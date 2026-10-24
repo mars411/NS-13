@@ -385,9 +385,13 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	desc = "Controls the control rods, the feedwater and the steam valve of the reactor."
 	machine_name = "reactor control console"
 	machine_desc = "Used to operate the submarine reactor: control rods, feedwater valve, steam valve and emergency SCRAM."
+	// Консоль не собирается из деталей: для неё нет платы-чертежа, а значит нет и деталей «экран» и «клавиатура».
+	// Без этих двух строк Бэй считает консоль сломанной или без экрана и не даёт с ней взаимодействовать
+	// («It is missing a screen, making it hard to interact with»).
+	construct_state = null
 	// ВРЕМЕННО: консоль работает без питания, чтобы реактор можно было запустить на карте без АКБ-контура.
-	// Когда контур АКБ будет готов (GDD, задача 5), убрать эту строку, и консоль начнёт требовать питание.
-	stat_immune = MACHINE_STAT_NOPOWER
+	// Когда контур АКБ будет готов (GDD, задача 5), убрать из этой строки только MACHINE_STAT_NOPOWER.
+	stat_immune = MACHINE_STAT_NOPOWER | MACHINE_STAT_NOSCREEN | MACHINE_STAT_NOINPUT
 
 	/// Метка реактора, которым управляет консоль. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
