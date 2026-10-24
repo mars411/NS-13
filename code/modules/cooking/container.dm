@@ -14,7 +14,7 @@
 	w_class = ITEM_SIZE_NORMAL
 	obj_flags = OBJ_FLAG_CONDUCTIBLE
 	atom_flags = ATOM_FLAG_OPEN_CONTAINER | ATOM_FLAG_NO_REACT
-	matter = list(MATERIAL_ALUMINIUM = 3000)
+	matter = list(MATERIAL_ALUMINIUM = 300)
 	var/list/insertable = list(
 		/obj/item/reagent_containers/food/snacks,
 		/obj/item/holder,
@@ -463,7 +463,15 @@
 	var/singleton/cooking_recipe/recipe = select_recipe(src, appliance = appliancetype)
 
 	if(!recipe && length(contents))
-		var/obj/item/reagent_containers/food/snacks/source = contents[1]
+		for(var/obj/item/component in contents)
+			if(istype(component, /obj/item/reagent_containers/food/snacks))
+				continue
+			to_chat(usr, SPAN_WARNING("\The [component] will not combine into a meal on its own - \the [src] does not hold a complete recipe."))
+			return
+		var/obj/item/reagent_containers/food/snacks/source = locate(/obj/item/reagent_containers/food/snacks) in contents
+		if(!source)
+			to_chat(usr, SPAN_WARNING("There is nothing on \the [src] you could make a meal out of."))
+			return
 		var/obj/item/reagent_containers/food/snacks/variable/result = new (get_turf(src))
 		if (source.reagents?.total_volume)
 			source.reagents.trans_to(result, source.reagents.total_volume)
@@ -528,7 +536,6 @@
 	desc = "A bowl. You bowl foods... wait, what?"
 	icon_state = "mixingbowl"
 	center_of_mass = "x=17;y=7"
-	matter = list(MATERIAL_STEEL = 300)
 	volume = 180
 	amount_per_transfer_from_this = 10
 	possible_transfer_amounts = "5;10;15;25;30;60;180"

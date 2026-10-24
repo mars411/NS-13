@@ -27,8 +27,8 @@ jobs:
     name: Check Test Requirements
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d
         id: filter
         with:
           filters: .github/workflow-config/preflight-filters.yml
@@ -42,7 +42,7 @@ jobs:
     - preflight
     if: needs.preflight.outputs.byond == 'true'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check dreamchecker cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         id: check-cache
@@ -63,7 +63,7 @@ jobs:
           chmod +x ~/dreamchecker
       - name: Cache dreamchecker
         if: ${{ !steps.check-cache.outputs.cache-hit && success() }}
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/spaceman_dmm/${{ env.SDMM_TARGET }}
           key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-spacemandmm-${{ env.SDMM_TARGET }}
@@ -77,7 +77,7 @@ jobs:
     - preflight
     if: needs.preflight.outputs.byond == 'true'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check Cached BYOND
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         id: check-cache
@@ -93,7 +93,7 @@ jobs:
           test/install-byond.sh
       - name: Save BYOND Cache
         if: ${{ !steps.check-cache.outputs.cache-hit && success() }}
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/BYOND-${{ env.BYOND_MAJOR }}.${{ env.BYOND_MINOR }}
           key: ${{ env.CACHE_PREFIX }}-${{ runner.os }}-byond-${{ env.BYOND_MAJOR }}-${{ env.BYOND_MINOR }}
@@ -107,7 +107,7 @@ jobs:
     - install_byond
     if: needs.preflight.outputs.byond == 'true'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -126,7 +126,7 @@ jobs:
     - install_byond
     if: needs.preflight.outputs.byond == 'true'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/BYOND-${{ env.BYOND_MAJOR }}.${{ env.BYOND_MINOR }}
@@ -151,7 +151,7 @@ jobs:
     - install_byond
     if: needs.preflight.outputs.byond == 'true'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/BYOND-${{ env.BYOND_MAJOR }}.${{ env.BYOND_MINOR }}
@@ -176,7 +176,7 @@ jobs:
     - install_byond
     if: needs.preflight.outputs.byond == 'true'
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/BYOND-${{ env.BYOND_MAJOR }}.${{ env.BYOND_MINOR }}
