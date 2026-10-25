@@ -1,0 +1,153 @@
+{{if !data.linked}}
+<div class='notice'>
+	<b>NO LINK TO REACTOR UNIT '{{:data.reactorId}}'</b><br>
+	Check that the reactor core is built and has the same unit id.<br><br>
+	{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
+</div>
+{{else}}
+<div class="item">
+	<div class="itemLabel">
+		Unit:
+	</div>
+	<div class="itemContent">
+		<b>{{:data.reactorId}}</b>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Status:
+	</div>
+	<div class="itemContent">
+		<span class='{{:data.statusClass}}'><b>{{:data.status}}</b></span>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Armour plates:
+	</div>
+	<div class="itemContent">
+		{{if data.casingsOpen}}
+			<span class='average'>{{:data.casingsOpen}} of {{:data.casingsTotal}} REMOVED</span>
+		{{else}}
+			<span class='good'>all {{:data.casingsTotal}} sealed</span>
+		{{/if}}
+	</div>
+</div>
+
+<h3>Monitoring</h3>
+<div class="item">
+	<div class="itemLabel">
+		Core temperature:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.temp, 0, data.tempMax, data.tempClass)}}
+		<div class="statusValue">
+			{{:data.temp}} C
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Steam pressure:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.pressure, 0, data.pressureMax, data.pressureClass)}}
+		<div class="statusValue">
+			{{:data.pressure}} bar
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Coolant level:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.coolant, 0, 100, data.coolantClass)}}
+		<div class="statusValue">
+			{{:data.coolant}} %
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Steam output:
+	</div>
+	<div class="itemContent">
+		{{:data.steamFlow}} bar/s
+	</div>
+</div>
+
+<h3>Controls</h3>
+{{if data.dead}}
+<div class='notice'>
+	<b>REACTOR LOST. NO CONTROL POSSIBLE.</b>
+</div>
+{{else}}
+<div class="item">
+	<div class="itemLabel">
+		Control rods:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.rods, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.rods}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('Lower -10', 'triangle-1-s', {'action' : 'rods_down'}, (data.rods > 0) ? null : 'disabled')}}
+			{{:helper.link('Raise +10', 'triangle-1-n', {'action' : 'rods_up'}, (data.scrammed || data.rods >= 100) ? 'disabled' : null)}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Feedwater valve:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.feedwater, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.feedwater}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('Close -10', 'triangle-1-s', {'action' : 'feed_down'}, (data.feedwater > 0) ? null : 'disabled')}}
+			{{:helper.link('Open +10', 'triangle-1-n', {'action' : 'feed_up'}, (data.feedwater < 100) ? null : 'disabled')}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Steam valve:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.steamValve, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.steamValve}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('Close -10', 'triangle-1-s', {'action' : 'steam_down'}, (data.steamValve > 0) ? null : 'disabled')}}
+			{{:helper.link('Open +10', 'triangle-1-n', {'action' : 'steam_up'}, (data.steamValve < 100) ? null : 'disabled')}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Emergency:
+	</div>
+	<div class="itemContent">
+		{{:helper.link('SCRAM', 'alert', {'action' : 'scram'}, data.scrammed ? 'disabled' : null, 'redButton')}}
+		{{:helper.link('Reset SCRAM', 'unlocked', {'action' : 'reset'}, data.scrammed ? null : 'disabled')}}
+		{{if data.scrammed}}
+			<span class='bad'>&nbsp;SCRAM ENGAGED, rods locked</span>
+		{{/if}}
+	</div>
+</div>
+{{/if}}
+
+<div class="item">
+	<div class="itemLabel">
+		Link:
+	</div>
+	<div class="itemContent">
+		{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
+	</div>
+</div>
+{{/if}}

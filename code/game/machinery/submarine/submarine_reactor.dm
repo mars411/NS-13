@@ -1,26 +1,31 @@
 /*
-	NS-13: реактор подлодки. Чистая реализация, этап 1 («ядро и состояния»).
+	NS-13: реактор подлодки. Этап 1 («ядро и состояния»), пульт БЩУ на NanoUI.
+	Подробное описание, настройка и проверка: README.md в этой же папке.
 
 	ЧТО ЗДЕСЬ ЕСТЬ
-	- Ядро реактора (/obj/machinery/submarine_reactor_core): вся физика и состояния.
-	- Секции корпуса (/obj/machinery/submarine_reactor_section/...): снимается броня гаечным ключом.
-	- Консоль БЩУ (/obj/machinery/computer/submarine_reactor_console): стержни, клапаны, SCRAM.
+	- Ядро реактора (/obj/machinery/submarine_reactor_core): вся физика и состояния. Оно же одна из четырёх секций корпуса.
+	- Ещё три секции корпуса (/obj/machinery/submarine_reactor_section/...): left_end, middle, right_end.
+	  У всех четырёх секций броня снимается гаечным ключом.
+	- Пульт БЩУ (/obj/machinery/computer/submarine_reactor_console): окно NanoUI с кнопками,
+	  шаблон лежит в nano/templates/submarine_reactor_panel.tmpl.
+	  Путь типа «computer» историческая случайность: на карте объект уже стоит, и менять путь без правки карты нельзя.
+	  Для игрока это пульт, а не компьютер.
 
 	КАК РАССТАВЛЯТЬ НА КАРТЕ (StrongDMM)
 	Четыре тайла в ряд: left_end, core, middle, right_end.
 	Ядро находит секции в радиусе NSR_SECTION_LINK_RANGE тайлов (по умолчанию 3).
-	Консоль находит ядро по reactor_id (по умолчанию "main" у обоих), расстояние не важно.
-	Между консолью и залом реактора должно быть минимум две двери (требование ТЗ, это вопрос карты).
+	Пульт находит ядро по reactor_id (по умолчанию "main" у обоих), расстояние не важно.
+	Между пультом и залом реактора должно быть минимум две двери (требование ТЗ, это вопрос карты).
 
-	ЗАГЛУШКИ ДО ЭТАПА 3 (трубы и газ «Водяной пар»)
+	ЗАГЛУШКИ ДО ЭТАПА 3 (трубы и существующий в Бэе газ пар, GAS_STEAM)
 	- Клапан питательной воды: добавляет воду в сосуд. Потом заменится подключением к трубам.
 	- Клапан пара: стравливает пар. Потом заменится турбиной (steam_flow уже считается для неё).
 
 	НЕ РЕАЛИЗОВАНО НАМЕРЕННО (TBD в GDD, не подменяю догадками)
 	- Износ стержней СУЗ и их замена (скафандр, радиация при замене).
-	- Подключение к АКБ-контуру: консоль пока не требует питания (stat_immune ниже).
+	- Подключение к АКБ-контуру: пульт пока не требует питания (stat_immune ниже).
 
-	Все числа — ЧЕРНОВЫЕ. Они собраны в одном блоке ниже, меняйте только там.
+	Все числа ЧЕРНОВЫЕ. Они собраны в одном блоке ниже, меняйте только там.
 */
 
 GLOBAL_LIST_EMPTY(submarine_reactors)
@@ -70,6 +75,16 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 #define NSR_CASING_TIME           (3 SECONDS)
 #define NSR_ALARM_REPEAT          (6 SECONDS)
 
+/// Общий порядок снятия и установки броневой плиты для всех четырёх секций корпуса (три секции и ядро).
+/// Возвращает TRUE, если плиту после этого нужно переключить: вызывающий сам меняет свой casing_open.
+/proc/nsr_wrench_casing(obj/machinery/hull, mob/living/user, is_open)
+	hull.visible_message(SPAN_NOTICE("\The [user] starts [is_open ? "securing" : "unbolting"] the armour plate of \the [hull]."))
+	playsound(hull, 'sound/items/Ratchet.ogg', 50, TRUE)
+	if(!do_after(user, NSR_CASING_TIME, hull))
+		return FALSE
+	hull.visible_message(SPAN_NOTICE("\The [user] [is_open ? "secures" : "removes"] the armour plate of \the [hull]."))
+	return TRUE
+
 // ----------------------------------------------------------------------------
 // СЕКЦИЯ КОРПУСА
 // ----------------------------------------------------------------------------
@@ -109,13 +124,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /obj/machinery/submarine_reactor_section/use_tool(obj/item/tool, mob/living/user, list/click_params)
 	if(!isWrench(tool))
 		return ..()
-	visible_message(SPAN_NOTICE("\The [user] starts [casing_open ? "securing" : "unbolting"] the armour plate of \the [src]."))
-	playsound(src, 'sound/items/Ratchet.ogg', 50, TRUE)
-	if(!do_after(user, NSR_CASING_TIME, src))
-		return TRUE
-	casing_open = !casing_open
-	visible_message(SPAN_NOTICE("\The [user] [casing_open ? "removes" : "secures"] the armour plate of \the [src]."))
-	queue_icon_update()
+	if(nsr_wrench_casing(src, user, casing_open))
+		casing_open = !casing_open
+		queue_icon_update()
 	return TRUE
 
 /obj/machinery/submarine_reactor_section/on_update_icon()
@@ -168,8 +179,10 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	var/alarm_level = 0
 	var/next_alarm_time = 0
 
-	/// Привязанные секции корпуса.
+	/// Привязанные секции корпуса (три штуки). Само ядро тоже секция, его плита учитывается отдельно.
 	var/list/sections
+	/// TRUE, если броневая плита самого ядра снята.
+	var/casing_open = FALSE
 
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
@@ -192,11 +205,24 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		sections += S
 	return length(sections)
 
+/// Сколько броневых плит снято из четырёх (три секции и ядро).
 /obj/machinery/submarine_reactor_core/proc/count_open_casings()
-	. = 0
+	. = casing_open ? 1 : 0
 	for(var/obj/machinery/submarine_reactor_section/S in sections)
 		if(S.casing_open)
 			. += 1
+
+/// Сколько всего секций корпуса: привязанные секции и само ядро. На правильной карте это 4.
+/obj/machinery/submarine_reactor_core/proc/count_casings()
+	return length(sections) + 1
+
+/obj/machinery/submarine_reactor_core/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	if(!isWrench(tool))
+		return ..()
+	if(nsr_wrench_casing(src, user, casing_open))
+		casing_open = !casing_open
+		queue_icon_update()
+	return TRUE
 
 /obj/machinery/submarine_reactor_core/proc/is_dead()
 	return ruptured || melted
@@ -342,7 +368,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
 	playsound(src, 'sound/machines/warning-buzzer.ogg', 100, FALSE)
 
-// --- Текст для консоли ---
+// --- Текст для пульта ---
 
 /obj/machinery/submarine_reactor_core/proc/get_status_text()
 	if(melted)
@@ -359,16 +385,18 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		return "OFFLINE"
 	return "NOMINAL"
 
-/// Класс CSS для цвета статуса: "" (зелёный), "w" (жёлтый), "c" (красный).
+/// Класс цвета NanoUI для статуса: good (зелёный), average (жёлтый), bad (красный).
 /obj/machinery/submarine_reactor_core/proc/get_status_class()
 	if(is_dead() || alarm_level >= 2)
-		return "c"
+		return "bad"
 	if(alarm_level >= 1)
-		return "w"
-	return ""
+		return "average"
+	return "good"
 
 /obj/machinery/submarine_reactor_core/on_update_icon()
 	ClearOverlays()
+	// Временная индикация: со снятой бронёй ядро полупрозрачно.
+	alpha = casing_open ? 150 : 255
 	if(is_dead())
 		color = "#554433"
 		return
@@ -377,25 +405,36 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		AddOverlays("+on")
 
 // ----------------------------------------------------------------------------
-// КОНСОЛЬ БЩУ
+// ПУЛЬТ БЩУ
 // ----------------------------------------------------------------------------
 
 /obj/machinery/computer/submarine_reactor_console
-	name = "reactor control console"
-	desc = "Controls the control rods, the feedwater and the steam valve of the reactor."
-	machine_name = "reactor control console"
+	name = "reactor control panel"
+	desc = "A heavy control panel with buttons for the control rods, the feedwater valve, the steam valve and the emergency SCRAM."
+	machine_name = "reactor control panel"
 	machine_desc = "Used to operate the submarine reactor: control rods, feedwater valve, steam valve and emergency SCRAM."
-	// Консоль не собирается из деталей: для неё нет платы-чертежа, а значит нет и деталей «экран» и «клавиатура».
-	// Без этих двух строк Бэй считает консоль сломанной или без экрана и не даёт с ней взаимодействовать
+	// Спрайт временный: блок управления из стокового Бэя. Заменить на свой.
+	icon = 'icons/obj/machines/power/antimatter.dmi'
+	icon_state = "control_on"
+	// Нажатия кнопок, а не стук по клавиатуре, и на пульт нельзя залезть как на компьютер.
+	clicksound = "button"
+	atom_flags = ATOM_FLAG_NO_TEMP_CHANGE
+	// Пульт не собирается из деталей: для него нет платы-чертежа, а значит нет деталей «экран» и «клавиатура».
+	// Без этой строки Бэй считает пульт сломанным или без экрана и не даёт с ним взаимодействовать
 	// («It is missing a screen, making it hard to interact with»).
 	construct_state = null
-	// ВРЕМЕННО: консоль работает без питания, чтобы реактор можно было запустить на карте без АКБ-контура.
+	// ВРЕМЕННО: пульт работает без питания, чтобы реактор можно было запустить на карте без АКБ-контура.
 	// Когда контур АКБ будет готов (GDD, задача 5), убрать из этой строки только MACHINE_STAT_NOPOWER.
 	stat_immune = MACHINE_STAT_NOPOWER | MACHINE_STAT_NOSCREEN | MACHINE_STAT_NOINPUT
 
-	/// Метка реактора, которым управляет консоль. Должна совпадать с reactor_id ядра.
+	/// Метка реактора, которым управляет пульт. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/reactor
+
+/obj/machinery/computer/submarine_reactor_console/on_update_icon()
+	// Не вызываем родителя: он рисует экран и клавиатуру компьютера, которых у пульта нет.
+	ClearOverlays()
+	icon_state = "control_on"
 
 /obj/machinery/computer/submarine_reactor_console/proc/get_reactor()
 	if(reactor && !QDELETED(reactor))
@@ -407,73 +446,61 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 			break
 	return reactor
 
-/// Обновляет открытые окна, пока кто-то пользуется консолью.
-/obj/machinery/computer/submarine_reactor_console/Process()
-	if(in_use)
-		updateUsrDialog()
-
 /obj/machinery/computer/submarine_reactor_console/interface_interact(mob/user)
-	interact(user)
+	ui_interact(user)
 	return TRUE
 
-/obj/machinery/computer/submarine_reactor_console/proc/make_link(label, action)
-	return "<a href='byond://?src=\ref[src];action=[action]'>[label]</a>"
+/// Цвет шкалы по порогам: good ниже warn, average от warn, bad от crit.
+/obj/machinery/computer/submarine_reactor_console/proc/level_class(value, warn, crit)
+	if(value >= crit)
+		return "bad"
+	if(value >= warn)
+		return "average"
+	return "good"
 
-/obj/machinery/computer/submarine_reactor_console/proc/make_bar(value, max_value, width = 20)
-	var/filled = round(clamp(value / max_value, 0, 1) * width)
-	var/bar = "|"
-	for(var/i in 1 to width)
-		bar += ((i <= filled) ? "#" : ".")
-	return bar + "|"
-
-/obj/machinery/computer/submarine_reactor_console/interact(mob/user)
-	user.set_machine(src)
-	var/list/html = list()
-	html += "<style>body{background:#000;color:#3f3;font-family:'Courier New',monospace;font-size:13px}"
-	html += "a{color:#3f3;text-decoration:none}a:hover{background:#3f3;color:#000}"
-	html += ".w{color:#fc0}.c{color:#f33}</style>"
-
+/// Данные для окна NanoUI. Шаблон: nano/templates/submarine_reactor_panel.tmpl.
+/obj/machinery/computer/submarine_reactor_console/proc/build_ui_data()
+	var/list/data = list()
 	var/obj/machinery/submarine_reactor_core/R = get_reactor()
+	data["linked"] = !!R
+	data["reactorId"] = reactor_id
 	if(!R)
-		html += "<pre>NS-13 REACTOR CONTROL\n\nNO LINK TO REACTOR UNIT '[reactor_id]'\n</pre>"
-		html += make_link("RESCAN LINKS", "rescan")
-	else
-		var/open_casings = R.count_open_casings()
-		var/total_casings = length(R.sections)
-		var/armour_text = "sealed ([total_casings] sections linked)"
-		if(open_casings)
-			armour_text = "[open_casings] of [total_casings] plates REMOVED"
-		var/scram_text = "ready"
-		if(R.scrammed)
-			scram_text = "ENGAGED"
-		html += "<pre>"
-		html += "NS-13 REACTOR CONTROL // UNIT [uppertext(R.reactor_id)]\n"
-		html += "STATUS       <span class='[R.get_status_class()]'>[R.get_status_text()]</span>\n"
-		html += "-----------------------------------------------\n"
-		html += "CORE TEMP    [round(R.core_temperature)] C\n"
-		html += "             [make_bar(R.core_temperature, NSR_MELTDOWN_TEMP)]\n"
-		html += "PRESSURE     [round(R.steam_pressure, 0.1)] bar\n"
-		html += "             [make_bar(R.steam_pressure, NSR_PRESSURE_BURST)]\n"
-		html += "COOLANT      [round(R.coolant_level, 0.1)] %\n"
-		html += "             [make_bar(R.coolant_level, 100)]\n"
-		html += "CONTROL RODS [R.rods_pos] %\n"
-		html += "             [make_bar(R.rods_pos, 100)]\n"
-		html += "FEEDWATER    [R.feedwater_valve] %\n"
-		html += "STEAM VALVE  [R.steam_valve] %   (steam out: [round(R.steam_flow, 0.1)] bar/s)\n"
-		html += "SCRAM        [scram_text]\n"
-		html += "ARMOUR       [armour_text]\n"
-		html += "</pre>"
-		if(R.is_dead())
-			html += "<p class='c'>REACTOR LOST. NO CONTROL POSSIBLE.</p>"
-		else
-			html += "RODS &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [make_link("+10", "rods_up")] [make_link("-10", "rods_down")]<br>"
-			html += "FEEDWATER &nbsp; [make_link("+10", "feed_up")] [make_link("-10", "feed_down")]<br>"
-			html += "STEAM &nbsp;&nbsp;&nbsp;&nbsp; [make_link("+10", "steam_up")] [make_link("-10", "steam_down")]<br>"
-			html += "<br>[make_link("SCRAM", "scram")] &nbsp; [make_link("RESET SCRAM", "reset")]<br>"
-		html += "<br>[make_link("RESCAN LINKS", "rescan")]"
+		return data
+	data["dead"] = R.is_dead()
+	data["status"] = R.get_status_text()
+	data["statusClass"] = R.get_status_class()
+	data["temp"] = round(R.core_temperature)
+	data["tempMax"] = NSR_MELTDOWN_TEMP
+	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
+	data["pressure"] = round(R.steam_pressure, 0.1)
+	data["pressureMax"] = NSR_PRESSURE_BURST
+	data["pressureClass"] = level_class(R.steam_pressure, NSR_PRESSURE_WARN, NSR_PRESSURE_CRIT)
+	data["coolant"] = round(R.coolant_level, 0.1)
+	// У воды всё наоборот: чем её меньше, тем хуже.
+	data["coolantClass"] = "good"
+	if(R.coolant_level < NSR_COOLANT_CRIT)
+		data["coolantClass"] = "bad"
+	else if(R.coolant_level < NSR_COOLANT_WARN)
+		data["coolantClass"] = "average"
+	data["rods"] = R.rods_pos
+	data["feedwater"] = R.feedwater_valve
+	data["steamValve"] = R.steam_valve
+	data["steamFlow"] = round(R.steam_flow, 0.1)
+	data["scrammed"] = R.scrammed
+	data["casingsOpen"] = R.count_open_casings()
+	data["casingsTotal"] = R.count_casings()
+	return data
 
-	show_browser(user, jointext(html, null), "window=ns_reactor;size=520x560")
-	onclose(user, "ns_reactor")
+/obj/machinery/computer/submarine_reactor_console/ui_interact(mob/user, ui_key = "main", datum/nanoui/ui = null, force_open = 1)
+	var/list/data = build_ui_data()
+	// Обновляет окно, если оно уже открыто. Если окна нет, возвращает null.
+	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
+	if(!ui)
+		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Reactor control panel", 540, 640)
+		ui.set_initial_data(data)
+		ui.open()
+		// Окно само обновляется каждый тик подсистемы NanoUI, пока открыто.
+		ui.set_auto_update(1)
 
 /obj/machinery/computer/submarine_reactor_console/OnTopic(mob/user, href_list, datum/topic_state/state)
 	var/action = href_list["action"]
@@ -483,7 +510,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		var/obj/machinery/submarine_reactor_core/found = get_reactor()
 		if(found)
 			var/section_count = found.find_sections()
-			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected."))
+			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core."))
 		else
 			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
 		return TOPIC_REFRESH
