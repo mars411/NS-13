@@ -21,6 +21,11 @@
 	- Клапан питательной воды: добавляет воду в сосуд. Потом заменится подключением к трубам.
 	- Клапан пара: стравливает пар. Потом заменится турбиной (steam_flow уже считается для неё).
 
+	ПАРОВОЙ ПОРТ (этап 3а)
+	- Паровой порт (/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port) садится на настоящие трубы.
+	  Пока порт стоит рядом с ядром, давление пара в сосуде равно давлению в этих трубах, а пар из кипения уходит в трубы.
+	- Без порта работает прежний режим: запечатанный сосуд с заглушкой клапана пара. Старая карта продолжает работать.
+
 	НЕ РЕАЛИЗОВАНО НАМЕРЕННО (TBD в GDD, не подменяю догадками)
 	- Износ стержней СУЗ и их замена (скафандр, радиация при замене).
 	- Подключение к АКБ-контуру: пульт пока не требует питания (stat_immune ниже).
@@ -43,8 +48,12 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 #define NSR_COOLANT_HEAT_CAP      40     // добавка к теплоёмкости при полном сосуде воды
 #define NSR_PASSIVE_LOSS          0.2    // ед. тепла/с на каждый C выше температуры отсека
 #define NSR_BOIL_CONDUCT          5      // ед. тепла/с, которые забирает кипение, на каждый C выше точки кипения
-#define NSR_COOLANT_PER_HEAT      0.01   // процентов воды, выкипающих на единицу тепла
-#define NSR_STEAM_PER_HEAT        0.02   // бар пара на единицу тепла, ушедшего в кипение
+#define NSR_MOLES_PER_HEAT        0.6    // моль пара на единицу тепла, ушедшего в кипение
+#define NSR_MOLES_PER_PERCENT     60     // моль воды в 1% уровня воды. Вода кипит в пар моль в моль, ничего не пропадает
+
+// Паровое пространство сосуда
+#define NSR_VESSEL_VOLUME         1000   // л, объём пара в сосуде и в паровом порту
+#define NSR_KPA_PER_BAR           100    // перевод давления газа Бэя (кПа) в бары
 
 // Заглушки труб
 #define NSR_FEEDWATER_MAX         1      // процентов воды в секунду при клапане питательной воды 100%
@@ -155,7 +164,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 
 	/// Температура активной зоны, C.
 	var/core_temperature = NSR_AMBIENT_TEMP
-	/// Давление пара в сосуде, бар.
+	/// Давление пара в сосуде, бар. Считается из настоящего газа каждый тик, руками не менять.
 	var/steam_pressure = 0
 	/// Уровень воды в сосуде, 0-100%.
 	var/coolant_level = 100
@@ -163,9 +172,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	var/rods_pos = 0
 	/// Клапан питательной воды, 0-100%. ЗАГЛУШКА до труб.
 	var/feedwater_valve = 0
-	/// Клапан пара, 0-100%. ЗАГЛУШКА до турбины.
+	/// Клапан пара, 0-100%. ЗАГЛУШКА для режима без порта: стравливает пар в никуда. С портом не действует.
 	var/steam_valve = 0
-	/// Расход пара наружу за последний тик, бар/с. Это то, что потом заберёт турбина.
+	/// Выработка пара за последний тик, моль/с.
 	var/steam_flow = 0
 
 	/// SCRAM: стержни сброшены в ноль и заблокированы до сброса.
@@ -184,10 +193,17 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	/// TRUE, если броневая плита самого ядра снята.
 	var/casing_open = FALSE
 
+	/// Паровой порт на трубах. Если есть, пар и давление берутся оттуда.
+	var/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/steam_port
+	/// Собственный пар сосуда для режима без порта (запечатанный сосуд).
+	var/datum/gas_mixture/vessel_air
+
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
 	GLOB.submarine_reactors += src
+	vessel_air = new /datum/gas_mixture(NSR_VESSEL_VOLUME, T0C + NSR_AMBIENT_TEMP)
 	find_sections()
+	find_steam_port()
 	queue_icon_update()
 
 /obj/machinery/submarine_reactor_core/Destroy()
@@ -195,7 +211,28 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	for(var/obj/machinery/submarine_reactor_section/S in sections)
 		S.core = null
 	sections = null
+	if(steam_port)
+		steam_port.core = null
+		steam_port = null
+	vessel_air = null
 	return ..()
+
+/// Ищет паровой порт рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если порт найден.
+/obj/machinery/submarine_reactor_core/proc/find_steam_port()
+	steam_port = null
+	for(var/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/P in range(NSR_SECTION_LINK_RANGE, src))
+		if(P.reactor_id != reactor_id)
+			continue
+		steam_port = P
+		P.core = src
+		break
+	return !!steam_port
+
+/// Газ, в котором живёт пар реактора: газ порта на трубах или собственный газ запечатанного сосуда.
+/obj/machinery/submarine_reactor_core/proc/get_steam_air()
+	if(steam_port && !QDELETED(steam_port) && steam_port.air_contents)
+		return steam_port.air_contents
+	return vessel_air
 
 /// Ищет секции корпуса рядом и привязывает их к ядру. Возвращает число найденных.
 /obj/machinery/submarine_reactor_core/proc/find_sections()
@@ -294,6 +331,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 
 /// Один шаг физики. dt - длительность шага в секундах.
 /obj/machinery/submarine_reactor_core/proc/simulate(dt)
+	var/datum/gas_mixture/steam_air = get_steam_air()
+	var/pressure_bar = steam_air.return_pressure() / NSR_KPA_PER_BAR
+
 	var/rods_frac = rods_pos / 100
 	var/coolant_frac = coolant_level / 100
 
@@ -301,15 +341,21 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	var/heat_cap = NSR_CORE_HEAT_CAP + coolant_frac * NSR_COOLANT_HEAT_CAP
 	var/heat_loss = max(0, core_temperature - NSR_AMBIENT_TEMP) * NSR_PASSIVE_LOSS
 
-	// Кипение: чем выше давление пара, тем выше точка кипения.
-	var/boil_point = NSR_BOIL_TEMP + steam_pressure * NSR_BOIL_TEMP_PER_BAR
+	// Кипение: чем выше давление пара, тем выше точка кипения. Давление настоящее: из сосуда или из труб.
+	var/boil_point = NSR_BOIL_TEMP + pressure_bar * NSR_BOIL_TEMP_PER_BAR
 	var/boil_heat = 0
+	steam_flow = 0
 	if(core_temperature > boil_point && coolant_level > 0)
 		boil_heat = (core_temperature - boil_point) * NSR_BOIL_CONDUCT
 		// Не больше, чем способна отдать оставшаяся вода за этот шаг.
-		boil_heat = min(boil_heat, coolant_level / (NSR_COOLANT_PER_HEAT * dt))
-		coolant_level = max(0, coolant_level - boil_heat * NSR_COOLANT_PER_HEAT * dt)
-		steam_pressure += boil_heat * NSR_STEAM_PER_HEAT * dt
+		var/boil_moles = min(boil_heat * NSR_MOLES_PER_HEAT * dt, coolant_level * NSR_MOLES_PER_PERCENT)
+		boil_heat = boil_moles / (NSR_MOLES_PER_HEAT * dt)
+		coolant_level = max(0, coolant_level - boil_moles / NSR_MOLES_PER_PERCENT)
+		// Пар уходит в сосуд (или в трубы) с температурой кипения.
+		steam_air.adjust_gas_temp(GAS_STEAM, boil_moles, boil_point + T0C)
+		if(steam_port && steam_port.network)
+			steam_port.network.update = 1
+		steam_flow = boil_moles / dt
 
 	core_temperature += (heat_in - heat_loss - boil_heat) * dt / heat_cap
 	core_temperature = max(core_temperature, NSR_AMBIENT_TEMP)
@@ -317,10 +363,13 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	// Питательная вода (заглушка).
 	coolant_level = min(100, coolant_level + (feedwater_valve / 100) * NSR_FEEDWATER_MAX * dt)
 
-	// Стравливание пара (заглушка турбины): чем выше давление, тем быстрее уходит.
-	var/steam_out = steam_pressure * (steam_valve / 100) * NSR_STEAM_VENT_COEF * dt
-	steam_pressure = max(0, steam_pressure - steam_out)
-	steam_flow = steam_out / dt
+	// Режим без порта: клапан пара стравливает часть пара в никуда (заглушка).
+	if(!steam_port)
+		var/vent_ratio = (steam_valve / 100) * NSR_STEAM_VENT_COEF * dt
+		if(vent_ratio > 0)
+			steam_air.remove_ratio(vent_ratio)
+
+	steam_pressure = steam_air.return_pressure() / NSR_KPA_PER_BAR
 
 /obj/machinery/submarine_reactor_core/proc/update_alarm()
 	var/new_level = 0
@@ -357,8 +406,13 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	steam_flow = 0
 	queue_icon_update()
 	visible_message(SPAN_DANGER("\The [src] ruptures violently!"))
+	// Весь пар сосуда вырывается в помещение.
+	var/datum/gas_mixture/released = get_steam_air().remove_ratio(1)
+	var/turf/here = get_turf(src)
+	if(here && released)
+		here.assume_air(released)
 	SSradiation.radiate(src, NSR_RADS_RUPTURE)
-	explosion(get_turf(src), NSR_RUPTURE_RANGE)
+	explosion(here, NSR_RUPTURE_RANGE)
 
 /// Расплав от потери воды. Взрыва нет, но зона остаётся радиоактивной навсегда.
 /obj/machinery/submarine_reactor_core/proc/meltdown()
@@ -403,6 +457,35 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	color = null
 	if(rods_pos > 0)
 		AddOverlays("+on")
+
+// ----------------------------------------------------------------------------
+// ПАРОВОЙ ПОРТ (этап 3а)
+// ----------------------------------------------------------------------------
+
+/// Выход пара из сосуда реактора. Садится на настоящие трубы Бэя: пока он есть, давление в нём и есть давление в сосуде.
+/// Ставить рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE), поворачивать (dir) в сторону трубы.
+/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port
+	name = "reactor steam port"
+	desc = "The steam outlet of the reactor vessel. Superheated steam leaves through here under high pressure."
+	volume = NSR_VESSEL_VOLUME
+	// Временно: оранжевый цвет, чтобы отличать от обычного бака. Заменить своим спрайтом.
+	color = "#c47a2c"
+	/// Метка реактора, к которому подключён порт. Должна совпадать с reactor_id ядра.
+	var/reactor_id = "main"
+	var/obj/machinery/submarine_reactor_core/core
+
+/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/Destroy()
+	if(core)
+		core.steam_port = null
+	core = null
+	return ..()
+
+/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	// Порт приварен к сосуду: отвернуть его, как обычный бак, нельзя.
+	if(isWrench(tool))
+		to_chat(user, SPAN_WARNING("\The [src] is welded to the reactor vessel."))
+		return TRUE
+	return ..()
 
 // ----------------------------------------------------------------------------
 // ПУЛЬТ БЩУ
@@ -486,6 +569,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	data["feedwater"] = R.feedwater_valve
 	data["steamValve"] = R.steam_valve
 	data["steamFlow"] = round(R.steam_flow, 0.1)
+	data["hasPort"] = !!R.steam_port
 	data["scrammed"] = R.scrammed
 	data["casingsOpen"] = R.count_open_casings()
 	data["casingsTotal"] = R.count_casings()
@@ -510,7 +594,8 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		var/obj/machinery/submarine_reactor_core/found = get_reactor()
 		if(found)
 			var/section_count = found.find_sections()
-			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core."))
+			var/port_text = found.find_steam_port() ? "steam port connected" : "no steam port (sealed test vessel)"
+			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text]."))
 		else
 			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
 		return TOPIC_REFRESH
@@ -535,10 +620,11 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 			R.adjust_feedwater(NSR_VALVE_STEP)
 		if("feed_down")
 			R.adjust_feedwater(-NSR_VALVE_STEP)
-		if("steam_up")
-			R.adjust_steam_valve(NSR_VALVE_STEP)
-		if("steam_down")
-			R.adjust_steam_valve(-NSR_VALVE_STEP)
+		if("steam_up", "steam_down")
+			if(R.steam_port)
+				to_chat(user, SPAN_WARNING("The steam line is controlled by the valves on the pipes, not from this panel."))
+			else
+				R.adjust_steam_valve(action == "steam_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
 		if("scram")
 			R.scram()
 		if("reset")

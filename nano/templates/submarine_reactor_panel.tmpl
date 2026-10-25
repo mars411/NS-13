@@ -70,10 +70,22 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Steam output:
+		Steam production:
 	</div>
 	<div class="itemContent">
-		{{:data.steamFlow}} bar/s
+		{{:data.steamFlow}} mol/s
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Steam port:
+	</div>
+	<div class="itemContent">
+		{{if data.hasPort}}
+			<span class='good'>connected to the pipes</span>
+		{{else}}
+			<span class='average'>none, sealed test vessel</span>
+		{{/if}}
 	</div>
 </div>
 
@@ -113,6 +125,7 @@
 		</div>
 	</div>
 </div>
+{{if !data.hasPort}}
 <div class="item">
 	<div class="itemLabel">
 		Steam valve:
@@ -128,6 +141,7 @@
 		</div>
 	</div>
 </div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Emergency:
