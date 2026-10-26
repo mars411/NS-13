@@ -1,6 +1,6 @@
 //MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
 "aA" = (
-/obj/machinery/telecomms/server/map_preset/example,
+/obj/machinery/telecomms/server/map_preset/reactor_test,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "bI" = (
@@ -17,7 +17,7 @@
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "dU" = (
-/obj/machinery/telecomms/bus/map_preset/example,
+/obj/machinery/telecomms/bus/map_preset/reactor_test,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "dY" = (
@@ -43,7 +43,7 @@
 /area/constructionsite)
 "fV" = (
 /obj/machinery/light,
-/obj/machinery/telecomms/processor/map_preset/example,
+/obj/machinery/telecomms/processor/map_preset/reactor_test,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "gn" = (
@@ -84,11 +84,11 @@
 	dir = 1
 	},
 /obj/machinery/embedded_controller/radio/simple_docking_controller{
-	id_tag = "example_shuttle_starboard";
+	id_tag = "reactor_test_shuttle_starboard";
 	pixel_x = 28
 	},
 /obj/machinery/embedded_controller/radio/simple_docking_controller{
-	id_tag = "example_shuttle_port";
+	id_tag = "reactor_test_shuttle_port";
 	pixel_x = -28
 	},
 /obj/shuttle_landmark/lower_level,
@@ -105,12 +105,12 @@
 	},
 /obj/machinery/embedded_controller/radio/airlock/airlock_controller{
 	pixel_y = 19;
-	id_tag = "example_east"
+	id_tag = "reactor_test_east"
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "lT" = (
-/obj/machinery/telecomms/broadcaster/map_preset/example,
+/obj/machinery/telecomms/broadcaster/map_preset/reactor_test,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "mZ" = (
@@ -166,13 +166,13 @@
 /turf/simulated/floor/plating,
 /area/shuttle/escape)
 "zk" = (
-/obj/machinery/telecomms/receiver/map_preset/example,
+/obj/machinery/telecomms/receiver/map_preset/reactor_test,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "zp" = (
 /obj/machinery/door/airlock/external/bolted{
 	frequency = 1379;
-	id_tag = "example_shuttle_port_hatch"
+	id_tag = "reactor_test_shuttle_port_hatch"
 	},
 /turf/simulated/floor/plating,
 /area/shuttle/escape)
@@ -180,7 +180,7 @@
 /turf/simulated/floor/carpet,
 /area/constructionsite)
 "Ca" = (
-/obj/machinery/telecomms/hub/map_preset/example,
+/obj/machinery/telecomms/hub/map_preset/reactor_test,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Co" = (
@@ -319,7 +319,7 @@
 "Rv" = (
 /obj/machinery/door/airlock/external/bolted{
 	frequency = 1379;
-	id_tag = "example_shuttle_starboard_hatch"
+	id_tag = "reactor_test_shuttle_starboard_hatch"
 	},
 /turf/simulated/floor/plating,
 /area/shuttle/escape)
