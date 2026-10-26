@@ -59,7 +59,7 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Coolant level:
+		Coolant (water) level:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.coolant, 0, 100, data.coolantClass)}}
@@ -103,10 +103,13 @@
 		{{:helper.displayBar(data.rods, 0, 100, 'good')}}
 		<div class="statusValue">
 			{{:data.rods}} %
+			{{if data.rodsMoving}}
+				<span class='average'>moving to {{:data.rodsTarget}} %</span>
+			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('Lower -10', 'triangle-1-s', {'action' : 'rods_down'}, (data.rods > 0) ? null : 'disabled')}}
-			{{:helper.link('Raise +10', 'triangle-1-n', {'action' : 'rods_up'}, (data.scrammed || data.rods >= 100) ? 'disabled' : null)}}
+			{{:helper.link('Lower -10', 'triangle-1-s', {'action' : 'rods_down'}, (data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('Raise +10', 'triangle-1-n', {'action' : 'rods_up'}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
 		</div>
 	</div>
 </div>

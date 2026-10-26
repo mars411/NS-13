@@ -26,6 +26,14 @@
 	  Пока порт стоит рядом с ядром, давление пара в сосуде равно давлению в этих трубах, а пар из кипения уходит в трубы.
 	- Без порта работает прежний режим: запечатанный сосуд с заглушкой клапана пара. Старая карта продолжает работать.
 
+	СТЕРЖНИ ХОДЯТ НЕ МГНОВЕННО (ревизия 4)
+	- Оператор задаёт цель (rods_target), а стержни (rods_pos) идут к ней с конечной скоростью NSR_ROD_SPEED.
+	- SCRAM вставляет стержни быстрее (NSR_ROD_SPEED_SCRAM), но тоже не мгновенно.
+
+	СТЕНДОВЫЙ СБРОС ПАРА (ревизия 4)
+	- /obj/machinery/atmospherics/unary/tank/submarine_steam_dump: бак, который выпускает свой газ в никуда.
+	  Нужен только на тестовой карте как замена турбине и конденсатору. В игровую карту не ставить.
+
 	НЕ РЕАЛИЗОВАНО НАМЕРЕННО (TBD в GDD, не подменяю догадками)
 	- Износ стержней СУЗ и их замена (скафандр, радиация при замене).
 	- Подключение к АКБ-контуру: пульт пока не требует питания (stat_immune ниже).
@@ -58,6 +66,8 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 // Заглушки труб
 #define NSR_FEEDWATER_MAX         1      // процентов воды в секунду при клапане питательной воды 100%
 #define NSR_STEAM_VENT_COEF       0.05   // доля давления в секунду, уходящая при клапане пара 100%
+#define NSR_DUMP_VOLUME           1000   // л, объём стендового сброса пара
+#define NSR_DUMP_RATIO            0.05   // доля газа сброса, которая уходит в никуда за секунду
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             150    // C
@@ -78,7 +88,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 #define NSR_RADS_MELTDOWN         40     // каждый тик после расплава
 
 // Управление и прочее
-#define NSR_ROD_STEP              10     // шаг стержней, процентов
+#define NSR_ROD_STEP              10     // шаг цели стержней на одно нажатие, процентов
+#define NSR_ROD_SPEED             2      // ход стержней, процентов в секунду: шаг в 10% занимает 5 секунд
+#define NSR_ROD_SPEED_SCRAM       25     // ход стержней при SCRAM, процентов в секунду: полный ход за 4 секунды
 #define NSR_VALVE_STEP            10     // шаг клапанов, процентов
 #define NSR_SECTION_LINK_RANGE    3      // радиус поиска секций от ядра, тайлов
 #define NSR_CASING_TIME           (3 SECONDS)
@@ -168,8 +180,10 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	var/steam_pressure = 0
 	/// Уровень воды в сосуде, 0-100%.
 	var/coolant_level = 100
-	/// Положение стержней, 0-100%. Чем выше, тем больше тепловая мощность.
+	/// Фактическое положение стержней, 0-100%. Чем выше, тем больше тепловая мощность. Идёт к rods_target с конечной скоростью.
 	var/rods_pos = 0
+	/// Куда оператор послал стержни, 0-100%.
+	var/rods_target = 0
 	/// Клапан питательной воды, 0-100%. ЗАГЛУШКА до труб.
 	var/feedwater_valve = 0
 	/// Клапан пара, 0-100%. ЗАГЛУШКА для режима без порта: стравливает пар в никуда. С портом не действует.
@@ -238,6 +252,11 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /obj/machinery/submarine_reactor_core/proc/find_sections()
 	sections = list()
 	for(var/obj/machinery/submarine_reactor_section/S in range(NSR_SECTION_LINK_RANGE, src))
+		// Секция уходит к тому ядру, которое к ней ближе: два реактора рядом не путают друг другу корпус.
+		if(S.core && S.core != src && !QDELETED(S.core) && get_dist(S, S.core) <= get_dist(S, src))
+			continue
+		if(S.core && S.core != src && S.core.sections)
+			S.core.sections -= S
 		S.core = src
 		sections += S
 	return length(sections)
@@ -269,8 +288,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /obj/machinery/submarine_reactor_core/proc/adjust_rods(amount)
 	if(is_dead() || scrammed)
 		return FALSE
-	rods_pos = clamp(rods_pos + amount, 0, 100)
-	queue_icon_update()
+	rods_target = clamp(rods_target + amount, 0, 100)
 	return TRUE
 
 /obj/machinery/submarine_reactor_core/proc/adjust_feedwater(amount)
@@ -289,7 +307,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	if(is_dead())
 		return FALSE
 	scrammed = TRUE
-	rods_pos = 0
+	rods_target = 0
 	playsound(src, 'sound/machines/buzz-two.ogg', 60, FALSE)
 	audible_message(SPAN_WARNING("\The [src] drops its control rods with a heavy clunk."))
 	queue_icon_update()
@@ -329,8 +347,23 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	update_alarm()
 	emit_radiation()
 
+/// Двигает стержни к цели с конечной скоростью. При SCRAM скорость выше, но не бесконечная.
+/obj/machinery/submarine_reactor_core/proc/move_rods(dt)
+	if(rods_pos == rods_target)
+		return
+	var/old_pos = rods_pos
+	var/step = (scrammed ? NSR_ROD_SPEED_SCRAM : NSR_ROD_SPEED) * dt
+	if(rods_pos < rods_target)
+		rods_pos = min(rods_pos + step, rods_target)
+	else
+		rods_pos = max(rods_pos - step, rods_target)
+	// Значок зависит только от того, стоят ли стержни в нуле, поэтому обновляем его не каждый тик.
+	if((old_pos > 0) != (rods_pos > 0))
+		queue_icon_update()
+
 /// Один шаг физики. dt - длительность шага в секундах.
 /obj/machinery/submarine_reactor_core/proc/simulate(dt)
+	move_rods(dt)
 	var/datum/gas_mixture/steam_air = get_steam_air()
 	var/pressure_bar = steam_air.return_pressure() / NSR_KPA_PER_BAR
 
@@ -402,6 +435,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /obj/machinery/submarine_reactor_core/proc/rupture()
 	ruptured = TRUE
 	rods_pos = 0
+	rods_target = 0
 	steam_pressure = 0
 	steam_flow = 0
 	queue_icon_update()
@@ -418,6 +452,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /obj/machinery/submarine_reactor_core/proc/meltdown()
 	melted = TRUE
 	rods_pos = 0
+	rods_target = 0
 	queue_icon_update()
 	visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
 	playsound(src, 'sound/machines/warning-buzzer.ogg', 100, FALSE)
@@ -486,6 +521,28 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		to_chat(user, SPAN_WARNING("\The [src] is welded to the reactor vessel."))
 		return TRUE
 	return ..()
+
+// ----------------------------------------------------------------------------
+// СТЕНДОВЫЙ СБРОС ПАРА (только для тестовой карты)
+// ----------------------------------------------------------------------------
+
+/// СТЕНДОВОЕ устройство: бак, который постоянно выпускает свой газ в никуда. Пока нет турбины и конденсатора,
+/// он принимает пар из труб, и реактор можно проверить в устойчивом режиме. В игровую карту не ставить.
+/obj/machinery/atmospherics/unary/tank/submarine_steam_dump
+	name = "steam dump"
+	desc = "A test-stand drain that swallows steam from the pipes. It stands in for the turbine and the condenser."
+	volume = NSR_DUMP_VOLUME
+	// Временно: серо-голубой цвет, чтобы отличать от парового порта и обычных баков.
+	color = "#6a8296"
+
+/obj/machinery/atmospherics/unary/tank/submarine_steam_dump/Process(wait)
+	. = ..()
+	var/dt = 2
+	if(wait > 0)
+		dt = clamp(wait / 10, 0.5, 5)
+	air_contents.remove_ratio(min(1, NSR_DUMP_RATIO * dt))
+	if(network)
+		network.update = 1
 
 // ----------------------------------------------------------------------------
 // ПУЛЬТ БЩУ
@@ -565,7 +622,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		data["coolantClass"] = "bad"
 	else if(R.coolant_level < NSR_COOLANT_WARN)
 		data["coolantClass"] = "average"
-	data["rods"] = R.rods_pos
+	data["rods"] = round(R.rods_pos, 0.1)
+	data["rodsTarget"] = R.rods_target
+	data["rodsMoving"] = abs(R.rods_pos - R.rods_target) >= 0.5
 	data["feedwater"] = R.feedwater_valve
 	data["steamValve"] = R.steam_valve
 	data["steamFlow"] = round(R.steam_flow, 0.1)
