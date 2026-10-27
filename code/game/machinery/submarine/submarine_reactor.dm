@@ -12,13 +12,13 @@
 	  Для игрока это пульт, а не компьютер.
 
 	КАК РАССТАВЛЯТЬ НА КАРТЕ (StrongDMM)
-	Четыре тайла в ряд: left_end, core, middle, right_end.
+	Четыре секции блоком 2x2: core, left_end, middle, right_end (какая где, не важно, они одинаковые).
 	Ядро находит секции в радиусе NSR_SECTION_LINK_RANGE тайлов (по умолчанию 3).
 	Пульт находит ядро по reactor_id (по умолчанию "main" у обоих), расстояние не важно.
 	Между пультом и залом реактора должно быть минимум две двери (требование ТЗ, это вопрос карты).
 
 	ЗАГЛУШКИ ДО ЭТАПА 3 (трубы и существующий в Бэе газ пар, GAS_STEAM)
-	- Клапан питательной воды: добавляет воду в сосуд. Потом заменится подключением к трубам.
+	- Клапан питательной воды: добавляет воду в сосуд из ниоткуда. Работает только пока нет питательного насоса.
 	- Клапан пара: стравливает пар. Потом заменится турбиной (steam_flow уже считается для неё).
 
 	ПАРОВОЙ ПОРТ (этап 3а)
@@ -30,9 +30,18 @@
 	- Оператор задаёт цель (rods_target), а стержни (rods_pos) идут к ней с конечной скоростью NSR_ROD_SPEED.
 	- SCRAM вставляет стержни быстрее (NSR_ROD_SPEED_SCRAM), но тоже не мгновенно.
 
-	СТЕНДОВЫЙ СБРОС ПАРА (ревизия 4)
-	- /obj/machinery/atmospherics/unary/tank/submarine_steam_dump: бак, который выпускает свой газ в никуда.
-	  Нужен только на тестовой карте как замена турбине и конденсатору. В игровую карту не ставить.
+	СТЕРЖНИ ПО ОТДЕЛЬНОСТИ (ревизия 5)
+	- Четыре стержня (NSR_ROD_COUNT), у каждого своя цель и свой привод. Тепловая мощность идёт от их среднего положения.
+	  rods_pos и rods_target это средние значения, они считаются сами.
+
+	ЗАМКНУТЫЙ КОНТУР (этап 3б)
+	- Вода идёт по кругу: сосуд, пар, паровой порт, трубы, конденсатор, холодная ветка, питательный насос, сосуд.
+	  Моли не теряются: сколько воды ушло в пар, столько пара должно вернуться конденсатом.
+	- Конденсатор (/obj/machinery/atmospherics/binary/submarine_condenser): остужает пар забортной водой и отдаёт холодную ветку.
+	  В Бэе по трубам ходят только газы, поэтому конденсат это тот же GAS_STEAM, но холодный.
+	- Питательный насос (/obj/machinery/atmospherics/unary/tank/submarine_feed_pump): стоит на холодной ветке рядом с ядром
+	  и вливает конденсат в сосуд против давления пара. Ему нужно электропитание: пропало, и охлаждения нет.
+	- Без насоса работает прежняя заглушка: клапан питательной воды берёт воду из ниоткуда.
 
 	НЕ РЕАЛИЗОВАНО НАМЕРЕННО (TBD в GDD, не подменяю догадками)
 	- Износ стержней СУЗ и их замена (скафандр, радиация при замене).
@@ -66,8 +75,15 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 // Заглушки труб
 #define NSR_FEEDWATER_MAX         1      // процентов воды в секунду при клапане питательной воды 100%
 #define NSR_STEAM_VENT_COEF       0.05   // доля давления в секунду, уходящая при клапане пара 100%
-#define NSR_DUMP_VOLUME           1000   // л, объём стендового сброса пара
-#define NSR_DUMP_RATIO            0.05   // доля газа сброса, которая уходит в никуда за секунду
+
+// Замкнутый контур (этап 3б)
+#define NSR_CONDENSER_VOLUME      1000   // л, объём газа на каждой стороне конденсатора
+#define NSR_CONDENSER_RATIO       0.06   // доля газа на входе конденсатора, уходящая в конденсат за секунду
+#define NSR_CONDENSER_OUT_TEMP    (T0C + 30) // K, температура конденсата на выходе (забортная вода)
+#define NSR_FEED_TANK_VOLUME      3000   // л, бак питательного насоса (запас конденсата)
+#define NSR_FEED_PUMP_MAX         90     // моль/с при скорости 100% и нулевом давлении в сосуде
+#define NSR_FEED_PUMP_HEAD        100    // бар, при таком давлении в сосуде насос уже не может подавать воду
+#define NSR_FEED_PUMP_POWER       5000   // Вт при скорости 100%
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             150    // C
@@ -88,6 +104,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 #define NSR_RADS_MELTDOWN         40     // каждый тик после расплава
 
 // Управление и прочее
+#define NSR_ROD_COUNT             4      // число стержней, у каждого свой привод
 #define NSR_ROD_STEP              10     // шаг цели стержней на одно нажатие, процентов
 #define NSR_ROD_SPEED             2      // ход стержней, процентов в секунду: шаг в 10% занимает 5 секунд
 #define NSR_ROD_SPEED_SCRAM       25     // ход стержней при SCRAM, процентов в секунду: полный ход за 4 секунды
@@ -127,14 +144,12 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	/// TRUE, если броневая плита снята.
 	var/casing_open = FALSE
 
+// Три типа ради совместимости со старыми картами: секции одинаковые, их место в блоке 2x2 не важно.
 /obj/machinery/submarine_reactor_section/left_end
-	name = "reactor left section"
 
 /obj/machinery/submarine_reactor_section/middle
-	name = "reactor middle section"
 
 /obj/machinery/submarine_reactor_section/right_end
-	name = "reactor right section"
 
 /obj/machinery/submarine_reactor_section/Destroy()
 	if(core && core.sections)
@@ -180,10 +195,14 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	var/steam_pressure = 0
 	/// Уровень воды в сосуде, 0-100%.
 	var/coolant_level = 100
-	/// Фактическое положение стержней, 0-100%. Чем выше, тем больше тепловая мощность. Идёт к rods_target с конечной скоростью.
+	/// Среднее фактическое положение стержней, 0-100%. Считается из rod_pos, руками не менять. От него зависит тепловая мощность.
 	var/rods_pos = 0
-	/// Куда оператор послал стержни, 0-100%.
+	/// Средняя цель стержней, 0-100%. Считается из rod_target, руками не менять.
 	var/rods_target = 0
+	/// Фактическое положение каждого стержня, 0-100%. Идёт к цели с конечной скоростью.
+	var/list/rod_pos
+	/// Куда оператор послал каждый стержень, 0-100%.
+	var/list/rod_target
 	/// Клапан питательной воды, 0-100%. ЗАГЛУШКА до труб.
 	var/feedwater_valve = 0
 	/// Клапан пара, 0-100%. ЗАГЛУШКА для режима без порта: стравливает пар в никуда. С портом не действует.
@@ -211,13 +230,21 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	var/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/steam_port
 	/// Собственный пар сосуда для режима без порта (запечатанный сосуд).
 	var/datum/gas_mixture/vessel_air
+	/// Питательный насос на холодной ветке. Если есть, воду подаёт он, а клапан питательной воды-заглушка не работает.
+	var/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/feed_pump
 
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
 	GLOB.submarine_reactors += src
 	vessel_air = new /datum/gas_mixture(NSR_VESSEL_VOLUME, T0C + NSR_AMBIENT_TEMP)
+	rod_pos = list()
+	rod_target = list()
+	for(var/i in 1 to NSR_ROD_COUNT)
+		rod_pos += 0
+		rod_target += 0
 	find_sections()
 	find_steam_port()
+	find_feed_pump()
 	queue_icon_update()
 
 /obj/machinery/submarine_reactor_core/Destroy()
@@ -228,8 +255,31 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	if(steam_port)
 		steam_port.core = null
 		steam_port = null
+	if(feed_pump)
+		feed_pump.core = null
+		feed_pump = null
 	vessel_air = null
+	rod_pos = null
+	rod_target = null
 	return ..()
+
+/// Ищет питательный насос рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если насос найден.
+/obj/machinery/submarine_reactor_core/proc/find_feed_pump()
+	feed_pump = null
+	for(var/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/P in range(NSR_SECTION_LINK_RANGE, src))
+		if(P.reactor_id != reactor_id)
+			continue
+		feed_pump = P
+		P.core = src
+		break
+	return !!feed_pump
+
+/// Питательный насос вливает в сосуд воду (в молях). Возвращает, сколько моль влезло.
+/obj/machinery/submarine_reactor_core/proc/add_water(moles)
+	var/room = (100 - coolant_level) * NSR_MOLES_PER_PERCENT
+	var/added = clamp(moles, 0, room)
+	coolant_level = min(100, coolant_level + added / NSR_MOLES_PER_PERCENT)
+	return added
 
 /// Ищет паровой порт рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если порт найден.
 /obj/machinery/submarine_reactor_core/proc/find_steam_port()
@@ -285,11 +335,39 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 
 // --- Управление (вызывается консолью) ---
 
-/obj/machinery/submarine_reactor_core/proc/adjust_rods(amount)
+/// Двигает цель одного стержня (номер от 1 до NSR_ROD_COUNT) или всех сразу (номер 0).
+/obj/machinery/submarine_reactor_core/proc/adjust_rod(index, amount)
 	if(is_dead() || scrammed)
 		return FALSE
-	rods_target = clamp(rods_target + amount, 0, 100)
+	if(!isnum(index) || index < 0 || index > NSR_ROD_COUNT)
+		return FALSE
+	for(var/i in 1 to NSR_ROD_COUNT)
+		if(index == 0 || index == i)
+			rod_target[i] = clamp(rod_target[i] + amount, 0, 100)
+	update_rod_averages()
 	return TRUE
+
+/// Двигает цель всех стержней сразу.
+/obj/machinery/submarine_reactor_core/proc/adjust_rods(amount)
+	return adjust_rod(0, amount)
+
+/// Пересчитывает средние значения по стержням.
+/obj/machinery/submarine_reactor_core/proc/update_rod_averages()
+	var/pos_sum = 0
+	var/target_sum = 0
+	for(var/i in 1 to NSR_ROD_COUNT)
+		pos_sum += rod_pos[i]
+		target_sum += rod_target[i]
+	rods_pos = pos_sum / NSR_ROD_COUNT
+	rods_target = target_sum / NSR_ROD_COUNT
+
+/// Мгновенно обнуляет все стержни. Только для катастроф, в обычной работе стержни идут с конечной скоростью.
+/obj/machinery/submarine_reactor_core/proc/zero_rods()
+	for(var/i in 1 to NSR_ROD_COUNT)
+		rod_pos[i] = 0
+		rod_target[i] = 0
+	rods_pos = 0
+	rods_target = 0
 
 /obj/machinery/submarine_reactor_core/proc/adjust_feedwater(amount)
 	if(is_dead())
@@ -307,7 +385,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	if(is_dead())
 		return FALSE
 	scrammed = TRUE
-	rods_target = 0
+	for(var/i in 1 to NSR_ROD_COUNT)
+		rod_target[i] = 0
+	update_rod_averages()
 	playsound(src, 'sound/machines/buzz-two.ogg', 60, FALSE)
 	audible_message(SPAN_WARNING("\The [src] drops its control rods with a heavy clunk."))
 	queue_icon_update()
@@ -347,18 +427,20 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	update_alarm()
 	emit_radiation()
 
-/// Двигает стержни к цели с конечной скоростью. При SCRAM скорость выше, но не бесконечная.
+/// Двигает каждый стержень к его цели с конечной скоростью. При SCRAM скорость выше, но не бесконечная.
 /obj/machinery/submarine_reactor_core/proc/move_rods(dt)
-	if(rods_pos == rods_target)
-		return
-	var/old_pos = rods_pos
+	var/was_up = rods_pos > 0
 	var/step = (scrammed ? NSR_ROD_SPEED_SCRAM : NSR_ROD_SPEED) * dt
-	if(rods_pos < rods_target)
-		rods_pos = min(rods_pos + step, rods_target)
-	else
-		rods_pos = max(rods_pos - step, rods_target)
+	for(var/i in 1 to NSR_ROD_COUNT)
+		var/pos = rod_pos[i]
+		var/target = rod_target[i]
+		if(pos < target)
+			rod_pos[i] = min(pos + step, target)
+		else if(pos > target)
+			rod_pos[i] = max(pos - step, target)
+	update_rod_averages()
 	// Значок зависит только от того, стоят ли стержни в нуле, поэтому обновляем его не каждый тик.
-	if((old_pos > 0) != (rods_pos > 0))
+	if(was_up != (rods_pos > 0))
 		queue_icon_update()
 
 /// Один шаг физики. dt - длительность шага в секундах.
@@ -393,8 +475,9 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	core_temperature += (heat_in - heat_loss - boil_heat) * dt / heat_cap
 	core_temperature = max(core_temperature, NSR_AMBIENT_TEMP)
 
-	// Питательная вода (заглушка).
-	coolant_level = min(100, coolant_level + (feedwater_valve / 100) * NSR_FEEDWATER_MAX * dt)
+	// Питательная вода (заглушка). Если стоит питательный насос, воду подаёт он, и заглушка не работает.
+	if(!feed_pump)
+		coolant_level = min(100, coolant_level + (feedwater_valve / 100) * NSR_FEEDWATER_MAX * dt)
 
 	// Режим без порта: клапан пара стравливает часть пара в никуда (заглушка).
 	if(!steam_port)
@@ -434,8 +517,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /// Взрыв от давления. Рвёт сосуд и всё вокруг в радиусе, но батареи должны стоять дальше (вопрос карты).
 /obj/machinery/submarine_reactor_core/proc/rupture()
 	ruptured = TRUE
-	rods_pos = 0
-	rods_target = 0
+	zero_rods()
 	steam_pressure = 0
 	steam_flow = 0
 	queue_icon_update()
@@ -451,8 +533,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 /// Расплав от потери воды. Взрыва нет, но зона остаётся радиоактивной навсегда.
 /obj/machinery/submarine_reactor_core/proc/meltdown()
 	melted = TRUE
-	rods_pos = 0
-	rods_target = 0
+	zero_rods()
 	queue_icon_update()
 	visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
 	playsound(src, 'sound/machines/warning-buzzer.ogg', 100, FALSE)
@@ -523,24 +604,126 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	return ..()
 
 // ----------------------------------------------------------------------------
-// СТЕНДОВЫЙ СБРОС ПАРА (только для тестовой карты)
+// КОНДЕНСАТОР (этап 3б)
 // ----------------------------------------------------------------------------
 
-/// СТЕНДОВОЕ устройство: бак, который постоянно выпускает свой газ в никуда. Пока нет турбины и конденсатора,
-/// он принимает пар из труб, и реактор можно проверить в устойчивом режиме. В игровую карту не ставить.
-/obj/machinery/atmospherics/unary/tank/submarine_steam_dump
-	name = "steam dump"
-	desc = "A test-stand drain that swallows steam from the pipes. It stands in for the turbine and the condenser."
-	volume = NSR_DUMP_VOLUME
-	// Временно: серо-голубой цвет, чтобы отличать от парового порта и обычных баков.
-	color = "#6a8296"
+/// Конденсатор пара. Двухпортовое устройство на трубах: пар входит с тыла, остывший конденсат выходит вперёд (по dir).
+/// Холодит забортной водой, поэтому питания не требует. В Бэе по трубам ходят только газы, так что конденсат это тот же
+/// GAS_STEAM, только холодный. Позже перед ним встанет турбина.
+/obj/machinery/atmospherics/binary/submarine_condenser
+	name = "steam condenser"
+	desc = "Cools steam against the cold sea outside the hull and returns it as condensate. Steam enters at the back."
+	// Временно: спрайт насоса из стока, окрашенный в голубой. Заменить своим.
+	icon = 'icons/atmos/pump.dmi'
+	icon_state = "off"
+	color = "#6fb7d9"
+	level = ATOM_LEVEL_OVER_TILE
+	use_power = POWER_USE_OFF
+	uncreated_component_parts = null
+	connect_types = CONNECT_TYPE_REGULAR
 
-/obj/machinery/atmospherics/unary/tank/submarine_steam_dump/Process(wait)
+/obj/machinery/atmospherics/binary/submarine_condenser/Initialize()
 	. = ..()
+	air1.volume = NSR_CONDENSER_VOLUME
+	air2.volume = NSR_CONDENSER_VOLUME
+
+/obj/machinery/atmospherics/binary/submarine_condenser/update_underlays()
+	if(..())
+		underlays.Cut()
+		var/turf/T = get_turf(src)
+		if(!istype(T))
+			return
+		add_underlay(T, node1, turn(dir, -180))
+		add_underlay(T, node2, dir)
+
+/obj/machinery/atmospherics/binary/submarine_condenser/hide(i)
+	update_underlays()
+
+/obj/machinery/atmospherics/binary/submarine_condenser/Process(wait)
+	. = ..()
+	if(!network1 || !network2)
+		return
 	var/dt = 2
 	if(wait > 0)
 		dt = clamp(wait / 10, 0.5, 5)
-	air_contents.remove_ratio(min(1, NSR_DUMP_RATIO * dt))
+	var/datum/gas_mixture/taken = air1.remove_ratio(min(1, NSR_CONDENSER_RATIO * dt))
+	if(!taken)
+		return
+	// Тепло уходит в океан: на выходе газ имеет температуру забортной воды.
+	taken.temperature = NSR_CONDENSER_OUT_TEMP
+	air2.merge(taken)
+	network1.update = 1
+	network2.update = 1
+
+// ----------------------------------------------------------------------------
+// ПИТАТЕЛЬНЫЙ НАСОС (этап 3б)
+// ----------------------------------------------------------------------------
+
+/// Питательный насос. Стоит на холодной ветке рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE) и вливает конденсат
+/// в сосуд против давления пара. Бак насоса хранит запас конденсата. Нужно электропитание: без него насос стоит.
+/// Подача падает с ростом давления в сосуде и доходит до нуля при NSR_FEED_PUMP_HEAD.
+/obj/machinery/atmospherics/unary/tank/submarine_feed_pump
+	name = "reactor feedwater pump"
+	desc = "Pushes condensate back into the reactor vessel against the steam pressure. It needs electric power."
+	volume = NSR_FEED_TANK_VOLUME
+	// Временно: синий цвет, чтобы отличать от парового порта и обычных баков. Заменить своим спрайтом.
+	color = "#3f6f9f"
+	/// Метка реактора, в который качает насос. Должна совпадать с reactor_id ядра.
+	var/reactor_id = "main"
+	var/obj/machinery/submarine_reactor_core/core
+	/// Скорость насоса, 0-100%.
+	var/speed = 0
+	/// Подача воды в сосуд за последний тик, моль/с.
+	var/last_flow = 0
+	/// Состояние для пульта: RUNNING, STOPPED, NO POWER, NO SUCTION, NO HEAD, VESSEL FULL, NO REACTOR.
+	var/pump_state = "STOPPED"
+
+/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/Destroy()
+	if(core)
+		core.feed_pump = null
+	core = null
+	return ..()
+
+/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	// Насос приварен к сосуду: отвернуть его, как обычный бак, нельзя.
+	if(isWrench(tool))
+		to_chat(user, SPAN_WARNING("\The [src] is welded to the reactor vessel."))
+		return TRUE
+	return ..()
+
+/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/Process(wait)
+	. = ..()
+	last_flow = 0
+	if(speed <= 0)
+		pump_state = "STOPPED"
+		return
+	if(inoperable())
+		pump_state = "NO POWER"
+		return
+	if(!core || QDELETED(core) || core.is_dead())
+		pump_state = "NO REACTOR"
+		return
+	use_power_oneoff(NSR_FEED_PUMP_POWER * speed / 100)
+	var/dt = 2
+	if(wait > 0)
+		dt = clamp(wait / 10, 0.5, 5)
+	// Чем выше давление в сосуде, тем слабее подача.
+	var/head_factor = clamp(1 - core.steam_pressure / NSR_FEED_PUMP_HEAD, 0, 1)
+	var/wanted = (speed / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
+	var/available = air_contents.get_gas(GAS_STEAM)
+	if(head_factor <= 0)
+		pump_state = "NO HEAD"
+		return
+	if(available <= 0)
+		pump_state = "NO SUCTION"
+		return
+	var/added = core.add_water(min(wanted, available))
+	if(added <= 0)
+		pump_state = "VESSEL FULL"
+		return
+	air_contents.adjust_gas(GAS_STEAM, -added)
+	last_flow = added / dt
+	pump_state = "RUNNING"
 	if(network)
 		network.update = 1
 
@@ -623,12 +806,24 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	else if(R.coolant_level < NSR_COOLANT_WARN)
 		data["coolantClass"] = "average"
 	data["rods"] = round(R.rods_pos, 0.1)
+	var/list/rod_list = list()
+	for(var/i in 1 to NSR_ROD_COUNT)
+		rod_list += list(list("n" = i, "pos" = round(R.rod_pos[i], 0.1), "target" = R.rod_target[i], "moving" = abs(R.rod_pos[i] - R.rod_target[i]) >= 0.5, "locked" = R.scrammed))
+	data["rodList"] = rod_list
 	data["rodsTarget"] = R.rods_target
 	data["rodsMoving"] = abs(R.rods_pos - R.rods_target) >= 0.5
 	data["feedwater"] = R.feedwater_valve
 	data["steamValve"] = R.steam_valve
 	data["steamFlow"] = round(R.steam_flow, 0.1)
 	data["hasPort"] = !!R.steam_port
+	data["hasPump"] = !!R.feed_pump
+	if(R.feed_pump)
+		var/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/pump = R.feed_pump
+		data["pumpSpeed"] = pump.speed
+		data["pumpState"] = pump.pump_state
+		data["pumpClass"] = (pump.pump_state == "RUNNING") ? "good" : ((pump.pump_state == "STOPPED") ? "average" : "bad")
+		data["pumpFlow"] = round(pump.last_flow, 0.1)
+		data["feedPressure"] = round(pump.air_contents.return_pressure() / NSR_KPA_PER_BAR, 0.1)
 	data["scrammed"] = R.scrammed
 	data["casingsOpen"] = R.count_open_casings()
 	data["casingsTotal"] = R.count_casings()
@@ -639,7 +834,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	// Обновляет окно, если оно уже открыто. Если окна нет, возвращает null.
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Reactor control panel", 540, 640)
+		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Reactor control panel", 540, 860)
 		ui.set_initial_data(data)
 		ui.open()
 		// Окно само обновляется каждый тик подсистемы NanoUI, пока открыто.
@@ -654,7 +849,8 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		if(found)
 			var/section_count = found.find_sections()
 			var/port_text = found.find_steam_port() ? "steam port connected" : "no steam port (sealed test vessel)"
-			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text]."))
+			var/pump_text = found.find_feed_pump() ? "feedwater pump connected" : "no feedwater pump (free water valve)"
+			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text]."))
 		else
 			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
 		return TOPIC_REFRESH
@@ -675,10 +871,26 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 				R.adjust_rods(NSR_ROD_STEP)
 		if("rods_down")
 			R.adjust_rods(-NSR_ROD_STEP)
-		if("feed_up")
-			R.adjust_feedwater(NSR_VALVE_STEP)
-		if("feed_down")
-			R.adjust_feedwater(-NSR_VALVE_STEP)
+		if("rod_move")
+			var/rod = text2num(href_list["rod"])
+			var/rod_amount = text2num(href_list["amount"])
+			if(isnull(rod) || !(rod_amount in list(-10, -1, 1, 10)))
+				return TOPIC_HANDLED
+			if(R.scrammed)
+				to_chat(user, SPAN_WARNING("The control rods are locked by SCRAM. Reset it first."))
+			else
+				R.adjust_rod(rod, rod_amount)
+		if("pump_move")
+			var/pump_amount = text2num(href_list["amount"])
+			if(!R.feed_pump)
+				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
+			else if(pump_amount in list(-10, -1, 1, 10))
+				R.feed_pump.speed = clamp(R.feed_pump.speed + pump_amount, 0, 100)
+		if("feed_up", "feed_down")
+			if(R.feed_pump)
+				to_chat(user, SPAN_WARNING("The vessel is fed by the pump, not by the valve."))
+			else
+				R.adjust_feedwater(action == "feed_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
 		if("steam_up", "steam_down")
 			if(R.steam_port)
 				to_chat(user, SPAN_WARNING("The steam line is controlled by the valves on the pipes, not from this panel."))

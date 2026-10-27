@@ -362,93 +362,133 @@
 "Za" = (
 /obj/machinery/submarine_reactor_section/left_end,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zb" = (
 /obj/machinery/submarine_reactor_core,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zc" = (
 /obj/machinery/computer/submarine_reactor_console,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zd" = (
 /obj/machinery/door/airlock,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Ze" = (
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zf" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zg" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 4
 	},
 /obj/machinery/meter,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
-"Zh" = (
-/obj/machinery/atmospherics/unary/tank/submarine_steam_dump{
-	dir = 8
-	},
-/turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zi" = (
 /obj/machinery/submarine_reactor_section/middle,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zj" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zk" = (
 /obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port{
-	dir = 1
+	dir = 4
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zl" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
-	dir = 6
+	dir = 10
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zm" = (
 /obj/machinery/submarine_reactor_section/right_end,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zn" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zo" = (
 /obj/item/wrench,
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zp" = (
 /obj/machinery/atmospherics/valve/open{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
 "Zq" = (
 /turf/simulated/wall,
-/area/reactor_test)
+/area/constructionsite)
 "Zr" = (
-/obj/item/paper{
-	info = "Reactor test lab.<br><br>This room: the reactor control panel. Click it, raise the control rods (they move slowly) and keep the feedwater valve open.<br><br>East, behind two doors: the reactor hall. Four sections in a row, the steam port above the core, a pipe with a manual valve, two gauges and a steam dump.<br><br>Close the valve with the rods up and the vessel will burst in a few minutes. Stay away from it.<br><br>A wrench lies in the hall: unbolt an armour plate and the radiation grows fourfold.<br><br>SCRAM drops the rods fast. It can be reset once the core has cooled.";
-	name = "reactor test notes"
+/obj/structure/sign{
+	icon_state = "atmosplaque";
+	name = "reactor test notes";
+	desc = "Reactor test lab, control room. Open the reactor panel (the console on the north wall). Raise the control rods one by one, they move slowly. Set the feedwater pump to about 100 percent, the pump needs power. The reactor is the 2x2 block in the hall to the east, behind two doors. To test a blackout, switch off the main breaker of the APC at the west end of the start hall, the feedwater pump stops and the core starts to dry out. SCRAM drops the rods fast. It can be reset once the core has cooled."
+	},
+/turf/simulated/wall,
+/area/constructionsite)
+"Zs" = (
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/machinery/power/apc{
+	dir = 8;
+	locked = 0;
+	name = "west bump";
+	pixel_x = -24
 	},
 /turf/simulated/floor/tiled,
-/area/reactor_test)
+/area/constructionsite)
+"Zt" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 9
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Zu" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Zv" = (
+/obj/machinery/atmospherics/binary/submarine_condenser{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Zw" = (
+/obj/machinery/atmospherics/unary/tank/submarine_feed_pump{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Zy" = (
+/obj/structure/sign{
+	icon_state = "radiation";
+	name = "reactor hall notes";
+	desc = "Reactor hall. Core and three sections form a 2x2 block. Steam leaves through the port east of the core, passes a gauge and a manual valve to the condenser, and the cold water returns along the south line through a second gauge to the feedwater pump. Close the valve with the rods up and the vessel will burst in a few minutes, stay away from it. A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold."
+	},
+/turf/simulated/wall,
+/area/constructionsite)
 
 (1,1,1) = {"
 OC
@@ -1083,7 +1123,7 @@ HH
 xL
 xL
 Di
-ST
+Zs
 gH
 fa
 mZ
@@ -1583,12 +1623,12 @@ OC
 OC
 OC
 OC
-Zq
-Ze
-Ze
-Ze
-Ze
 Zr
+Ze
+Ze
+Ze
+Ze
+Ze
 Ze
 Ze
 Zq
@@ -2062,8 +2102,8 @@ Zq
 Zj
 Ze
 Ze
-Ze
 Za
+Zi
 Ze
 Ze
 Ze
@@ -2095,9 +2135,9 @@ OC
 Zq
 Ze
 Ze
-Zl
-Zk
+Ze
 Zb
+Zm
 Ze
 Ze
 Ze
@@ -2129,9 +2169,9 @@ OC
 Zq
 Ze
 Ze
-Zf
 Ze
-Zi
+Zk
+Ze
 Ze
 Ze
 Ze
@@ -2163,11 +2203,11 @@ OC
 Zq
 Ze
 Ze
-Zg
 Ze
-Zm
+Zf
 Ze
 Ze
+Zw
 Ze
 Ze
 Zq
@@ -2194,14 +2234,14 @@ OC
 OC
 OC
 OC
-Zq
+Zy
+Ze
+Ze
+Ze
+Zg
 Ze
 Ze
 Zf
-Ze
-Ze
-Ze
-Ze
 Ze
 Ze
 Zq
@@ -2231,11 +2271,11 @@ OC
 Zq
 Ze
 Ze
+Ze
 Zp
 Ze
 Ze
-Ze
-Ze
+Zf
 Ze
 Ze
 Zq
@@ -2265,11 +2305,11 @@ OC
 Zq
 Zj
 Ze
+Ze
 Zf
 Ze
 Ze
-Ze
-Ze
+Zg
 Ze
 Zn
 Zq
@@ -2299,11 +2339,11 @@ OC
 Zq
 Ze
 Ze
-Zg
+Ze
+Zf
 Ze
 Ze
-Ze
-Ze
+Zf
 Ze
 Ze
 Zq
@@ -2333,11 +2373,11 @@ OC
 Zq
 Ze
 Ze
-Zf
 Ze
-Ze
-Ze
-Ze
+Zl
+Zu
+Zv
+Zt
 Ze
 Ze
 Zq
@@ -2367,7 +2407,7 @@ OC
 Zq
 Ze
 Ze
-Zh
+Ze
 Ze
 Ze
 Ze

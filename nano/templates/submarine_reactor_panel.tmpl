@@ -88,6 +88,19 @@
 		{{/if}}
 	</div>
 </div>
+<div class="item">
+	<div class="itemLabel">
+		Feedwater pump:
+	</div>
+	<div class="itemContent">
+		{{if data.hasPump}}
+			<span class='{{:data.pumpClass}}'><b>{{:data.pumpState}}</b></span>
+			, {{:data.pumpFlow}} mol/s, feed line {{:data.feedPressure}} bar
+		{{else}}
+			<span class='average'>none, free water valve</span>
+		{{/if}}
+	</div>
+</div>
 
 <h3>Controls</h3>
 {{if data.dead}}
@@ -97,22 +110,63 @@
 {{else}}
 <div class="item">
 	<div class="itemLabel">
-		Control rods:
+		All rods:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.rods, 0, 100, 'good')}}
 		<div class="statusValue">
 			{{:data.rods}} %
 			{{if data.rodsMoving}}
-				<span class='average'>moving to {{:data.rodsTarget}} %</span>
+				<span class='average'>average target {{:data.rodsTarget}} %</span>
 			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('Lower -10', 'triangle-1-s', {'action' : 'rods_down'}, (data.rodsTarget > 0) ? null : 'disabled')}}
-			{{:helper.link('Raise +10', 'triangle-1-n', {'action' : 'rods_up'}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+			{{:helper.link('Lower all -10', 'triangle-1-s', {'action' : 'rods_down'}, (data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('Raise all +10', 'triangle-1-n', {'action' : 'rods_up'}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
 		</div>
 	</div>
 </div>
+{{for data.rodList}}
+<div class="item">
+	<div class="itemLabel">
+		Rod {{:value.n}}:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(value.pos, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:value.pos}} %
+			{{if value.moving}}
+				<span class='average'>moving to {{:value.target}} %</span>
+			{{/if}}
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -10}, (value.target > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -1}, (value.target > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (value.locked || value.target >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (value.locked || value.target >= 100) ? 'disabled' : null)}}
+		</div>
+	</div>
+</div>
+{{/for}}
+{{if data.hasPump}}
+<div class="item">
+	<div class="itemLabel">
+		Feedwater pump:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.pumpSpeed, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.pumpSpeed}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (data.pumpSpeed > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'pump_move', 'amount' : -1}, (data.pumpSpeed > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'pump_move', 'amount' : 1}, (data.pumpSpeed < 100) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'pump_move', 'amount' : 10}, (data.pumpSpeed < 100) ? null : 'disabled')}}
+		</div>
+	</div>
+</div>
+{{else}}
 <div class="item">
 	<div class="itemLabel">
 		Feedwater valve:
@@ -128,6 +182,7 @@
 		</div>
 	</div>
 </div>
+{{/if}}
 {{if !data.hasPort}}
 <div class="item">
 	<div class="itemLabel">
