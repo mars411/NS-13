@@ -121,8 +121,10 @@
 			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('Lower all -10', 'triangle-1-s', {'action' : 'rods_down'}, (data.rodsTarget > 0) ? null : 'disabled')}}
-			{{:helper.link('Raise all +10', 'triangle-1-n', {'action' : 'rods_up'}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+			{{:helper.link('-10', null, {'action' : 'rods_move', 'amount' : -10}, (data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rods_move', 'amount' : -1}, (data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rods_move', 'amount' : 1}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rods_move', 'amount' : 10}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
 		</div>
 	</div>
 </div>

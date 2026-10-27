@@ -106,7 +106,6 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 
 // Управление и прочее
 #define NSR_ROD_COUNT             4      // число стержней, у каждого свой привод
-#define NSR_ROD_STEP              10     // шаг цели стержней на одно нажатие, процентов
 #define NSR_ROD_SPEED             2      // ход стержней, процентов в секунду: шаг в 10% занимает 5 секунд
 #define NSR_ROD_SPEED_SCRAM       25     // ход стержней при SCRAM, процентов в секунду: полный ход за 4 секунды
 #define NSR_VALVE_STEP            10     // шаг клапанов, процентов
@@ -889,13 +888,14 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 		return TOPIC_REFRESH
 
 	switch(action)
-		if("rods_up")
+		if("rods_move")
+			var/rods_amount = text2num(href_list["amount"])
+			if(!(rods_amount in list(-10, -1, 1, 10)))
+				return TOPIC_HANDLED
 			if(R.scrammed)
 				to_chat(user, SPAN_WARNING("The control rods are locked by SCRAM. Reset it first."))
 			else
-				R.adjust_rods(NSR_ROD_STEP)
-		if("rods_down")
-			R.adjust_rods(-NSR_ROD_STEP)
+				R.adjust_rods(rods_amount)
 		if("rod_move")
 			var/rod = text2num(href_list["rod"])
 			var/rod_amount = text2num(href_list["amount"])
