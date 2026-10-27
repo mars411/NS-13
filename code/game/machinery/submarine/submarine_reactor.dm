@@ -51,6 +51,7 @@
 */
 
 GLOBAL_LIST_EMPTY(submarine_reactors)
+GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 
 // ----------------------------------------------------------------------------
 // ЧЕРНОВЫЕ ЧИСЛА [TBD]
@@ -497,12 +498,27 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 		new_level = 2
 
 	if(new_level > alarm_level)
-		playsound(src, 'sound/machines/buzz-two.ogg', 60, FALSE)
-		audible_message(SPAN_WARNING("\The [src] emits a warning tone."))
+		sound_alarm('sound/machines/buzz-two.ogg', 60, TRUE)
 	if(new_level >= 2 && world.time >= next_alarm_time)
-		playsound(src, 'sound/machines/warning-buzzer.ogg', 70, FALSE)
+		sound_alarm('sound/machines/warning-buzzer.ogg', 70)
 		next_alarm_time = world.time + NSR_ALARM_REPEAT
 	alarm_level = new_level
+
+/// Сигнал тревоги звучит на пультах БЩУ этого реактора, а не у самого реактора.
+/// Если у реактора нет ни одного пульта, сигнал звучит у ядра, чтобы авария не прошла молча.
+/obj/machinery/submarine_reactor_core/proc/sound_alarm(alarm_sound, volume, announce = FALSE)
+	var/heard = FALSE
+	for(var/obj/machinery/computer/submarine_reactor_console/C in GLOB.submarine_reactor_consoles)
+		if(QDELETED(C) || C.reactor_id != reactor_id)
+			continue
+		heard = TRUE
+		playsound(C, alarm_sound, volume, FALSE)
+		if(announce)
+			C.audible_message(SPAN_WARNING("\The [C] emits a warning tone."))
+	if(!heard)
+		playsound(src, alarm_sound, volume, FALSE)
+		if(announce)
+			audible_message(SPAN_WARNING("\The [src] emits a warning tone."))
 
 /obj/machinery/submarine_reactor_core/proc/emit_radiation()
 	if(rods_pos <= 0)
@@ -536,7 +552,7 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	zero_rods()
 	queue_icon_update()
 	visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
-	playsound(src, 'sound/machines/warning-buzzer.ogg', 100, FALSE)
+	sound_alarm('sound/machines/warning-buzzer.ogg', 100)
 
 // --- Текст для пульта ---
 
@@ -753,6 +769,15 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 	/// Метка реактора, которым управляет пульт. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/reactor
+
+/obj/machinery/computer/submarine_reactor_console/Initialize()
+	. = ..()
+	GLOB.submarine_reactor_consoles += src
+
+/obj/machinery/computer/submarine_reactor_console/Destroy()
+	GLOB.submarine_reactor_consoles -= src
+	reactor = null
+	return ..()
 
 /obj/machinery/computer/submarine_reactor_console/on_update_icon()
 	// Не вызываем родителя: он рисует экран и клавиатуру компьютера, которых у пульта нет.
