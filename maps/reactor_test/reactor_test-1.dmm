@@ -359,20 +359,45 @@
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
-"Ya" = (
-/obj/structure/sign/reactor_test/blackout,
-/turf/simulated/wall,
+"Tb" = (
+/obj/structure/table/standard,
+/obj/item/paper/reactor_test/blackout,
+/turf/simulated/floor/tiled,
 /area/constructionsite)
-"Yb" = (
-/obj/structure/sign/reactor_test/hatches,
-/turf/simulated/wall,
+"Tc" = (
+/obj/structure/table/standard,
+/obj/item/paper/reactor_test/control_room,
+/turf/simulated/floor/tiled,
 /area/constructionsite)
-"Yc" = (
-/obj/structure/sign/reactor_test/hall_warning,
-/turf/simulated/wall,
+"Th" = (
+/obj/structure/table/standard,
+/obj/item/paper/reactor_test/hatches,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Tw" = (
+/obj/structure/table/standard,
+/obj/item/paper/reactor_test/warning,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Ty" = (
+/obj/structure/table/standard,
+/obj/item/paper/reactor_test/hall,
+/turf/simulated/floor/tiled,
 /area/constructionsite)
 "Yh" = (
 /obj/machinery/door/submarine_hatch,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Yi" = (
+/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Yq" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 5
+	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Yw" = (
@@ -465,10 +490,6 @@
 "Zq" = (
 /turf/simulated/wall,
 /area/constructionsite)
-"Zr" = (
-/obj/structure/sign/reactor_test/control_room,
-/turf/simulated/wall,
-/area/constructionsite)
 "Zs" = (
 /obj/structure/cable{
 	d2 = 2;
@@ -501,14 +522,10 @@
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Zw" = (
-/obj/machinery/atmospherics/unary/tank/submarine_feed_pump{
-	dir = 4
+/obj/machinery/atmospherics/binary/submarine_feed_pump{
+	dir = 8
 	},
 /turf/simulated/floor/tiled,
-/area/constructionsite)
-"Zy" = (
-/obj/structure/sign/reactor_test/hall,
-/turf/simulated/wall,
 /area/constructionsite)
 
 (1,1,1) = {"
@@ -1644,8 +1661,8 @@ OC
 OC
 OC
 OC
-Zr
-Ze
+Zq
+Tc
 Ze
 Ze
 Ze
@@ -1712,8 +1729,8 @@ OC
 OC
 OC
 OC
-Ya
-Ze
+Zq
+Th
 Ze
 Ze
 Ze
@@ -1780,8 +1797,8 @@ OC
 OC
 OC
 OC
-Yb
-Ze
+Zq
+Tb
 Ze
 Ze
 Ze
@@ -2159,8 +2176,8 @@ Ze
 Ze
 Zb
 Zm
-Ze
-Ze
+Yi
+Yq
 Ze
 Ze
 Zq
@@ -2194,7 +2211,7 @@ Ze
 Zk
 Ze
 Ze
-Ze
+Zh
 Ze
 Ze
 Zq
@@ -2255,8 +2272,8 @@ OC
 OC
 OC
 OC
-Zy
-Ze
+Zq
+Ty
 Ze
 Ze
 Zg
@@ -2391,8 +2408,8 @@ OC
 OC
 OC
 OC
-Yc
-Ze
+Zq
+Tw
 Ze
 Ze
 Zl

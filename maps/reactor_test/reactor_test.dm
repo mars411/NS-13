@@ -4,7 +4,7 @@
 	#include "reactor_test_shuttles.dm"
 	#include "reactor_test_radio.dm"
 	#include "reactor_test_unit_testing.dm"
-	#include "reactor_test_signs.dm"
+	#include "reactor_test_guides.dm"
 
 	#include "reactor_test-1.dmm"
 	#include "reactor_test-2.dmm"

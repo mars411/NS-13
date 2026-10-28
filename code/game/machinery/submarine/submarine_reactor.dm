@@ -42,9 +42,14 @@
 	  тип соединения CONNECT_TYPE_WATER): к паровым трубам они не стыкуются. В Бэе по трубам ходят только газы, поэтому
 	  внутри вода это счёт в молях (холодный GAS_STEAM). Но при утечке холодный пар (ниже 35 °C) в зоне ZAS сам
 	  конденсируется в настоящие лужи, так что игрок видит и получает воду, а не пар.
-	- Питательный насос (/obj/machinery/atmospherics/unary/tank/submarine_feed_pump): стоит на холодной ветке рядом с ядром
-	  и вливает конденсат в сосуд против давления пара. Ему нужно электропитание: пропало, и охлаждения нет.
+	- Питательный насос (/obj/machinery/atmospherics/binary/submarine_feed_pump): двухпортовое устройство на холодной ветке.
+	  Всасывает с востока (по dir насос смотрит напорной стороной), качает воду по водяной трубе к входному порту.
+	  Подача падает с ростом давления в сосуде. Ему нужно электропитание: пропало, и охлаждения нет.
+	- Входной порт питательной воды (/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet): приварен к сосуду рядом
+	  с ядром, принимает воду из напорной трубы и сливает её в сосуд. Между насосом и портом ставится обычная водяная труба.
 	- Без насоса работает прежняя заглушка: клапан питательной воды берёт воду из ниоткуда.
+	- Водяная труба (submarine_water) только выпускает воду наружу, воздух помещения в неё не входит.
+	  Конденсатор пропускает дальше по холодной ветке только пар (воду), прочие газы остаются на паровой стороне.
 
 	НЕ РЕАЛИЗОВАНО НАМЕРЕННО (TBD в GDD, не подменяю догадками)
 	- Износ стержней СУЗ и их замена (скафандр, радиация при замене).
@@ -84,7 +89,10 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 #define NSR_CONDENSER_VOLUME      1000   // л, объём газа на каждой стороне конденсатора
 #define NSR_CONDENSER_RATIO       0.06   // доля газа на входе конденсатора, уходящая в конденсат за секунду
 #define NSR_CONDENSER_OUT_TEMP    (T0C + 30) // K, температура конденсата на выходе (забортная вода)
-#define NSR_FEED_TANK_VOLUME      3000   // л, бак питательного насоса (запас конденсата)
+#define NSR_FEED_TANK_VOLUME      3000   // л, всасывающая сторона питательного насоса (запас конденсата)
+#define NSR_FEED_INLET_VOLUME     1500   // л, входной порт питательной воды на сосуде
+#define NSR_FEED_LINE_MAX         10     // бар, при таком давлении в напорной трубе насос уже не качает (сосуд полон)
+#define NSR_WATER_DRAIN_MIN       0.25   // доля воды из участка открытой водяной трубы, которая вытекает за тик даже без давления (самотёк)
 #define NSR_FEED_PUMP_MAX         90     // моль/с при скорости 100% и нулевом давлении в сосуде
 #define NSR_FEED_PUMP_HEAD        100    // бар, при таком давлении в сосуде насос уже не может подавать воду
 #define NSR_FEED_PUMP_POWER       5000   // Вт при скорости 100%
@@ -234,7 +242,9 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	/// Собственный пар сосуда для режима без порта (запечатанный сосуд).
 	var/datum/gas_mixture/vessel_air
 	/// Питательный насос на холодной ветке. Если есть, воду подаёт он, а клапан питательной воды-заглушка не работает.
-	var/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/feed_pump
+	var/obj/machinery/atmospherics/binary/submarine_feed_pump/feed_pump
+	/// Входной порт питательной воды на сосуде. Принимает воду из напорной трубы насоса и сливает её в сосуд.
+	var/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet/feed_inlet
 
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
@@ -248,6 +258,7 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	find_sections()
 	find_steam_port()
 	find_feed_pump()
+	find_feed_inlet()
 	queue_icon_update()
 
 /obj/machinery/submarine_reactor_core/Destroy()
@@ -261,6 +272,9 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	if(feed_pump)
 		feed_pump.core = null
 		feed_pump = null
+	if(feed_inlet)
+		feed_inlet.core = null
+		feed_inlet = null
 	vessel_air = null
 	rod_pos = null
 	rod_target = null
@@ -269,13 +283,24 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 /// Ищет питательный насос рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если насос найден.
 /obj/machinery/submarine_reactor_core/proc/find_feed_pump()
 	feed_pump = null
-	for(var/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/P in range(NSR_SECTION_LINK_RANGE, src))
+	for(var/obj/machinery/atmospherics/binary/submarine_feed_pump/P in range(NSR_SECTION_LINK_RANGE, src))
 		if(P.reactor_id != reactor_id)
 			continue
 		feed_pump = P
 		P.core = src
 		break
 	return !!feed_pump
+
+/// Ищет входной порт питательной воды рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если порт найден.
+/obj/machinery/submarine_reactor_core/proc/find_feed_inlet()
+	feed_inlet = null
+	for(var/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet/P in range(NSR_SECTION_LINK_RANGE, src))
+		if(P.reactor_id != reactor_id)
+			continue
+		feed_inlet = P
+		P.core = src
+		break
+	return !!feed_inlet
 
 /// Питательный насос вливает в сосуд воду (в молях). Возвращает, сколько моль влезло.
 /obj/machinery/submarine_reactor_core/proc/add_water(moles)
@@ -625,7 +650,7 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 // ВОДЯНАЯ ТРУБА (этап 3б)
 // ----------------------------------------------------------------------------
 
-/// Труба для воды контура: от конденсатора до питательного насоса. Своего типа соединения (CONNECT_TYPE_WATER), поэтому
+/// Труба для воды контура: от конденсатора до питательного насоса и от насоса до входного порта. Своего типа соединения (CONNECT_TYPE_WATER), поэтому
 /// к паровым трубам не стыкуется. Внутри по-прежнему счёт в молях (холодный GAS_STEAM). Если труба лопнула или с неё сняли
 /// соседа, холодный пар вытекает в помещение и ниже 35 °C сам конденсируется в лужи (ZAS), то есть утечка воды это лужа.
 /// Свой спрайт подменит цвет: пока обычный спрайт трубы, окрашенный в голубой.
@@ -634,6 +659,35 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	desc = "A one meter section of pipe carrying water."
 	connect_types = CONNECT_TYPE_WATER
 	color = PIPE_COLOR_CYAN
+
+/// Утечка только наружу. Стоковая труба с открытым концом выравнивает газ с помещением в обе стороны и «вдыхает» воздух.
+/// В воде воздуха быть не должно, поэтому здесь из трубы может только вытекать: чем выше давление воды над давлением
+/// в помещении, тем больше уходит за тик, но не меньше NSR_WATER_DRAIN_MIN: вода под своим весом всё равно вытекает, труба опустеет.
+/// Воздух помещения труба не берёт никогда.
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water/Process()
+	if(!parent)
+		return ..()
+	if(!leaking)
+		return PROCESS_KILL
+	var/turf/T = loc
+	var/datum/gas_mixture/pipe_air = parent.air
+	if(!istype(T) || !pipe_air || pipe_air.volume <= 0)
+		return
+	var/pipe_pressure = pipe_air.return_pressure()
+	if(pipe_pressure > 0)
+		var/datum/gas_mixture/room_air = T.return_air()
+		var/out_ratio = clamp(1 - room_air.return_pressure() / pipe_pressure, NSR_WATER_DRAIN_MIN, 1)
+		if(out_ratio > 0)
+			var/datum/gas_mixture/leaked = pipe_air.remove_ratio(out_ratio * min(1, volume / pipe_air.volume))
+			if(leaked)
+				T.assume_air(leaked)
+			if(parent.network)
+				parent.network.update = 1
+	var/has_water = pipe_air.return_pressure() > 1 // кПа: шипение утечки пока в трубе остаётся заметное давление
+	if(!sound_token && has_water)
+		update_sound(1)
+	else if(sound_token && !has_water)
+		update_sound(0)
 
 // ----------------------------------------------------------------------------
 // КОНДЕНСАТОР (этап 3б)
@@ -678,12 +732,14 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	var/dt = 2
 	if(wait > 0)
 		dt = clamp(wait / 10, 0.5, 5)
-	var/datum/gas_mixture/taken = air1.remove_ratio(min(1, NSR_CONDENSER_RATIO * dt))
-	if(!taken)
+	// Конденсируется только пар. Прочие газы (воздух, попавший в паровую ветку) остаются на паровой стороне,
+	// так что в водяной ветке газов не бывает.
+	var/moved = air1.get_gas(GAS_STEAM) * min(1, NSR_CONDENSER_RATIO * dt)
+	if(moved <= 0)
 		return
-	// Тепло уходит в океан: на выходе газ имеет температуру забортной воды.
-	taken.temperature = NSR_CONDENSER_OUT_TEMP
-	air2.merge(taken)
+	air1.adjust_gas(GAS_STEAM, -moved)
+	// Тепло уходит в океан: на выходе вода имеет температуру забортной воды.
+	air2.adjust_gas_temp(GAS_STEAM, moved, NSR_CONDENSER_OUT_TEMP)
 	network1.update = 1
 	network2.update = 1
 
@@ -691,41 +747,61 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 // ПИТАТЕЛЬНЫЙ НАСОС (этап 3б)
 // ----------------------------------------------------------------------------
 
-/// Питательный насос. Стоит на водяной ветке рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE) и вливает воду
-/// в сосуд против давления пара. Бак насоса хранит запас воды. Нужно электропитание: без него насос стоит.
-/// Подача падает с ростом давления в сосуде и доходит до нуля при NSR_FEED_PUMP_HEAD.
-/obj/machinery/atmospherics/unary/tank/submarine_feed_pump
+/// Питательный насос. Двухпортовое устройство на водяной ветке: с тыла (против dir) всасывает воду, вперёд (по dir) качает её
+/// по водяной трубе к входному порту на сосуде. Стоит рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE).
+/// Подача падает с ростом давления в сосуде и доходит до нуля при NSR_FEED_PUMP_HEAD. Нужно электропитание: без него насос стоит.
+/// Питание берётся из щитка зоны через стандартную деталь (uncreated_component_parts по умолчанию), блэкаут его останавливает.
+/obj/machinery/atmospherics/binary/submarine_feed_pump
 	name = "reactor feedwater pump"
-	desc = "Pushes water back into the reactor vessel against the steam pressure. It needs electric power."
-	volume = NSR_FEED_TANK_VOLUME
+	desc = "Pushes water through the pipe to the reactor vessel against the steam pressure. It needs electric power."
+	// Временно: спрайт насоса из стока, окрашенный в синий. Заменить своим.
+	icon = 'icons/atmos/pump.dmi'
+	icon_state = "off"
+	color = "#3f6f9f"
+	level = ATOM_LEVEL_OVER_TILE
 	// Подключается только к водяным трубам.
 	connect_types = CONNECT_TYPE_WATER
-	// Временно: синий цвет, чтобы отличать от парового порта и обычных баков. Заменить своим спрайтом.
-	color = "#3f6f9f"
 	/// Метка реактора, в который качает насос. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/core
 	/// Скорость насоса, 0-100%.
 	var/speed = 0
-	/// Подача воды в сосуд за последний тик, моль/с.
+	/// Подача воды в напорную трубу за последний тик, моль/с.
 	var/last_flow = 0
-	/// Состояние для пульта: RUNNING, STOPPED, NO POWER, NO SUCTION, NO HEAD, VESSEL FULL, NO REACTOR.
+	/// Состояние для пульта: RUNNING, STOPPED, NO POWER, NOT PIPED, NO REACTOR, NO INLET, NO SUCTION, NO HEAD, VESSEL FULL.
 	var/pump_state = "STOPPED"
 
-/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/Destroy()
+/obj/machinery/atmospherics/binary/submarine_feed_pump/Initialize()
+	. = ..()
+	// Всасывающая сторона большая: это запас конденсата, из него насос берёт воду.
+	air1.volume = NSR_FEED_TANK_VOLUME
+
+/obj/machinery/atmospherics/binary/submarine_feed_pump/Destroy()
 	if(core)
 		core.feed_pump = null
 	core = null
 	return ..()
 
-/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/use_tool(obj/item/tool, mob/living/user, list/click_params)
-	// Насос приварен к сосуду: отвернуть его, как обычный бак, нельзя.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	// Насос закреплён на палубе: отвернуть его гаечным ключом нельзя.
 	if(isWrench(tool))
-		to_chat(user, SPAN_WARNING("\The [src] is welded to the reactor vessel."))
+		to_chat(user, SPAN_WARNING("\The [src] is bolted to the deck."))
 		return TRUE
 	return ..()
 
-/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/Process(wait)
+/obj/machinery/atmospherics/binary/submarine_feed_pump/update_underlays()
+	if(..())
+		underlays.Cut()
+		var/turf/T = get_turf(src)
+		if(!istype(T))
+			return
+		add_underlay(T, node1, turn(dir, -180))
+		add_underlay(T, node2, dir)
+
+/obj/machinery/atmospherics/binary/submarine_feed_pump/hide(i)
+	update_underlays()
+
+/obj/machinery/atmospherics/binary/submarine_feed_pump/Process(wait)
 	. = ..()
 	last_flow = 0
 	if(speed <= 0)
@@ -734,8 +810,14 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	if(inoperable())
 		pump_state = "NO POWER"
 		return
+	if(!network1 || !network2)
+		pump_state = "NOT PIPED"
+		return
 	if(!core || QDELETED(core) || core.is_dead())
 		pump_state = "NO REACTOR"
+		return
+	if(!core.feed_inlet)
+		pump_state = "NO INLET"
 		return
 	use_power_oneoff(NSR_FEED_PUMP_POWER * speed / 100)
 	var/dt = 2
@@ -743,21 +825,63 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 		dt = clamp(wait / 10, 0.5, 5)
 	// Чем выше давление в сосуде, тем слабее подача.
 	var/head_factor = clamp(1 - core.steam_pressure / NSR_FEED_PUMP_HEAD, 0, 1)
-	var/wanted = (speed / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
-	var/available = air_contents.get_gas(GAS_STEAM)
 	if(head_factor <= 0)
 		pump_state = "NO HEAD"
 		return
+	var/available = air1.get_gas(GAS_STEAM)
 	if(available <= 0)
 		pump_state = "NO SUCTION"
 		return
-	var/added = core.add_water(min(wanted, available))
-	if(added <= 0)
+	// Напорная труба не должна перегружаться: если сосуд не принимает воду, насос упирается в предел давления трубы.
+	if(air2.return_pressure() >= NSR_FEED_LINE_MAX * NSR_KPA_PER_BAR)
 		pump_state = "VESSEL FULL"
 		return
-	air_contents.adjust_gas(GAS_STEAM, -added)
-	last_flow = added / dt
+	var/wanted = (speed / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
+	var/moved = min(wanted, available)
+	air1.adjust_gas(GAS_STEAM, -moved)
+	air2.adjust_gas_temp(GAS_STEAM, moved, air1.temperature)
+	last_flow = moved / dt
 	pump_state = "RUNNING"
+	network1.update = 1
+	network2.update = 1
+
+/// Входной порт питательной воды. Приварен к сосуду рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE), смотрит (dir) на водяную трубу.
+/// Принимает воду из напорной трубы и сливает её в сосуд. Сколько сосуд готов принять, столько и уходит.
+/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet
+	name = "reactor feedwater inlet"
+	desc = "The feedwater inlet of the reactor vessel. The pump line ends here."
+	volume = NSR_FEED_INLET_VOLUME
+	connect_types = CONNECT_TYPE_WATER
+	// Временно: тёмно-голубой, чтобы отличать от парового порта и баков. Заменить своим спрайтом.
+	color = "#2f8fb0"
+	/// Метка реактора, в который сливается вода. Должна совпадать с reactor_id ядра.
+	var/reactor_id = "main"
+	var/obj/machinery/submarine_reactor_core/core
+
+/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet/Destroy()
+	if(core)
+		core.feed_inlet = null
+	core = null
+	return ..()
+
+/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	// Порт приварен к сосуду: отвернуть его, как обычный бак, нельзя.
+	if(isWrench(tool))
+		to_chat(user, SPAN_WARNING("\The [src] is welded to the reactor vessel."))
+		return TRUE
+	return ..()
+
+/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet/Process(wait)
+	. = ..()
+	if(!core || QDELETED(core) || core.is_dead())
+		return
+	var/available = air_contents.get_gas(GAS_STEAM)
+	if(available <= 0)
+		return
+	var/added = core.add_water(available)
+	if(added <= 0)
+		return
+	air_contents.adjust_gas(GAS_STEAM, -added)
 	if(network)
 		network.update = 1
 
@@ -861,12 +985,12 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	data["hasPort"] = !!R.steam_port
 	data["hasPump"] = !!R.feed_pump
 	if(R.feed_pump)
-		var/obj/machinery/atmospherics/unary/tank/submarine_feed_pump/pump = R.feed_pump
+		var/obj/machinery/atmospherics/binary/submarine_feed_pump/pump = R.feed_pump
 		data["pumpSpeed"] = pump.speed
 		data["pumpState"] = pump.pump_state
 		data["pumpClass"] = (pump.pump_state == "RUNNING") ? "good" : ((pump.pump_state == "STOPPED") ? "average" : "bad")
 		data["pumpFlow"] = round(pump.last_flow, 0.1)
-		data["feedPressure"] = round(pump.air_contents.return_pressure() / NSR_KPA_PER_BAR, 0.1)
+		data["feedPressure"] = round(pump.air2.return_pressure() / NSR_KPA_PER_BAR, 0.1)
 	data["scrammed"] = R.scrammed
 	data["casingsOpen"] = R.count_open_casings()
 	data["casingsTotal"] = R.count_casings()
@@ -893,7 +1017,8 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 			var/section_count = found.find_sections()
 			var/port_text = found.find_steam_port() ? "steam port connected" : "no steam port (sealed test vessel)"
 			var/pump_text = found.find_feed_pump() ? "feedwater pump connected" : "no feedwater pump (free water valve)"
-			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text]."))
+			var/inlet_text = found.find_feed_inlet() ? "feedwater inlet connected" : "no feedwater inlet"
+			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text], [inlet_text]."))
 		else
 			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
 		return TOPIC_REFRESH
