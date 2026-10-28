@@ -33,9 +33,11 @@ See the **Code of Conduct** ([/docs/CODE_OF_CONDUCT.md](/docs/CODE_OF_CONDUCT.md
 
 See the **Security Policy** ([/docs/SECURITY.md](/docs/SECURITY.md)) for how to tell us about vulnerabilities and other security problems.
 
-**Generative AI is not welcome here.**
+**AI disclosure.**
 \
-[![https://www.aihonestybadge.com](https://www.aihonestybadge.com/badges/no-ai.svg)](https://www.aihonestybadge.com)
+This is **NS-13**, a fork of Baystation12. The Baystation12 code and assets it is built on were written by people before this fork. The NS-13 additions (the submarine reactor, the pressure hatch, the reactor test map and their documentation) are written by an AI coding assistant (Claude, by Anthropic) while the project author directs the design, makes the decisions and tests every change in the game. Honesty label: [AI Assisted](https://www.aihonestybadge.com).
+\
+Upstream Baystation12 states that generative AI is not welcome in its repository, so do not send NS-13 code there.
 
 ---
 
