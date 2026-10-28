@@ -14,7 +14,7 @@
 	Все числа ЧЕРНОВЫЕ и лежат в блоке #define ниже.
 */
 
-#define HATCH_TURN_TIME   (8 SECONDS) // сколько крутить штурвал, прежде чем дверь начнёт двигаться
+#define HATCH_TURN_TIME   (4 SECONDS) // сколько крутить штурвал, прежде чем дверь начнёт двигаться
 #define HATCH_OPEN_SOUND  'sound/machines/blastdoor_open.ogg'
 #define HATCH_CLOSE_SOUND 'sound/machines/blastdoor_close.ogg'
 
