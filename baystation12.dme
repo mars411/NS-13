@@ -888,6 +888,7 @@
 #include "code\game\machinery\pipe\pipe_datums\pipe_datum_base.dm"
 #include "code\game\machinery\pipe\pipe_datums\pipe_datums.dm"
 #include "code\game\machinery\rotating_alarm\station_alerts.dm"
+#include "code\game\machinery\submarine\submarine_hatch.dm"
 #include "code\game\machinery\submarine\submarine_reactor.dm"
 #include "code\game\machinery\telecomms\broadcaster.dm"
 #include "code\game\machinery\telecomms\logbrowser.dm"
