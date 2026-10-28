@@ -359,15 +359,27 @@
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
-"Z1" = (
+"Ya" = (
+/obj/structure/sign/reactor_test/blackout,
+/turf/simulated/wall,
+/area/constructionsite)
+"Yb" = (
+/obj/structure/sign/reactor_test/hatches,
+/turf/simulated/wall,
+/area/constructionsite)
+"Yc" = (
+/obj/structure/sign/reactor_test/hall_warning,
+/turf/simulated/wall,
+/area/constructionsite)
+"Yh" = (
+/obj/machinery/door/submarine_hatch,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Yw" = (
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 4
 	},
 /obj/machinery/meter,
-/turf/simulated/floor/tiled,
-/area/constructionsite)
-"Z2" = (
-/obj/machinery/door/submarine_hatch,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Za" = (
@@ -454,11 +466,7 @@
 /turf/simulated/wall,
 /area/constructionsite)
 "Zr" = (
-/obj/structure/sign{
-	icon_state = "atmosplaque";
-	name = "reactor test notes";
-	desc = "Reactor test lab, control room. Open the reactor panel (the console on the north wall). Raise the control rods one by one, they move slowly. Set the feedwater pump to about 100 percent, the pump needs power. The reactor is the 2x2 block in the hall to the east, behind two pressure hatches. Click a hatch to turn its wheel: it takes four seconds and needs no power. To test a blackout, switch off the main breaker of the APC at the west end of the start hall, the feedwater pump stops and the core starts to dry out. SCRAM drops the rods fast. It can be reset once the core has cooled."
-	},
+/obj/structure/sign/reactor_test/control_room,
 /turf/simulated/wall,
 /area/constructionsite)
 "Zs" = (
@@ -499,11 +507,7 @@
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Zy" = (
-/obj/structure/sign{
-	icon_state = "radiation";
-	name = "reactor hall notes";
-	desc = "Reactor hall. Core and three sections form a 2x2 block. Steam leaves through the port east of the core, passes a gauge and a manual valve to the condenser, and the water returns along the cyan water pipes of the south line through a second gauge to the feedwater pump. Steam pipes and water pipes do not connect to each other. Close the valve with the rods up and the vessel will burst in a few minutes, stay away from it. A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold."
-	},
+/obj/structure/sign/reactor_test/hall,
 /turf/simulated/wall,
 /area/constructionsite)
 
@@ -1708,7 +1712,7 @@ OC
 OC
 OC
 OC
-Zq
+Ya
 Ze
 Ze
 Ze
@@ -1776,7 +1780,7 @@ OC
 OC
 OC
 OC
-Zq
+Yb
 Ze
 Ze
 Ze
@@ -1882,7 +1886,7 @@ Zq
 Zq
 Zq
 Zq
-Z2
+Yh
 Zq
 Zq
 Zq
@@ -1984,7 +1988,7 @@ Zq
 Zq
 Zq
 Zq
-Z2
+Yh
 Zq
 Zq
 Zq
@@ -2326,7 +2330,7 @@ Ze
 Zf
 Ze
 Ze
-Z1
+Yw
 Ze
 Zn
 Zq
@@ -2387,7 +2391,7 @@ OC
 OC
 OC
 OC
-Zq
+Yc
 Ze
 Ze
 Ze
