@@ -37,8 +37,11 @@
 	ЗАМКНУТЫЙ КОНТУР (этап 3б)
 	- Вода идёт по кругу: сосуд, пар, паровой порт, трубы, конденсатор, холодная ветка, питательный насос, сосуд.
 	  Моли не теряются: сколько воды ушло в пар, столько пара должно вернуться конденсатом.
-	- Конденсатор (/obj/machinery/atmospherics/binary/submarine_condenser): остужает пар забортной водой и отдаёт холодную ветку.
-	  В Бэе по трубам ходят только газы, поэтому конденсат это тот же GAS_STEAM, но холодный.
+	- Конденсатор (/obj/machinery/atmospherics/binary/submarine_condenser): остужает пар забортной водой и отдаёт воду
+	  в холодную ветку. Холодная ветка это ВОДЯНЫЕ ТРУБЫ (/obj/machinery/atmospherics/pipe/simple/visible/submarine_water,
+	  тип соединения CONNECT_TYPE_WATER): к паровым трубам они не стыкуются. В Бэе по трубам ходят только газы, поэтому
+	  внутри вода это счёт в молях (холодный GAS_STEAM). Но при утечке холодный пар (ниже 35 °C) в зоне ZAS сам
+	  конденсируется в настоящие лужи, так что игрок видит и получает воду, а не пар.
 	- Питательный насос (/obj/machinery/atmospherics/unary/tank/submarine_feed_pump): стоит на холодной ветке рядом с ядром
 	  и вливает конденсат в сосуд против давления пара. Ему нужно электропитание: пропало, и охлаждения нет.
 	- Без насоса работает прежняя заглушка: клапан питательной воды берёт воду из ниоткуда.
@@ -619,15 +622,28 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	return ..()
 
 // ----------------------------------------------------------------------------
+// ВОДЯНАЯ ТРУБА (этап 3б)
+// ----------------------------------------------------------------------------
+
+/// Труба для воды контура: от конденсатора до питательного насоса. Своего типа соединения (CONNECT_TYPE_WATER), поэтому
+/// к паровым трубам не стыкуется. Внутри по-прежнему счёт в молях (холодный GAS_STEAM). Если труба лопнула или с неё сняли
+/// соседа, холодный пар вытекает в помещение и ниже 35 °C сам конденсируется в лужи (ZAS), то есть утечка воды это лужа.
+/// Свой спрайт подменит цвет: пока обычный спрайт трубы, окрашенный в голубой.
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water
+	name = "water pipe"
+	desc = "A one meter section of pipe carrying water."
+	connect_types = CONNECT_TYPE_WATER
+	color = PIPE_COLOR_CYAN
+
+// ----------------------------------------------------------------------------
 // КОНДЕНСАТОР (этап 3б)
 // ----------------------------------------------------------------------------
 
-/// Конденсатор пара. Двухпортовое устройство на трубах: пар входит с тыла, остывший конденсат выходит вперёд (по dir).
-/// Холодит забортной водой, поэтому питания не требует. В Бэе по трубам ходят только газы, так что конденсат это тот же
-/// GAS_STEAM, только холодный. Позже перед ним встанет турбина.
+/// Конденсатор пара. Двухпортовое устройство на трубах: пар входит с тыла (паровая труба), вода выходит вперёд (по dir,
+/// водяная труба). Холодит забортной водой, поэтому питания не требует. Позже перед ним встанет турбина.
 /obj/machinery/atmospherics/binary/submarine_condenser
 	name = "steam condenser"
-	desc = "Cools steam against the cold sea outside the hull and returns it as condensate. Steam enters at the back."
+	desc = "Cools steam against the cold sea outside the hull and turns it back into water. Steam enters at the back."
 	// Временно: спрайт насоса из стока, окрашенный в голубой. Заменить своим.
 	icon = 'icons/atmos/pump.dmi'
 	icon_state = "off"
@@ -635,7 +651,8 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	level = ATOM_LEVEL_OVER_TILE
 	use_power = POWER_USE_OFF
 	uncreated_component_parts = null
-	connect_types = CONNECT_TYPE_REGULAR
+	// С одной стороны паровая труба, с другой водяная. Какая где, решает только карта: код этого не проверяет.
+	connect_types = CONNECT_TYPE_REGULAR | CONNECT_TYPE_WATER
 
 /obj/machinery/atmospherics/binary/submarine_condenser/Initialize()
 	. = ..()
@@ -674,13 +691,15 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 // ПИТАТЕЛЬНЫЙ НАСОС (этап 3б)
 // ----------------------------------------------------------------------------
 
-/// Питательный насос. Стоит на холодной ветке рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE) и вливает конденсат
-/// в сосуд против давления пара. Бак насоса хранит запас конденсата. Нужно электропитание: без него насос стоит.
+/// Питательный насос. Стоит на водяной ветке рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE) и вливает воду
+/// в сосуд против давления пара. Бак насоса хранит запас воды. Нужно электропитание: без него насос стоит.
 /// Подача падает с ростом давления в сосуде и доходит до нуля при NSR_FEED_PUMP_HEAD.
 /obj/machinery/atmospherics/unary/tank/submarine_feed_pump
 	name = "reactor feedwater pump"
-	desc = "Pushes condensate back into the reactor vessel against the steam pressure. It needs electric power."
+	desc = "Pushes water back into the reactor vessel against the steam pressure. It needs electric power."
 	volume = NSR_FEED_TANK_VOLUME
+	// Подключается только к водяным трубам.
+	connect_types = CONNECT_TYPE_WATER
 	// Временно: синий цвет, чтобы отличать от парового порта и обычных баков. Заменить своим спрайтом.
 	color = "#3f6f9f"
 	/// Метка реактора, в который качает насос. Должна совпадать с reactor_id ядра.

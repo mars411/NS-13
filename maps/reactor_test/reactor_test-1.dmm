@@ -359,6 +359,13 @@
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Z1" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 4
+	},
+/obj/machinery/meter,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Za" = (
 /obj/machinery/submarine_reactor_section/left_end,
 /turf/simulated/floor/tiled,
@@ -389,6 +396,12 @@
 	dir = 4
 	},
 /obj/machinery/meter,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Zh" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 4
+	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Zi" = (
@@ -458,7 +471,7 @@
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Zt" = (
-/obj/machinery/atmospherics/pipe/simple/visible{
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 9
 	},
 /turf/simulated/floor/tiled,
@@ -485,7 +498,7 @@
 /obj/structure/sign{
 	icon_state = "radiation";
 	name = "reactor hall notes";
-	desc = "Reactor hall. Core and three sections form a 2x2 block. Steam leaves through the port east of the core, passes a gauge and a manual valve to the condenser, and the cold water returns along the south line through a second gauge to the feedwater pump. Close the valve with the rods up and the vessel will burst in a few minutes, stay away from it. A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold."
+	desc = "Reactor hall. Core and three sections form a 2x2 block. Steam leaves through the port east of the core, passes a gauge and a manual valve to the condenser, and the water returns along the cyan water pipes of the south line through a second gauge to the feedwater pump. Steam pipes and water pipes do not connect to each other. Close the valve with the rods up and the vessel will burst in a few minutes, stay away from it. A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold."
 	},
 /turf/simulated/wall,
 /area/constructionsite)
@@ -2241,7 +2254,7 @@ Ze
 Zg
 Ze
 Ze
-Zf
+Zh
 Ze
 Ze
 Zq
@@ -2275,7 +2288,7 @@ Ze
 Zp
 Ze
 Ze
-Zf
+Zh
 Ze
 Ze
 Zq
@@ -2309,7 +2322,7 @@ Ze
 Zf
 Ze
 Ze
-Zg
+Z1
 Ze
 Zn
 Zq
@@ -2343,7 +2356,7 @@ Ze
 Zf
 Ze
 Ze
-Zf
+Zh
 Ze
 Ze
 Zq
