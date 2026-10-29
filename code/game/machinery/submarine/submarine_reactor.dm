@@ -40,8 +40,8 @@
 	- Конденсатор (/obj/machinery/atmospherics/binary/submarine_condenser): остужает пар забортной водой и отдаёт воду
 	  в холодную ветку. Холодная ветка это ВОДЯНЫЕ ТРУБЫ (/obj/machinery/atmospherics/pipe/simple/visible/submarine_water,
 	  тип соединения CONNECT_TYPE_WATER): к паровым трубам они не стыкуются. В Бэе по трубам ходят только газы, поэтому
-	  внутри вода это счёт в молях (холодный GAS_STEAM). Но при утечке холодный пар (ниже 35 °C) в зоне ZAS сам
-	  конденсируется в настоящие лужи, так что игрок видит и получает воду, а не пар.
+	  внутри вода это счёт в молях отдельного вещества Water (GAS_LIQUID_WATER, не пар): без облаков, не кипит, анализатор
+	  показывает Water. При утечке зона ZAS сразу конденсирует его в настоящие лужи, так что игрок видит и получает воду, а не пар.
 	- Питательный насос (/obj/machinery/atmospherics/binary/submarine_feed_pump): двухпортовое устройство на холодной ветке.
 	  Всасывает с востока (по dir насос смотрит напорной стороной), качает воду по водяной трубе к входному порту.
 	  Подача падает с ростом давления в сосуде. Ему нужно электропитание: пропало, и охлаждения нет.
@@ -86,6 +86,7 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 #define NSR_STEAM_VENT_COEF       0.05   // доля давления в секунду, уходящая при клапане пара 100%
 
 // Замкнутый контур (этап 3б)
+#define GAS_LIQUID_WATER          "liquid_water" // идентификатор вещества Water (вода контура). Не равен GAS_STEAM: у того идентификатор "water", имя Steam
 #define NSR_CONDENSER_VOLUME      1000   // л, объём газа на каждой стороне конденсатора
 #define NSR_CONDENSER_RATIO       0.06   // доля газа на входе конденсатора, уходящая в конденсат за секунду
 #define NSR_CONDENSER_OUT_TEMP    (T0C + 30) // K, температура конденсата на выходе (забортная вода)
@@ -647,12 +648,32 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	return ..()
 
 // ----------------------------------------------------------------------------
+// ВОДА КОНТУРА (ревизия 7)
+// ----------------------------------------------------------------------------
+
+/// Вода за конденсатором и в напорной трубе. В этом Бэе по трубам ходят только газы, жидкости в них нет, поэтому это
+/// отдельное газоподобное вещество, но именно ВОДА, а не пар: называется Water, не рисует облаков и не кипит.
+/// Конденсируется в зоне ZAS при любой температуре, так что любая утечка сразу даёт настоящую лужу.
+/// Объём и давление в трубах считаются по моли, как у всех газов (баланс контура тот же, что был с холодным паром).
+/singleton/xgm_gas/submarine_water
+	id = GAS_LIQUID_WATER
+	name = "Water"
+	specific_heat = 75 // J/(mol*K)
+	molar_mass = 0.018 // kg/mol
+	breathed_product = /datum/reagent/water
+	condensation_point = INFINITY
+	condensation_product = /datum/reagent/water
+	hidden_from_codex = TRUE
+	symbol_html = "H<sub>2</sub>O"
+	symbol = "H2O"
+
+// ----------------------------------------------------------------------------
 // ВОДЯНАЯ ТРУБА (этап 3б)
 // ----------------------------------------------------------------------------
 
 /// Труба для воды контура: от конденсатора до питательного насоса и от насоса до входного порта. Своего типа соединения (CONNECT_TYPE_WATER), поэтому
-/// к паровым трубам не стыкуется. Внутри по-прежнему счёт в молях (холодный GAS_STEAM). Если труба лопнула или с неё сняли
-/// соседа, холодный пар вытекает в помещение и ниже 35 °C сам конденсируется в лужи (ZAS), то есть утечка воды это лужа.
+/// к паровым трубам не стыкуется. Внутри счёт в молях вещества Water (GAS_LIQUID_WATER, не пар). Если труба лопнула или с неё сняли
+/// соседа, вода вытекает в помещение и сразу конденсируется в лужи (ZAS), то есть утечка воды это лужа, без облака пара.
 /// Свой спрайт подменит цвет: пока обычный спрайт трубы, окрашенный в голубой.
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water
 	name = "water pipe"
@@ -737,9 +758,10 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	var/moved = air1.get_gas(GAS_STEAM) * min(1, NSR_CONDENSER_RATIO * dt)
 	if(moved <= 0)
 		return
+	// Пар превращается в воду (другое вещество), моль в моль.
 	air1.adjust_gas(GAS_STEAM, -moved)
 	// Тепло уходит в океан: на выходе вода имеет температуру забортной воды.
-	air2.adjust_gas_temp(GAS_STEAM, moved, NSR_CONDENSER_OUT_TEMP)
+	air2.adjust_gas_temp(GAS_LIQUID_WATER, moved, NSR_CONDENSER_OUT_TEMP)
 	network1.update = 1
 	network2.update = 1
 
@@ -828,7 +850,7 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	if(head_factor <= 0)
 		pump_state = "NO HEAD"
 		return
-	var/available = air1.get_gas(GAS_STEAM)
+	var/available = air1.get_gas(GAS_LIQUID_WATER)
 	if(available <= 0)
 		pump_state = "NO SUCTION"
 		return
@@ -838,8 +860,8 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 		return
 	var/wanted = (speed / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
 	var/moved = min(wanted, available)
-	air1.adjust_gas(GAS_STEAM, -moved)
-	air2.adjust_gas_temp(GAS_STEAM, moved, air1.temperature)
+	air1.adjust_gas(GAS_LIQUID_WATER, -moved)
+	air2.adjust_gas_temp(GAS_LIQUID_WATER, moved, air1.temperature)
 	last_flow = moved / dt
 	pump_state = "RUNNING"
 	network1.update = 1
@@ -875,13 +897,13 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	. = ..()
 	if(!core || QDELETED(core) || core.is_dead())
 		return
-	var/available = air_contents.get_gas(GAS_STEAM)
+	var/available = air_contents.get_gas(GAS_LIQUID_WATER)
 	if(available <= 0)
 		return
 	var/added = core.add_water(available)
 	if(added <= 0)
 		return
-	air_contents.adjust_gas(GAS_STEAM, -added)
+	air_contents.adjust_gas(GAS_LIQUID_WATER, -added)
 	if(network)
 		network.update = 1
 
