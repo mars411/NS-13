@@ -324,6 +324,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Газ, в котором живёт пар реактора: газ порта на трубах или собственный газ запечатанного сосуда.
 /obj/machinery/submarine_reactor_core/proc/get_steam_air()
+	RETURN_TYPE(/datum/gas_mixture)
 	if(steam_port && !QDELETED(steam_port) && steam_port.air_contents)
 		return steam_port.air_contents
 	return vessel_air

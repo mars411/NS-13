@@ -55,6 +55,8 @@
 
 /// Любой предмет в руке это та же рука на штурвале.
 /obj/machinery/door/submarine_hatch/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	// Родителя намеренно не зовём: ломом, сваркой и прочим дверь не вскрыть, работает только штурвал.
+	SHOULD_CALL_PARENT(FALSE)
 	turn_wheel(user)
 	return TRUE
 
