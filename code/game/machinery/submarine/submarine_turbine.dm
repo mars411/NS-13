@@ -14,7 +14,11 @@
 	- Нагрузочный блок (/obj/machinery/power/submarine_load_bank): ТЕСТОВАЯ вещь, «потребитель на заказ». Нажатие рукой переключает
 	  нагрузку 0, 25, 50, 100, 150, 200 кВт, чтобы проверять регулятор, автомат и сброс нагрузки. Потом уберём или оставим как балласт.
 	- Пульт турбины (/obj/machinery/computer/submarine_turbine_console): NanoUI, шаблон nano/templates/submarine_turbine_panel.tmpl.
-	  Управляет заслонкой, регулятором, автоматом, стопорным клапаном и мощностью конденсатора.
+	  Управляет заслонкой, регулятором, автоматом, стопорным клапаном и мощностью конденсатора. Круглая шкала оборотов, число вибрации,
+	  описание в окне. Пульт можно таскать (pull), гаечный ключ закрепляет его.
+- Вибрация (ревизия 9): число в мм/с, растёт с оборотами, износом секций и разрушенной секцией. Тряски экрана нет (GDD, §2).
+  Выше NST_VIB_HIGH пульт предупреждает и турбина гремит, выше NST_VIB_DANGER секции начинают изнашиваться сами.
+- Гул: петля звука генератора, громкость по оборотам (стоковый sound_player).
 	- Конденсатор остался в submarine_reactor.dm, но теперь принимает пар «по ёмкости» (NSR_CONDENSER_CAPACITY, мощность cooling 0-100%).
 
 	КАК РАССТАВЛЯТЬ НА КАРТЕ
@@ -82,6 +86,18 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 // Предохранительный сброс пара
 #define NST_RELIEF_BAR            40     // бар, при таком давлении на входе клапан начинает сбрасывать пар в конденсатор
 #define NST_RELIEF_COEF           0.03   // моль/с на каждый кПа превышения
+
+// Вибрация, мм/с. Число на пульте, не тряска экрана. Растёт с оборотами, износом секций и разрушенной секцией.
+#define NST_VIB_RPM_REF           10000  // об/мин, при которых коэффициент оборотов равен 1 (дальше растёт с квадратом)
+#define NST_VIB_RPM               3      // мм/с у целой турбины на NST_VIB_RPM_REF
+#define NST_VIB_WEAR              6      // мм/с на каждую целую долю износа секции (на NST_VIB_RPM_REF)
+#define NST_VIB_WRECK             10     // мм/с от каждой разрушенной секции (на NST_VIB_RPM_REF)
+#define NST_VIB_OVER              2      // мм/с на каждые 1000 об/мин сверх NST_RPM_DAMAGE
+#define NST_VIB_LAG               3      // с, как быстро число догоняет расчёт
+#define NST_VIB_HIGH              4.5    // мм/с, предупреждение
+#define NST_VIB_DANGER            7.1    // мм/с, опасно: секции изнашиваются от тряски сами
+#define NST_VIB_MAX               12     // мм/с, конец шкалы на пульте
+#define NST_VIB_DAMAGE            0.004  // доля здоровья в секунду на каждую единицу (вибрация / NST_VIB_DANGER - 1)
 
 // Следование за нагрузкой: генератор отдаёт сети столько, сколько она потребляет
 #define NST_LOAD_MIN              2000   // Вт, подача при нулевом потреблении (чтобы было с чего начать)
@@ -434,6 +450,12 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/last_demand = 0
 	/// Последняя причина отключения автомата, для пульта.
 	var/trip_reason = ""
+	/// Вибрация, мм/с.
+	var/vibration = 0
+	/// Когда турбина в следующий раз пожалуется на тряску сообщением.
+	var/next_vib_message = 0
+	/// Петля звука работы (стоковый sound_player).
+	var/datum/sound_token/sound_token
 
 /obj/machinery/power/submarine_turbine_generator/Initialize()
 	. = ..()
@@ -441,6 +463,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	find_parts()
 
 /obj/machinery/power/submarine_turbine_generator/Destroy()
+	QDEL_NULL(sound_token)
 	GLOB.submarine_turbines -= src
 	hp = null
 	lp1 = null
@@ -549,13 +572,61 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 				weakest = S
 		if(weakest)
 			weakest.wreck()
+	return handle_wrecks(broken_before)
+
+/// Если с broken_before разрушились секции: сорванная лопасть уносит часть энергии вала, автомат срабатывает от удара. Возвращает TRUE, если так.
+/obj/machinery/power/submarine_turbine_generator/proc/handle_wrecks(broken_before)
 	var/wrecked = count_broken() - broken_before
 	if(wrecked > 0)
-		// Сорванная лопасть уносит часть энергии вала, а автомат срабатывает от удара.
 		shaft_energy *= NST_WRECK_ENERGY_KEEP ** wrecked
 		open_breaker("SECTION WRECKED")
 		return TRUE
 	return FALSE
+
+/// Пересчитывает вибрацию: растёт с оборотами, износом секций, разрушенной секцией и перебором оборотов; число догоняет расчёт плавно.
+/obj/machinery/power/submarine_turbine_generator/proc/update_vibration(dt)
+	var/factor = (rpm / NST_VIB_RPM_REF) ** 2
+	var/target = NST_VIB_RPM * factor
+	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
+		if(S.broken)
+			target += NST_VIB_WRECK * factor
+		else
+			target += NST_VIB_WEAR * (1 - S.health_frac) * factor
+	if(rpm > NST_RPM_DAMAGE)
+		target += (rpm - NST_RPM_DAMAGE) / 1000 * NST_VIB_OVER
+	vibration += (target - vibration) * min(1, dt / NST_VIB_LAG)
+	if(vibration < 0.05)
+		vibration = 0
+
+/// Сильная вибрация медленно разбивает секции сама (качает опоры): выше NST_VIB_DANGER, тем быстрее.
+/obj/machinery/power/submarine_turbine_generator/proc/apply_vibration_wear(dt)
+	if(vibration <= NST_VIB_DANGER)
+		return
+	var/broken_before = count_broken()
+	var/damage = (vibration / NST_VIB_DANGER - 1) * NST_VIB_DAMAGE * dt
+	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
+		S.take_overspeed_damage(damage)
+	handle_wrecks(broken_before)
+
+/// Предупреждение в зале: выше NST_VIB_HIGH турбина гремит на опорах.
+/obj/machinery/power/submarine_turbine_generator/proc/update_vibration_effects()
+	if(vibration < NST_VIB_HIGH || world.time < next_vib_message)
+		return
+	next_vib_message = world.time + 12 SECONDS
+	visible_message(SPAN_WARNING("The whole turbine rattles on its mounts."))
+	playsound(src, 'sound/machines/airlock_creaking.ogg', 30, TRUE)
+
+/// Гул турбины: петля звука, громкость по оборотам. Выключается, когда вал почти стоит.
+/obj/machinery/power/submarine_turbine_generator/proc/update_sound()
+	if(rpm < 300)
+		if(sound_token)
+			QDEL_NULL(sound_token)
+		return
+	var/volume = 8 + 24 * clamp(rpm / NST_VIB_RPM_REF, 0, 1.2)
+	if(!sound_token)
+		sound_token = GLOB.sound_player.PlayLoopingSound(src, "nst_turbine_\ref[src]", 'sound/machines/engine.ogg', volume = volume, range = 9, falloff = 3, prefer_mute = TRUE)
+	else
+		sound_token.SetVolume(volume)
 
 /obj/machinery/power/submarine_turbine_generator/Process(wait)
 	// Родительский Process() не зовём: у /obj/machinery он возвращает PROCESS_KILL и остановил бы обработку.
@@ -606,6 +677,11 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(rpm > NST_RPM_DAMAGE)
 		apply_overspeed(rpm, dt)
 		rpm = shaft_rpm()
+	// Вибрация, её последствия и гул.
+	update_vibration(dt)
+	apply_vibration_wear(dt)
+	update_vibration_effects()
+	update_sound()
 
 // ----------------------------------------------------------------------------
 // НАГРУЗОЧНЫЙ БЛОК (ТЕСТ)
@@ -657,7 +733,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 
 /obj/machinery/computer/submarine_turbine_console
 	name = "turbine control panel"
-	desc = "A heavy control panel with the admission valve, the governor, the generator breaker and the stop valve of the steam turbine."
+	desc = "A heavy control panel for the steam turbine: the admission (inlet) valve, the speed governor, the generator breaker, the stop valve and the condenser cooling. It is on a trolley frame: drag it with Ctrl+click, or bolt it to the deck with a wrench."
 	machine_name = "turbine control panel"
 	machine_desc = "Used to operate the steam turbine: admission valve, speed governor, generator breaker, stop valve and condenser cooling."
 	// Спрайт временный: блок управления из стокового Бэя, окрашенный. Заменить на свой.
@@ -666,6 +742,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	color = "#9fc4ff"
 	clicksound = "button"
 	atom_flags = ATOM_FLAG_NO_TEMP_CHANGE
+	// Как у пульта реактора: можно таскать (pull), гаечный ключ закрепляет. На карте лодки пульт ставится закреплённым.
+	anchored = FALSE
 	// Как у пульта реактора: не собирается из деталей, без экрана и клавиатуры.
 	construct_state = null
 	// ВРЕМЕННО: пульт работает без питания (до АКБ-контура), как пульт реактора. Убрать MACHINE_STAT_NOPOWER из этой строки вместе с ним.
@@ -682,6 +760,11 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /obj/machinery/computer/submarine_turbine_console/Destroy()
 	GLOB.submarine_turbine_consoles -= src
 	unit = null
+	return ..()
+
+/obj/machinery/computer/submarine_turbine_console/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	if(nsr_wrench_console(src, tool, user))
+		return TRUE
 	return ..()
 
 /obj/machinery/computer/submarine_turbine_console/on_update_icon()
@@ -737,6 +820,31 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		data["rpmClass"] = "good"
 	data["rpmWindowLow"] = NST_RPM_SYNC_LO
 	data["rpmWindowHigh"] = NST_RPM_SYNC_HI
+	// Круглая шкала: стрелка, засечка уставки регулятора и цветные зоны (рабочее окно, предупреждение, повреждения).
+	data["rpmAngle"] = nsr_gauge_angle(rpm_now / NST_RPM_EXPLODE)
+	data["govAngle"] = nsr_gauge_angle(G.governor_set / NST_RPM_EXPLODE)
+	var/green_start = nsr_gauge_len(NST_RPM_SYNC_LO / NST_RPM_EXPLODE)
+	var/amber_start = nsr_gauge_len(NST_RPM_SYNC_HI / NST_RPM_EXPLODE)
+	var/red_start = nsr_gauge_len(NST_RPM_DAMAGE / NST_RPM_EXPLODE)
+	data["gGreenStart"] = green_start
+	data["gGreenLen"] = round(amber_start - green_start, 0.1)
+	data["gAmberStart"] = amber_start
+	data["gAmberLen"] = round(red_start - amber_start, 0.1)
+	data["gRedStart"] = red_start
+	data["gRedLen"] = round(NSR_GAUGE_ARC - red_start, 0.1)
+	// Вибрация.
+	data["vib"] = round(G.vibration, 0.1)
+	data["vibMax"] = NST_VIB_MAX
+	data["vibHigh"] = NST_VIB_HIGH
+	data["vibDanger"] = NST_VIB_DANGER
+	data["vibClass"] = "good"
+	data["vibText"] = (G.vibration > 0) ? "normal" : "still"
+	if(G.vibration >= NST_VIB_DANGER)
+		data["vibClass"] = "bad"
+		data["vibText"] = "DANGER"
+	else if(G.vibration >= NST_VIB_HIGH)
+		data["vibClass"] = "average"
+		data["vibText"] = "HIGH"
 	data["admission"] = round(G.admission, 0.1)
 	data["effAdmission"] = G.stop_tripped ? 0 : round(G.admission, 0.1)
 	data["governorOn"] = G.governor_on
@@ -790,7 +898,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/list/data = build_ui_data()
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "submarine_turbine_panel.tmpl", "Turbine control panel", 540, 780)
+		ui = new(user, src, ui_key, "submarine_turbine_panel.tmpl", "Turbine control panel", 540, 960)
 		ui.set_initial_data(data)
 		ui.open()
 		ui.set_auto_update(1)

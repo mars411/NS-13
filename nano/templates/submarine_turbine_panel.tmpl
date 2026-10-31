@@ -1,3 +1,6 @@
+<div class="item">
+	<i>This panel runs the steam turbine. Steam comes in through the admission (inlet) valve and leaves through the condenser, whose cooling sets the exhaust side. The speed governor holds the shaft at its setting by moving the admission valve; switch it off to do that by hand. The generator breaker can be closed only while the needle is in the green band. The stop valve shuts the steam off in an emergency. Keep an eye on the vibration: worn or wrecked sections and overspeed make it climb.</i>
+</div>
 {{if !data.linked}}
 <div class='notice'>
 	<b>NO LINK TO TURBINE '{{:data.turbineId}}'</b><br>
@@ -23,12 +26,38 @@
 		Shaft speed:
 	</div>
 	<div class="itemContent">
-		{{:helper.displayBar(data.rpm, 0, data.rpmMax, data.rpmClass)}}
+		<svg width="170" height="142" viewBox="0 0 120 100">
+			<circle cx="60" cy="60" r="40" fill="none" stroke="#3a3a3a" stroke-width="9" stroke-dasharray="188.5 400" transform="rotate(135 60 60)"/>
+			<circle cx="60" cy="60" r="40" fill="none" stroke="#2f7d3a" stroke-width="9" stroke-dasharray="0 {{:data.gGreenStart}} {{:data.gGreenLen}} 400" transform="rotate(135 60 60)"/>
+			<circle cx="60" cy="60" r="40" fill="none" stroke="#a8841f" stroke-width="9" stroke-dasharray="0 {{:data.gAmberStart}} {{:data.gAmberLen}} 400" transform="rotate(135 60 60)"/>
+			<circle cx="60" cy="60" r="40" fill="none" stroke="#a63a2f" stroke-width="9" stroke-dasharray="0 {{:data.gRedStart}} {{:data.gRedLen}} 400" transform="rotate(135 60 60)"/>
+			{{if data.governorOn && data.governorOk}}
+				<line x1="60" y1="9" x2="60" y2="16" stroke="#f0c040" stroke-width="3" transform="rotate({{:data.govAngle}} 60 60)"/>
+			{{/if}}
+			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.rpmAngle}} 60 60)"/>
+			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
+			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.rpm}}</text>
+			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>
+		</svg>
+		<div>
+			Working window {{:data.rpmWindowLow}}-{{:data.rpmWindowHigh}} rpm (green), damage above red
+			{{if data.governorOn && data.governorOk}}
+				<br>Governor setting marked in yellow
+			{{/if}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Vibration:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.vib, 0, data.vibMax, data.vibClass)}}
 		<div class="statusValue">
-			{{:data.rpm}} rpm
+			{{:data.vib}} mm/s
 		</div>
 		<div style="clear: both; padding-top: 2px;">
-			Working window {{:data.rpmWindowLow}}-{{:data.rpmWindowHigh}} rpm
+			<span class='{{:data.vibClass}}'><b>{{:data.vibText}}</b></span>, warning at {{:data.vibHigh}}, danger at {{:data.vibDanger}} mm/s
 		</div>
 	</div>
 </div>
@@ -162,7 +191,7 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Admission valve (HP):
+		Admission (inlet) valve:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.effAdmission, 0, 100, 'good')}}
@@ -182,7 +211,7 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Condenser cooling:
+		Condenser cooling (exhaust):
 	</div>
 	<div class="itemContent">
 		{{if data.hasCondenser}}

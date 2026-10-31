@@ -1,3 +1,6 @@
+<div class="item">
+	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. SCRAM drops every rod at once and locks them until the core has cooled.</i>
+</div>
 {{if !data.linked}}
 <div class='notice'>
 	<b>NO LINK TO REACTOR UNIT '{{:data.reactorId}}'</b><br>
@@ -95,7 +98,7 @@
 	<div class="itemContent">
 		{{if data.hasPump}}
 			<span class='{{:data.pumpClass}}'><b>{{:data.pumpState}}</b></span>
-			, {{:data.pumpFlow}} mol/s, feed line {{:data.feedPressure}} bar
+			, rotor {{:data.pumpSpin}}, {{:data.pumpFlow}} mol/s, feed line {{:data.feedPressure}} bar
 		{{else}}
 			<span class='average'>none, free water valve</span>
 		{{/if}}
@@ -156,9 +159,21 @@
 		Feedwater pump:
 	</div>
 	<div class="itemContent">
+		<svg width="150" height="125" viewBox="0 0 120 100">
+			<circle cx="60" cy="60" r="40" fill="none" stroke="#3a3a3a" stroke-width="9" stroke-dasharray="188.5 400" transform="rotate(135 60 60)"/>
+			<circle cx="60" cy="60" r="40" fill="none" stroke-width="9" stroke-dasharray="{{:data.pumpFillLen}} 400" transform="rotate(135 60 60)" stroke="{{if data.pumpClass == 'good'}}#4caf50{{else}}{{if data.pumpClass == 'average'}}#d9a82b{{else}}#c0392b{{/if}}{{/if}}"/>
+			<line x1="60" y1="9" x2="60" y2="16" stroke="#f0c040" stroke-width="3" transform="rotate({{:data.pumpTargetAngle}} 60 60)"/>
+			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.pumpAngle}} 60 60)"/>
+			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
+			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.pumpRpm}}</text>
+			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>
+		</svg>
+		<div>
+			Rotor: <b>{{:data.pumpSpin}}</b>
+		</div>
 		{{:helper.displayBar(data.pumpSpeed, 0, 100, 'good')}}
 		<div class="statusValue">
-			{{:data.pumpSpeed}} %
+			set {{:data.pumpSpeed}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (data.pumpSpeed > 0) ? null : 'disabled')}}

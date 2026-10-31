@@ -45,6 +45,8 @@
 	- Питательный насос (/obj/machinery/atmospherics/binary/submarine_feed_pump): двухпортовое устройство на холодной ветке.
 	  Всасывает с востока (по dir насос смотрит напорной стороной), качает воду по водяной трубе к входному порту.
 	  Подача падает с ростом давления в сосуде. Ему нужно электропитание: пропало, и охлаждения нет.
+	  Обороты насоса идут к уставке с разгоном (10 с до полных) и торможением (около 17 с), без питания насос выбегает,
+	  но ещё какое-то время качает воду. На пульте у него круглая шкала оборотов, при работе он гудит (петля звука).
 	- Входной порт питательной воды (/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet): приварен к сосуду рядом
 	  с ядром, принимает воду из напорной трубы и сливает её в сосуд. Между насосом и портом ставится обычная водяная труба.
 	- Без насоса работает прежняя заглушка: клапан питательной воды берёт воду из ниоткуда.
@@ -58,8 +60,32 @@
 	Все числа ЧЕРНОВЫЕ. Они собраны в одном блоке ниже, меняйте только там.
 */
 
+// Круглые шкалы пультов (реактора и турбины): дуга в 270 градусов окружности радиуса 40, длина дуги ниже.
+#define NSR_GAUGE_ARC             188.5  // длина дуги круглой шкалы на пульте (270 градусов окружности радиуса 40)
+
 GLOBAL_LIST_EMPTY(submarine_reactors)
 GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
+
+/// Гаечный ключ закрепляет пульт на палубе и отпускает его. Отпущенный пульт можно таскать (Ctrl+клик, pull).
+/// Общая для пультов реактора и турбины. Возвращает TRUE, если инструмент был гаечным ключом (клик обработан).
+/proc/nsr_wrench_console(obj/machinery/computer/console, obj/item/tool, mob/user)
+	if(!isWrench(tool))
+		return FALSE
+	console.anchored = !console.anchored
+	playsound(console, 'sound/items/Ratchet.ogg', 50, TRUE)
+	if(console.anchored)
+		user.visible_message(SPAN_NOTICE("\The [user] bolts \the [console] to the deck."), SPAN_NOTICE("You bolt \the [console] to the deck."))
+	else
+		user.visible_message(SPAN_NOTICE("\The [user] unbolts \the [console] from the deck."), SPAN_NOTICE("You unbolt \the [console] from the deck. It can be dragged now (Ctrl+click)."))
+	return TRUE
+
+/// Длина закрашенной части круглой шкалы для доли frac (0-1). Шкала в пульте нарисована дугой в 270 градусов.
+/proc/nsr_gauge_len(frac)
+	return round(clamp(frac, 0, 1) * NSR_GAUGE_ARC, 0.1)
+
+/// Угол стрелки круглой шкалы для доли frac (0-1): от -135 (слева внизу) до +135 градусов (справа внизу).
+/proc/nsr_gauge_angle(frac)
+	return round(-135 + 270 * clamp(frac, 0, 1), 0.1)
 GLOBAL_LIST_EMPTY(submarine_condensers)
 
 // ----------------------------------------------------------------------------
@@ -98,6 +124,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_FEED_PUMP_MAX         90     // моль/с при скорости 100% и нулевом давлении в сосуде
 #define NSR_FEED_PUMP_HEAD        100    // бар, при таком давлении в сосуде насос уже не может подавать воду
 #define NSR_FEED_PUMP_POWER       5000   // Вт при скорости 100%
+#define NSR_FEED_PUMP_RPM_MAX     3000   // об/мин при скорости 100% (для показа на пульте)
+#define NSR_FEED_PUMP_SPINUP      10     // % скорости в секунду при разгоне: от нуля до 100% за 10 секунд
+#define NSR_FEED_PUMP_SPINDOWN    6      // % скорости в секунду при торможении и при выбеге без питания: около 17 секунд до остановки
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             150    // C
@@ -804,8 +833,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Метка реактора, в который качает насос. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/core
-	/// Скорость насоса, 0-100%.
+	/// Заданная скорость насоса (уставка), 0-100%.
 	var/speed = 0
+	/// Фактическая скорость, 0-100%: идёт к уставке с разгоном и торможением, при потере питания выбегает. Подача берётся от неё.
+	var/spin = 0
+	/// Петля звука работы насоса (стоковый sound_player).
+	var/datum/sound_token/sound_token
 	/// Подача воды в напорную трубу за последний тик, моль/с.
 	var/last_flow = 0
 	/// Состояние для пульта: RUNNING, STOPPED, NO POWER, NOT PIPED, NO REACTOR, NO INLET, NO SUCTION, NO HEAD, VESSEL FULL.
@@ -817,10 +850,39 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	air1.volume = NSR_FEED_TANK_VOLUME
 
 /obj/machinery/atmospherics/binary/submarine_feed_pump/Destroy()
+	QDEL_NULL(sound_token)
 	if(core)
 		core.feed_pump = null
 	core = null
 	return ..()
+
+/// Обороты насоса для пульта, об/мин.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/get_rpm()
+	return round(spin / 100 * NSR_FEED_PUMP_RPM_MAX)
+
+/// Что делает ротор насоса: для пульта.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/get_spin_text()
+	if(spin <= 0)
+		return "STOPPED"
+	if(inoperable())
+		return "COASTING DOWN"
+	if(spin < speed - 0.5)
+		return "SPINNING UP"
+	if(spin > speed + 0.5)
+		return "SPINNING DOWN"
+	return "AT SPEED"
+
+/// Гул насоса: петля звука с громкостью по оборотам. Выключается, когда насос встал.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/update_sound()
+	if(spin < 3)
+		if(sound_token)
+			QDEL_NULL(sound_token)
+		return
+	var/volume = 6 + 16 * spin / 100
+	if(!sound_token)
+		sound_token = GLOB.sound_player.PlayLoopingSound(src, "nsr_pump_\ref[src]", 'sound/machines/pump.ogg', volume = volume, range = 6, falloff = 3, prefer_mute = TRUE)
+	else
+		sound_token.SetVolume(volume)
 
 /obj/machinery/atmospherics/binary/submarine_feed_pump/use_tool(obj/item/tool, mob/living/user, list/click_params)
 	// Насос закреплён на палубе: отвернуть его гаечным ключом нельзя.
@@ -844,46 +906,54 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/atmospherics/binary/submarine_feed_pump/Process(wait)
 	. = ..()
 	last_flow = 0
-	if(speed <= 0)
-		pump_state = "STOPPED"
-		return
-	if(inoperable())
-		pump_state = "NO POWER"
-		return
-	if(!network1 || !network2)
-		pump_state = "NOT PIPED"
-		return
-	if(!core || QDELETED(core) || core.is_dead())
-		pump_state = "NO REACTOR"
-		return
-	if(!core.feed_inlet)
-		pump_state = "NO INLET"
-		return
-	use_power_oneoff(NSR_FEED_PUMP_POWER * speed / 100)
 	var/dt = 2
 	if(wait > 0)
 		dt = clamp(wait / 10, 0.5, 5)
+	// Ротор идёт к уставке с разгоном и торможением. Без питания уставка считается нулевой: насос выбегает, но ещё какое-то время качает.
+	var/powered = !inoperable()
+	var/goal = powered ? speed : 0
+	if(spin < goal)
+		spin = min(goal, spin + NSR_FEED_PUMP_SPINUP * dt)
+	else if(spin > goal)
+		spin = max(goal, spin - NSR_FEED_PUMP_SPINDOWN * dt)
+	if(spin < 0.5 && goal <= 0)
+		spin = 0
+	if(powered && spin > 0)
+		use_power_oneoff(NSR_FEED_PUMP_POWER * spin / 100)
+	pump_state = pump_water(dt)
+	// Если питания нет и насос должен был работать, пульт показывает причину, даже пока ротор ещё крутится.
+	if(!powered && speed > 0)
+		pump_state = "NO POWER"
+	update_sound()
+
+/// Гидравлика насоса за dt секунд при текущих оборотах. Возвращает состояние для пульта.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/pump_water(dt)
+	if(spin <= 0)
+		return "STOPPED"
+	if(!network1 || !network2)
+		return "NOT PIPED"
+	if(!core || QDELETED(core) || core.is_dead())
+		return "NO REACTOR"
+	if(!core.feed_inlet)
+		return "NO INLET"
 	// Чем выше давление в сосуде, тем слабее подача.
 	var/head_factor = clamp(1 - core.steam_pressure / NSR_FEED_PUMP_HEAD, 0, 1)
 	if(head_factor <= 0)
-		pump_state = "NO HEAD"
-		return
+		return "NO HEAD"
 	var/available = air1.get_gas(GAS_LIQUID_WATER)
 	if(available <= 0)
-		pump_state = "NO SUCTION"
-		return
+		return "NO SUCTION"
 	// Напорная труба не должна перегружаться: если сосуд не принимает воду, насос упирается в предел давления трубы.
 	if(air2.return_pressure() >= NSR_FEED_LINE_MAX * NSR_KPA_PER_BAR)
-		pump_state = "VESSEL FULL"
-		return
-	var/wanted = (speed / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
+		return "VESSEL FULL"
+	var/wanted = (spin / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
 	var/moved = min(wanted, available)
 	air1.adjust_gas(GAS_LIQUID_WATER, -moved)
 	air2.adjust_gas_temp(GAS_LIQUID_WATER, moved, air1.temperature)
 	last_flow = moved / dt
-	pump_state = "RUNNING"
 	network1.update = 1
 	network2.update = 1
+	return "RUNNING"
 
 /// Входной порт питательной воды. Приварен к сосуду рядом с ядром (в радиусе NSR_SECTION_LINK_RANGE), смотрит (dir) на водяную трубу.
 /// Принимает воду из напорной трубы и сливает её в сосуд. Сколько сосуд готов принять, столько и уходит.
@@ -931,7 +1001,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /obj/machinery/computer/submarine_reactor_console
 	name = "reactor control panel"
-	desc = "A heavy control panel with buttons for the control rods, the feedwater valve, the steam valve and the emergency SCRAM."
+	desc = "A heavy control panel with buttons for the control rods, the feedwater pump and the emergency SCRAM. The rods set how much steam the reactor makes, the pump keeps it supplied with water, and SCRAM drops every rod at once. It is on a trolley frame: drag it with Ctrl+click, or bolt it to the deck with a wrench."
 	machine_name = "reactor control panel"
 	machine_desc = "Used to operate the submarine reactor: control rods, feedwater valve, steam valve and emergency SCRAM."
 	// Спрайт временный: блок управления из стокового Бэя. Заменить на свой.
@@ -940,6 +1010,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Нажатия кнопок, а не стук по клавиатуре, и на пульт нельзя залезть как на компьютер.
 	clicksound = "button"
 	atom_flags = ATOM_FLAG_NO_TEMP_CHANGE
+	// Пульт можно таскать (pull). Гаечный ключ закрепляет его на палубе; на настоящей карте лодки пульт ставится закреплённым (anchored = TRUE в карте).
+	anchored = FALSE
 	// Пульт не собирается из деталей: для него нет платы-чертежа, а значит нет деталей «экран» и «клавиатура».
 	// Без этой строки Бэй считает пульт сломанным или без экрана и не даёт с ним взаимодействовать
 	// («It is missing a screen, making it hard to interact with»).
@@ -959,6 +1031,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/computer/submarine_reactor_console/Destroy()
 	GLOB.submarine_reactor_consoles -= src
 	reactor = null
+	return ..()
+
+/obj/machinery/computer/submarine_reactor_console/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	if(nsr_wrench_console(src, tool, user))
+		return TRUE
 	return ..()
 
 /obj/machinery/computer/submarine_reactor_console/on_update_icon()
@@ -1027,6 +1104,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(R.feed_pump)
 		var/obj/machinery/atmospherics/binary/submarine_feed_pump/pump = R.feed_pump
 		data["pumpSpeed"] = pump.speed
+		data["pumpRpm"] = pump.get_rpm()
+		data["pumpRpmMax"] = NSR_FEED_PUMP_RPM_MAX
+		data["pumpSpin"] = pump.get_spin_text()
+		data["pumpAngle"] = nsr_gauge_angle(pump.spin / 100)
+		data["pumpTargetAngle"] = nsr_gauge_angle(pump.speed / 100)
+		data["pumpFillLen"] = nsr_gauge_len(pump.spin / 100)
 		data["pumpState"] = pump.pump_state
 		data["pumpClass"] = (pump.pump_state == "RUNNING") ? "good" : ((pump.pump_state == "STOPPED") ? "average" : "bad")
 		data["pumpFlow"] = round(pump.last_flow, 0.1)
@@ -1041,7 +1124,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Обновляет окно, если оно уже открыто. Если окна нет, возвращает null.
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Reactor control panel", 540, 860)
+		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Reactor control panel", 540, 960)
 		ui.set_initial_data(data)
 		ui.open()
 		// Окно само обновляется каждый тик подсистемы NanoUI, пока открыто.
