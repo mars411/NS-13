@@ -1,0 +1,225 @@
+{{if !data.linked}}
+<div class='notice'>
+	<b>NO LINK TO TURBINE '{{:data.turbineId}}'</b><br>
+	Check that the turbine generator is built and has the same unit id.<br><br>
+	{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
+</div>
+{{else}}
+<div class="item">
+	<div class="itemLabel">
+		Unit:
+	</div>
+	<div class="itemContent">
+		<b>{{:data.turbineId}}</b>
+		{{if data.missing > 0}}
+			<span class='bad'>&nbsp;{{:data.missing}} of 3 sections NOT FOUND</span>
+		{{/if}}
+	</div>
+</div>
+
+<h3>Shaft and generator</h3>
+<div class="item">
+	<div class="itemLabel">
+		Shaft speed:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.rpm, 0, data.rpmMax, data.rpmClass)}}
+		<div class="statusValue">
+			{{:data.rpm}} rpm
+		</div>
+		<div style="clear: both; padding-top: 2px;">
+			Working window {{:data.rpmWindowLow}}-{{:data.rpmWindowHigh}} rpm
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Steam power on the shaft:
+	</div>
+	<div class="itemContent">
+		{{:data.steamKw}} kW
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Electric output:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.outputKw, 0, data.maxKw, 'good')}}
+		<div class="statusValue">
+			{{:data.outputKw}} kW
+		</div>
+		<div style="clear: both; padding-top: 2px;">
+			Grid asks {{:data.demandKw}} kW, generator rated {{:data.maxKw}} kW
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Generator breaker:
+	</div>
+	<div class="itemContent">
+		{{if data.breaker}}
+			<span class='good'><b>CLOSED</b></span>
+			{{:helper.link('Open breaker', 'unlocked', {'action' : 'breaker'})}}
+		{{else}}
+			<span class='average'><b>OPEN</b></span>
+			{{:helper.link('Close breaker', 'locked', {'action' : 'breaker'}, data.hasGrid ? null : 'disabled')}}
+			{{if data.tripReason}}
+				<span class='bad'>&nbsp;tripped: {{:data.tripReason}}</span>
+			{{/if}}
+			{{if !data.hasGrid}}
+				<span class='bad'>&nbsp;no grid cable</span>
+			{{/if}}
+		{{/if}}
+	</div>
+</div>
+
+<h3>Steam path</h3>
+<div class="item">
+	<div class="itemLabel">
+		Pressure, bar:
+	</div>
+	<div class="itemContent">
+		before the turbine <b>{{:data.p0}}</b>, after HP <b>{{:data.p1}}</b>, after LP 1 <b>{{:data.p2}}</b>, at the condenser <b>{{:data.p3}}</b>
+	</div>
+</div>
+{{for data.sections}}
+<div class="item">
+	<div class="itemLabel">
+		{{:value.name}} section:
+	</div>
+	<div class="itemContent">
+		{{if value.broken}}
+			<span class='bad'><b>WRECKED</b></span>
+		{{else}}
+			{{:helper.displayBar(value.health, 0, 100, value.class)}}
+			<div class="statusValue">
+				{{:value.health}} %
+			</div>
+			<div style="clear: both; padding-top: 2px;">
+				{{:value.flow}} mol/s, {{:value.kw}} kW
+			</div>
+		{{/if}}
+	</div>
+</div>
+{{/for}}
+<div class="item">
+	<div class="itemLabel">
+		Condenser:
+	</div>
+	<div class="itemContent">
+		{{if data.hasCondenser}}
+			takes {{:data.condenserFlow}} of {{:data.condenserMax}} mol/s
+		{{else}}
+			<span class='bad'>none connected</span>
+		{{/if}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Relief valve:
+	</div>
+	<div class="itemContent">
+		{{if data.hasRelief}}
+			<span class='{{:data.reliefClass}}'><b>{{:data.reliefState}}</b></span>
+			, opens at {{:data.reliefBar}} bar, dumping {{:data.reliefFlow}} mol/s
+		{{else}}
+			<span class='bad'>none connected, the reactor is protected by SCRAM only</span>
+		{{/if}}
+	</div>
+</div>
+
+<h3>Controls</h3>
+<div class="item">
+	<div class="itemLabel">
+		Speed governor:
+	</div>
+	<div class="itemContent">
+		{{if !data.governorOk}}
+			<span class='bad'><b>FAILED</b></span>
+		{{else}}
+			{{if data.governorOn}}
+				<span class='good'><b>ON</b></span>
+			{{else}}
+				<span class='average'><b>OFF, manual</b></span>
+			{{/if}}
+			{{:helper.link(data.governorOn ? 'Switch off' : 'Switch on', null, {'action' : 'gov_toggle'})}}
+		{{/if}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Governor setting:
+	</div>
+	<div class="itemContent">
+		<div class="statusValue">
+			{{:data.governorSet}} rpm
+		</div>
+		{{:helper.link('-500', null, {'action' : 'gov_set', 'amount' : -500})}}
+		{{:helper.link('+500', null, {'action' : 'gov_set', 'amount' : 500})}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Admission valve (HP):
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.effAdmission, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.effAdmission}} %
+			{{if data.stopTripped}}
+				<span class='bad'>stop valve shut</span>
+			{{/if}}
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'adm_move', 'amount' : -10}, (data.governorOn && data.governorOk) ? 'disabled' : null)}}
+			{{:helper.link('-1', null, {'action' : 'adm_move', 'amount' : -1}, (data.governorOn && data.governorOk) ? 'disabled' : null)}}
+			{{:helper.link('+1', null, {'action' : 'adm_move', 'amount' : 1}, (data.governorOn && data.governorOk) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'adm_move', 'amount' : 10}, (data.governorOn && data.governorOk) ? 'disabled' : null)}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Condenser cooling:
+	</div>
+	<div class="itemContent">
+		{{if data.hasCondenser}}
+			{{:helper.displayBar(data.cooling, 0, 100, 'good')}}
+			<div class="statusValue">
+				{{:data.cooling}} %
+			</div>
+			<div style="clear: both; padding-top: 4px;">
+				{{:helper.link('-10', null, {'action' : 'cool_move', 'amount' : -10}, (data.cooling > 0) ? null : 'disabled')}}
+				{{:helper.link('-1', null, {'action' : 'cool_move', 'amount' : -1}, (data.cooling > 0) ? null : 'disabled')}}
+				{{:helper.link('+1', null, {'action' : 'cool_move', 'amount' : 1}, (data.cooling < 100) ? null : 'disabled')}}
+				{{:helper.link('+10', null, {'action' : 'cool_move', 'amount' : 10}, (data.cooling < 100) ? null : 'disabled')}}
+			</div>
+		{{else}}
+			<span class='bad'>no condenser</span>
+		{{/if}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Emergency:
+	</div>
+	<div class="itemContent">
+		{{:helper.link('EMERGENCY STOP', 'alert', {'action' : 'stop_trip'}, data.stopTripped ? 'disabled' : null, 'redButton')}}
+		{{:helper.link('Reset stop valve', 'unlocked', {'action' : 'stop_reset'}, data.stopTripped ? null : 'disabled')}}
+		{{if data.stopTripped}}
+			<span class='bad'>&nbsp;STOP VALVE SHUT, reset below 6000 rpm</span>
+		{{/if}}
+	</div>
+</div>
+
+<div class="item">
+	<div class="itemLabel">
+		Link:
+	</div>
+	<div class="itemContent">
+		{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
+	</div>
+</div>
+{{/if}}

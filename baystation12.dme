@@ -890,6 +890,7 @@
 #include "code\game\machinery\rotating_alarm\station_alerts.dm"
 #include "code\game\machinery\submarine\submarine_hatch.dm"
 #include "code\game\machinery\submarine\submarine_reactor.dm"
+#include "code\game\machinery\submarine\submarine_turbine.dm"
 #include "code\game\machinery\telecomms\broadcaster.dm"
 #include "code\game\machinery\telecomms\logbrowser.dm"
 #include "code\game\machinery\telecomms\machine_interactions.dm"

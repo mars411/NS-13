@@ -60,6 +60,7 @@
 
 GLOBAL_LIST_EMPTY(submarine_reactors)
 GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
+GLOBAL_LIST_EMPTY(submarine_condensers)
 
 // ----------------------------------------------------------------------------
 // ЧЕРНОВЫЕ ЧИСЛА [TBD]
@@ -88,7 +89,7 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 // Замкнутый контур (этап 3б)
 #define GAS_LIQUID_WATER          "liquid_water" // идентификатор вещества Water (вода контура). Не равен GAS_STEAM: у того идентификатор "water", имя Steam
 #define NSR_CONDENSER_VOLUME      1000   // л, объём газа на каждой стороне конденсатора
-#define NSR_CONDENSER_RATIO       0.06   // доля газа на входе конденсатора, уходящая в конденсат за секунду
+#define NSR_CONDENSER_CAPACITY    60     // моль пара в секунду, которые конденсатор принимает при мощности 100% (реактор даёт около 50)
 #define NSR_CONDENSER_OUT_TEMP    (T0C + 30) // K, температура конденсата на выходе (забортная вода)
 #define NSR_FEED_TANK_VOLUME      3000   // л, всасывающая сторона питательного насоса (запас конденсата)
 #define NSR_FEED_INLET_VOLUME     1500   // л, входной порт питательной воды на сосуде
@@ -715,7 +716,9 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 // ----------------------------------------------------------------------------
 
 /// Конденсатор пара. Двухпортовое устройство на трубах: пар входит с тыла (паровая труба), вода выходит вперёд (по dir,
-/// водяная труба). Холодит забортной водой, поэтому питания не требует. Позже перед ним встанет турбина.
+/// водяная труба). Холодит забортной водой, поэтому питания не требует. Принимает не больше NSR_CONDENSER_CAPACITY моль пара
+/// в секунду при мощности cooling 100% (мощность задают с пульта турбины, метка turbine_id). Сколько пара он не успел принять,
+/// копится в трубах, и давление перед ним растёт. Конденсирует пар из ВСЕЙ паровой сети, а не только из своего объёма.
 /obj/machinery/atmospherics/binary/submarine_condenser
 	name = "steam condenser"
 	desc = "Cools steam against the cold sea outside the hull and turns it back into water. Steam enters at the back."
@@ -728,11 +731,22 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 	uncreated_component_parts = null
 	// С одной стороны паровая труба, с другой водяная. Какая где, решает только карта: код этого не проверяет.
 	connect_types = CONNECT_TYPE_REGULAR | CONNECT_TYPE_WATER
+	/// Метка турбины, пульт которой управляет этим конденсатором. Должна совпадать с turbine_id турбины.
+	var/turbine_id = "main"
+	/// Мощность охлаждения, 0-100%.
+	var/cooling = 100
+	/// Сколько пара принято за последний тик, моль/с.
+	var/last_flow = 0
 
 /obj/machinery/atmospherics/binary/submarine_condenser/Initialize()
 	. = ..()
 	air1.volume = NSR_CONDENSER_VOLUME
 	air2.volume = NSR_CONDENSER_VOLUME
+	GLOB.submarine_condensers += src
+
+/obj/machinery/atmospherics/binary/submarine_condenser/Destroy()
+	GLOB.submarine_condensers -= src
+	return ..()
 
 /obj/machinery/atmospherics/binary/submarine_condenser/update_underlays()
 	if(..())
@@ -748,6 +762,7 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 
 /obj/machinery/atmospherics/binary/submarine_condenser/Process(wait)
 	. = ..()
+	last_flow = 0
 	if(!network1 || !network2)
 		return
 	var/dt = 2
@@ -755,14 +770,16 @@ GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 		dt = clamp(wait / 10, 0.5, 5)
 	// Конденсируется только пар. Прочие газы (воздух, попавший в паровую ветку) остаются на паровой стороне,
 	// так что в водяной ветке газов не бывает.
-	var/moved = air1.get_gas(GAS_STEAM) * min(1, NSR_CONDENSER_RATIO * dt)
+	var/capacity = NSR_CONDENSER_CAPACITY * clamp(cooling, 0, 100) / 100 * dt
+	if(capacity <= 0)
+		return
+	// Пар берётся из всей паровой сети, а не только из объёма самого конденсатора: иначе он принимал бы лишь долю сети за такт.
+	var/moved = nst_network_remove_gas(network1, GAS_STEAM, capacity)
 	if(moved <= 0)
 		return
-	// Пар превращается в воду (другое вещество), моль в моль.
-	air1.adjust_gas(GAS_STEAM, -moved)
-	// Тепло уходит в океан: на выходе вода имеет температуру забортной воды.
+	// Пар превращается в воду (другое вещество), моль в моль. Тепло уходит в океан: на выходе вода имеет температуру забортной воды.
 	air2.adjust_gas_temp(GAS_LIQUID_WATER, moved, NSR_CONDENSER_OUT_TEMP)
-	network1.update = 1
+	last_flow = moved / dt
 	network2.update = 1
 
 // ----------------------------------------------------------------------------
