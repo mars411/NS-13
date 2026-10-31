@@ -35,7 +35,9 @@ See the **Security Policy** ([/docs/SECURITY.md](/docs/SECURITY.md)) for how to 
 
 **AI disclosure.**
 \
-This is **NS-13**, a fork of Baystation12. The Baystation12 code and assets it is built on were written by people before this fork. The NS-13 additions (the submarine reactor, the pressure hatch, the reactor test map and their documentation) are written by an AI coding assistant (Claude, by Anthropic) while the project author directs the design, makes the decisions and tests every change in the game. Honesty label: [AI Assisted](https://www.aihonestybadge.com).
+<a href="https://www.aihonestybadge.com"><img src="docs/ai-assisted-badge.png" alt="AI Assisted" width="226"></a>
+\
+This is **NS-13**, a fork of Baystation12. The Baystation12 code and assets it is built on were written by people before this fork. The NS-13 additions (the submarine reactor, the turbine, the pressure hatch, the reactor test map and their documentation) are written by an AI coding assistant (Claude, by Anthropic) while the project author directs the design, makes the decisions and tests every change in the game. Honesty label: [AI Assisted](https://www.aihonestybadge.com) (the badge above).
 \
 Upstream Baystation12 states that generative AI is not welcome in its repository, so do not send NS-13 code there.
 

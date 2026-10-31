@@ -57,7 +57,7 @@ A wrench lies on the floor: unbolt an armour plate and the radiation grows fourf
 	info = {"\[large\]\[b\]Turbine hall: start-up\[/b\]\[/large\]
 \[hr\]
 1. Bring the reactor up first: rods at about 40-60%, the feedwater pump running. The steam comes through the gap in the west wall.
-2. Click the turbine panel. Keep the speed governor ON at 7500 rpm: it opens the admission valve slowly by itself.
+2. Click a turbine panel (one stands next to the reactor panel in the control room, one here in the turbine hall). Keep the speed governor ON at 7500 rpm: it opens the admission valve slowly by itself.
 3. Watch the shaft speed. At 5000-10000 rpm click Close breaker: the generator now feeds the test load bank.
 4. Touch the load bank to change the load from 0 to 200 kW. The generator follows the load; the rods decide how much power the plant can make, about 2.4 kW per 1% of rods.
 5. The red relief valve dumps steam straight to the condenser above 40 bar. Touch it to lock it shut.
