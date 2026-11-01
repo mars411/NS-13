@@ -131,6 +131,19 @@
 			<div style="clear: both; padding-top: 2px;">
 				{{:value.flow}} mol/s, {{:value.kw}} kW
 			</div>
+			<div style="padding-top: 2px;">
+				{{if value.sensor}}
+					Blade rows (in steam order):
+					{{for value.rows}}
+						<span class='{{:value.c}}'>{{:value.p}}</span>
+					{{/for}}
+					{{if value.lost}}
+						<span class='bad'>&nbsp;{{:value.lost}} row(s) LOST</span>
+					{{/if}}
+				{{else}}
+					Condition: <b>{{:value.grade}}</b> <i>(no scanning module, the rows are unknown)</i>
+				{{/if}}
+			</div>
 		{{/if}}
 	</div>
 </div>

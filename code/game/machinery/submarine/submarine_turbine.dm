@@ -16,8 +16,14 @@
 	- Пульт турбины (/obj/machinery/computer/submarine_turbine_console): NanoUI, шаблон nano/templates/submarine_turbine_panel.tmpl.
 	  Управляет заслонкой, регулятором, автоматом, стопорным клапаном и мощностью конденсатора. Круглая шкала оборотов, число вибрации,
 	  описание в окне.
-- Вибрация (ревизия 9): число в мм/с, растёт с оборотами, износом секций и разрушенной секцией. Тряски экрана нет (GDD, §2).
-  Выше NST_VIB_HIGH пульт предупреждает и турбина гремит, выше NST_VIB_DANGER секции начинают изнашиваться сами.
+- Вибрация (ревизия 9): число в мм/с, растёт с оборотами, износом секций, потерянными рядами лопастей и разрушенной секцией.
+  Выше NST_VIB_HIGH пульт предупреждает, турбина гремит и экран рядом слегка дрожит (ревизия 10), выше NST_VIB_DANGER секции
+  начинают изнашиваться сами.
+- Лопасти (этап 3в-2, часть 1): в каждой секции NST_ROWS рядов лопастей (список rows, 0-1), здоровье секции это их среднее.
+  Износ трёх видов: перебор оборотов (у низкого давления в NST_STRESS_LP раз сильнее), эрозия влажным паром (медленная, бьёт по
+  задним рядам) и циклы (пуск с нуля, срабатывание стопорного клапана, защитный сброс нагрузки). Потерянный ряд (ноль) даёт
+  удар по валу и срабатывание автомата, секция с пятью потерянными рядами разрушается. Пульт показывает каждый ряд только
+  при has_sensor (сканирующий модуль), иначе общую оценку из четырёх уровней.
 - Гул: петля звука генератора, громкость по оборотам (стоковый sound_player).
 	- Конденсатор остался в submarine_reactor.dm, но теперь принимает пар «по ёмкости» (NSR_CONDENSER_CAPACITY, мощность cooling 0-100%).
 
@@ -27,10 +33,11 @@
 	- Предохранительный клапан: вход (с тыла) в горячей линии до турбины, выход (по dir) во входную трубу конденсатора.
 	- Пульт находит генератор по turbine_id (по умолчанию "main" у всех), конденсатор и клапан тоже.
 
-	ЧЕГО ЗДЕСЬ НАМЕРЕННО НЕТ (этап 3в-2 и дальше, GDD)
-	- Лопасти, их рецепт в автолате, перестройка секции, ремонт генератора проводами и деталями.
-	  Сейчас разрушенная секция остаётся «закупоркой»: пар не проходит, пока её не заменят (замены пока нет).
-	- Автоматика серверной, радиатор, отказ регулятора (флаг governor_ok уже есть).
+	ПОКА НЕ СДЕЛАНО, ЗАПЛАНИРОВАНО (этап 3в-2, часть 2 и дальше, GDD)
+	- Замена лопастей по одной, их рецепт в автолате, перестройка разрушенной секции, ремонт генератора проводами и деталями,
+	  влагоотделитель, trip по давлению на конденсаторе. Пока износ накапливается без ремонта, а разрушенная секция остаётся
+	  «закупоркой»: пар не проходит, пока её не заменят.
+	- Серверная автоматики (сами автоматики насоса и конденсатора уже есть), радиатор, отказ регулятора (флаг governor_ok уже есть).
 
 	Все числа ЧЕРНОВЫЕ, взяты из расчётной модели (не из игры). Они собраны в одном блоке ниже, меняйте только там.
 */
@@ -76,6 +83,19 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_WRECK_ENERGY_KEEP     0.25   // какая доля энергии вала остаётся после разрушения секции (оторвало лопасть)
 #define NST_SECTION_EXPLOSION     5      // параметр range для explosion(): меньше, чем у реактора (10); при 5 ядро взрыва это 1 тайл
 
+// Лопаточные венцы (этап 3в-2, часть 1): в каждой секции пять рядов лопастей, у каждого своё состояние 0-1
+#define NST_ROWS                  5      // рядов лопастей в секции
+#define NST_ROW_LOSS_KEEP         0.85   // доля энергии вала, которая остаётся, когда срывает один ряд лопастей
+#define NST_STRESS_LP             2      // множитель износа от перебора оборотов у длинных лопастей низкого давления (у высокого 1)
+#define NST_EROSION_RATE          0.00006 // доля здоровья ряда в секунду при расширении 100%, оборотах 10000 и множителях 1 (около 22% в час)
+#define NST_EROSION_MIN_RPM       500    // ниже этих оборотов эрозии нет
+#define NST_EROSION_HP            0.2    // множитель эрозии у высокого давления (пар сухой, почти не страдает)
+#define NST_EROSION_LP1           1      // у первой низкого давления
+#define NST_EROSION_LP2           1.5    // у второй низкого давления (самый влажный пар)
+#define NST_CYCLE_FATIGUE         0.004  // доля здоровья каждого ряда за один цикл: пуск с нуля, срабатывание стопорного клапана, защитный сброс нагрузки
+#define NST_START_RPM_LO          200    // вал считается остановленным ниже этих оборотов
+#define NST_START_RPM_HI          1000   // разгон выше этих оборотов после остановки считается пуском
+
 // Регулятор оборотов
 #define NST_GOV_GAIN              1      // процентов хода заслонки в секунду на каждую 1000 об/мин ошибки (медленный)
 #define NST_GOV_SET_DEFAULT       7500   // об/мин, уставка по умолчанию
@@ -99,6 +119,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_VIB_DANGER            7.1    // мм/с, опасно: секции изнашиваются от тряски сами
 #define NST_VIB_MAX               12     // мм/с, конец шкалы на пульте
 #define NST_VIB_DAMAGE            0.004  // доля здоровья в секунду на каждую единицу (вибрация / NST_VIB_DANGER - 1)
+#define NST_VIB_ROW               2      // мм/с от каждого потерянного ряда лопастей (дисбаланс ротора) на NST_VIB_RPM_REF
 #define NST_SHAKE_RANGE           10     // тайлов: так далеко от турбины экран слегка трясётся
 #define NST_SHAKE_PX_MIN          1      // пикселей сдвига экрана при NST_VIB_HIGH
 #define NST_SHAKE_PX_MAX          4      // пикселей сдвига экрана при NST_VIB_MAX (потолок, чтобы не бесило)
@@ -176,8 +197,18 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/stage = NST_STAGE_HP
 	/// Моль/с на кПа перепада при открытой заслонке. Задаётся ступенью.
 	var/flow_coef = NST_K_HP
-	/// Здоровье секции, 0-1. Влияет на работу, которую секция берёт у пара.
+	/// Здоровье секции, 0-1: среднее по рядам лопастей (считается из rows, руками не менять). Влияет на вибрацию и состояние на пульте.
 	var/health_frac = 1
+	/// Состояние каждого из NST_ROWS рядов лопастей, 0-1. Ряд с нулём потерян (лопасти сорвало). Пар отдаёт работу всем рядам поровну.
+	var/list/rows
+	/// TRUE, если в секции стоит сканирующий модуль: пульт показывает каждый ряд. Без него только общую оценку. Модуль гибнет вместе с секцией.
+	var/has_sensor = TRUE
+	/// Доля расширения пара в секции за последний тик, 0-1 (1 - давление после / давление до). От неё зависит влажность и эрозия.
+	var/last_expansion = 0
+	/// Множитель износа от перебора оборотов (длинные лопасти низкого давления страдают сильнее).
+	var/stress_mult = 1
+	/// Множитель эрозии влажным паром по ступени.
+	var/erosion_mult = 1
 	/// TRUE, если секция разрушена: пар через неё не идёт.
 	var/broken = FALSE
 	/// Пар через секцию за последний тик, моль/с.
@@ -203,19 +234,100 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 
 /obj/machinery/atmospherics/binary/submarine_turbine_section/Initialize()
 	. = ..()
+	rows = list()
+	for(var/i = 1 to NST_ROWS)
+		rows += 1
 	switch(stage)
 		if(NST_STAGE_HP)
 			flow_coef = NST_K_HP
 			air1.volume = NST_VOL_HP
 			air2.volume = NST_VOL_HP
+			stress_mult = 1
+			erosion_mult = NST_EROSION_HP
 		if(NST_STAGE_LP1)
 			flow_coef = NST_K_LP1
 			air1.volume = NST_VOL_LP
 			air2.volume = NST_VOL_LP
+			stress_mult = NST_STRESS_LP
+			erosion_mult = NST_EROSION_LP1
 		if(NST_STAGE_LP2)
 			flow_coef = NST_K_LP2
 			air1.volume = NST_VOL_LP
 			air2.volume = NST_VOL_LP
+			stress_mult = NST_STRESS_LP
+			erosion_mult = NST_EROSION_LP2
+
+/// Веса рядов при разных видах износа (в сумме по ряду это в среднем 1). Ряды считаются по ходу пара: первый у входа, пятый у выхода.
+/// over: перебор оборотов, длинные последние лопасти страдают сильнее. erosion: влажный пар бьёт по задним рядам. flat: усталость поровну.
+/proc/nst_row_weights(kind)
+	var/static/list/over = list(0.8, 0.9, 1, 1.1, 1.2)
+	var/static/list/erosion = list(0.4, 0.7, 1, 1.3, 1.6)
+	var/static/list/flat = list(1, 1, 1, 1, 1)
+	switch(kind)
+		if("over")
+			return over
+		if("erosion")
+			return erosion
+	return flat
+
+/// Пересчитывает здоровье секции как среднее по рядам.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/update_health()
+	var/total = 0
+	for(var/row in rows)
+		total += row
+	health_frac = total / NST_ROWS
+
+/// Во сколько раз секция работает хуже: каждый ряд даёт долю работы, потерянный ноль.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/work_factor()
+	var/total = 0
+	for(var/row in rows)
+		if(row > 0)
+			total += NST_HEALTH_FLOOR + (1 - NST_HEALTH_FLOOR) * row
+	return total / NST_ROWS
+
+/// Сколько рядов потеряно (лопасти сорвало). У разрушенной секции не считается.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/lost_rows()
+	if(broken)
+		return 0
+	. = 0
+	for(var/row in rows)
+		if(row <= 0)
+			.++
+
+/// Снимает со всех целых рядов amount здоровья с весами по рядам. Если здоровья не осталось нигде, секция разрушается.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/damage_rows(amount, kind)
+	if(broken || amount <= 0)
+		return
+	var/list/weights = nst_row_weights(kind)
+	for(var/i = 1 to NST_ROWS)
+		if(rows[i] > 0)
+			rows[i] = max(0, rows[i] - amount * weights[i])
+	update_health()
+	if(health_frac <= 0)
+		wreck()
+
+/// Эрозия влажным паром: бьёт по задним рядам, растёт с оборотами, расширением в секции и множителем ступени. Медленная: часы игры.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/wear_blades(dt, rpm_now, wet_mult)
+	if(broken || last_expansion <= 0 || rpm_now < NST_EROSION_MIN_RPM)
+		return
+	damage_rows(NST_EROSION_RATE * (rpm_now / NST_VIB_RPM_REF) ** 2 * last_expansion * erosion_mult * wet_mult * dt, "erosion")
+
+/// Усталость от цикла (пуск, срабатывание защиты): мелкая и равная для всех рядов.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/apply_fatigue(amount)
+	damage_rows(amount, "flat")
+
+/// Общая оценка состояния без датчика, четыре уровня. Потерянный ряд не позволяет выглядеть лучше, чем POOR.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/grade_text()
+	if(broken)
+		return "WRECKED"
+	var/lost = lost_rows()
+	if(health_frac >= 0.9 && !lost)
+		return "IN ORDER"
+	if(health_frac >= 0.6 && !lost)
+		return "WORN"
+	if(health_frac >= 0.3)
+		return "POOR"
+	return "CRITICAL"
 
 /obj/machinery/atmospherics/binary/submarine_turbine_section/use_tool(obj/item/tool, mob/living/user, list/click_params)
 	// Секция закреплена на фундаменте: отвернуть её гаечным ключом нельзя.
@@ -241,6 +353,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /obj/machinery/atmospherics/binary/submarine_turbine_section/proc/run_section(dt, admission)
 	last_flow = 0
 	last_work = 0
+	last_expansion = 0
 	if(broken || !network1 || !network2 || admission <= 0 || dt <= 0)
 		return 0
 	var/pressure_in = air1.return_pressure()
@@ -263,13 +376,14 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		return 0
 	var/passed_moles = passed.total_moles
 	// Работа на моль: от логарифма отношения давлений, слабее у повреждённой секции.
-	var/work_per_mole = NST_W0 * max(0, log(pressure_in / max(pressure_out, NST_P_OUT_MIN))) * (NST_HEALTH_FLOOR + (1 - NST_HEALTH_FLOOR) * health_frac)
+	var/work_per_mole = NST_W0 * max(0, log(pressure_in / max(pressure_out, NST_P_OUT_MIN))) * work_factor()
 	var/heat_capacity_per_mole = passed.heat_capacity() / passed_moles
 	if(heat_capacity_per_mole > 0)
 		passed.temperature = min(temp_in, max(NST_EXHAUST_MIN_TEMP, temp_in - work_per_mole / heat_capacity_per_mole))
 	air2.merge(passed)
 	network2.update = 1
 	last_flow = passed_moles / dt
+	last_expansion = clamp(delta_pressure / max(pressure_in, 1), 0, 1)
 	var/work = passed_moles * work_per_mole
 	last_work = work / dt
 	return work
@@ -278,9 +392,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /obj/machinery/atmospherics/binary/submarine_turbine_section/proc/take_overspeed_damage(amount)
 	if(broken)
 		return FALSE
-	health_frac = max(0, health_frac - amount)
-	if(health_frac <= 0)
-		wreck()
+	damage_rows(amount * stress_mult, "over")
+	if(broken)
 		return TRUE
 	if(world.time >= next_shake_message)
 		next_shake_message = world.time + 8 SECONDS
@@ -294,8 +407,12 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		return
 	broken = TRUE
 	health_frac = 0
+	for(var/i = 1 to NST_ROWS)
+		rows[i] = 0
+	has_sensor = FALSE
 	last_flow = 0
 	last_work = 0
+	last_expansion = 0
 	color = "#443a33"
 	visible_message(SPAN_DANGER("A blade tears loose and \the [src] bursts apart in a cloud of steam!"))
 	var/turf/here = get_turf(src)
@@ -470,6 +587,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/next_vib_message = 0
 	/// Когда можно снова включить звук вибрации (файлы длинные, поэтому не чаще раза за их длину).
 	var/next_vib_sound = 0
+	/// TRUE, пока вал стоит: следующий разгон выше NST_START_RPM_HI считается пуском (цикл, усталость лопастей).
+	var/was_stopped = TRUE
+	/// Множитель влажности пара для эрозии лопастей. 1 без влагоотделителя; влагоотделитель (этап 3в-2, уровень Б) его понизит.
+	var/wet_mult = 1
 	/// Петля звука работы (стоковый sound_player).
 	var/datum/sound_token/sound_token
 
@@ -516,6 +637,12 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		if(S.broken)
 			.++
 
+/// Сколько рядов лопастей потеряно во всех целых секциях вместе.
+/obj/machinery/power/submarine_turbine_generator/proc/count_lost_rows()
+	. = 0
+	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
+		. += S.lost_rows()
+
 /obj/machinery/power/submarine_turbine_generator/proc/shaft_rpm()
 	return sqrt(2 * max(shaft_energy, 0) / NST_SHAFT_INERTIA) * NST_RPM_PER_RADS
 
@@ -538,6 +665,9 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	trip_reason = reason
 	visible_message(SPAN_WARNING("The generator breaker trips open ([reason])!"))
 	playsound(src, 'sound/machines/warning-buzzer.ogg', 60, TRUE)
+	// Защитный сброс нагрузки на ходу бьёт по ресурсу лопастей (как любой цикл); ручное отключение и срабатывание от удара не считаются.
+	if(reason == "OVERSPEED" || reason == "UNDERSPEED")
+		add_cycle()
 
 /// Пытается подключить генератор к сети. Только в рабочем окне оборотов и если под генератором есть сеть.
 /obj/machinery/power/submarine_turbine_generator/proc/try_close_breaker(mob/user)
@@ -562,6 +692,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	stop_tripped = TRUE
 	visible_message(SPAN_DANGER("The turbine stop valve slams shut ([reason])!"))
 	playsound(src, 'sound/machines/warning-buzzer.ogg', 80, TRUE)
+	add_cycle()
 
 /// Сброс стопорного клапана оператором. Только когда обороты упали ниже NST_RPM_STOP_RESET; заслонка при этом закрывается.
 /obj/machinery/power/submarine_turbine_generator/proc/reset_stop_valve(mob/user)
@@ -578,6 +709,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /// Повреждения от оборотов выше NST_RPM_DAMAGE и разрушение секций на NST_RPM_EXPLODE. Возвращает TRUE, если что-то разрушилось.
 /obj/machinery/power/submarine_turbine_generator/proc/apply_overspeed(rpm_now, dt)
 	var/broken_before = count_broken()
+	var/rows_before = count_lost_rows()
 	var/damage = (rpm_now - NST_RPM_DAMAGE) / 1000 * NST_DAMAGE_RATE * dt
 	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
 		S.take_overspeed_damage(damage)
@@ -588,16 +720,41 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 				weakest = S
 		if(weakest)
 			weakest.wreck()
-	return handle_wrecks(broken_before)
+	return handle_wrecks(broken_before, rows_before)
 
-/// Если с broken_before разрушились секции: сорванная лопасть уносит часть энергии вала, автомат срабатывает от удара. Возвращает TRUE, если так.
-/obj/machinery/power/submarine_turbine_generator/proc/handle_wrecks(broken_before)
+/// Если с broken_before разрушились секции или с rows_before потеряны ряды лопастей: сорванные лопасти уносят часть энергии вала,
+/// автомат срабатывает от удара. Возвращает TRUE, если что-то случилось.
+/obj/machinery/power/submarine_turbine_generator/proc/handle_wrecks(broken_before, rows_before = 0)
+	. = FALSE
 	var/wrecked = count_broken() - broken_before
+	var/rows_new = max(0, count_lost_rows() - rows_before)
+	if(rows_new > 0)
+		shaft_energy *= NST_ROW_LOSS_KEEP ** rows_new
+		visible_message(SPAN_DANGER("A bang from inside the turbine: a row of blades has torn loose!"))
+		playsound(src, 'sound/machines/warning-buzzer.ogg', 70, TRUE)
+		if(!wrecked)
+			open_breaker("BLADE LOST")
+		. = TRUE
 	if(wrecked > 0)
 		shaft_energy *= NST_WRECK_ENERGY_KEEP ** wrecked
 		open_breaker("SECTION WRECKED")
-		return TRUE
-	return FALSE
+		. = TRUE
+
+/// Один цикл нагрузки на ротор (пуск, срабатывание защиты): малая усталость всем рядам всех секций.
+/obj/machinery/power/submarine_turbine_generator/proc/add_cycle()
+	var/broken_before = count_broken()
+	var/rows_before = count_lost_rows()
+	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
+		S.apply_fatigue(NST_CYCLE_FATIGUE)
+	handle_wrecks(broken_before, rows_before)
+
+/// Эрозия влажным паром во всех секциях за dt секунд.
+/obj/machinery/power/submarine_turbine_generator/proc/apply_blade_wear(dt, rpm_now)
+	var/broken_before = count_broken()
+	var/rows_before = count_lost_rows()
+	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
+		S.wear_blades(dt, rpm_now, wet_mult)
+	handle_wrecks(broken_before, rows_before)
 
 /// Пересчитывает вибрацию: растёт с оборотами, износом секций, разрушенной секцией и перебором оборотов; число догоняет расчёт плавно.
 /obj/machinery/power/submarine_turbine_generator/proc/update_vibration(dt)
@@ -607,7 +764,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		if(S.broken)
 			target += NST_VIB_WRECK * factor
 		else
-			target += NST_VIB_WEAR * (1 - S.health_frac) * factor
+			target += (NST_VIB_WEAR * (1 - S.health_frac) + NST_VIB_ROW * S.lost_rows()) * factor
 	if(rpm > NST_RPM_DAMAGE)
 		target += (rpm - NST_RPM_DAMAGE) / 1000 * NST_VIB_OVER
 	vibration += (target - vibration) * min(1, dt / NST_VIB_LAG)
@@ -619,10 +776,11 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(vibration <= NST_VIB_DANGER)
 		return
 	var/broken_before = count_broken()
+	var/rows_before = count_lost_rows()
 	var/damage = (vibration / NST_VIB_DANGER - 1) * NST_VIB_DAMAGE * dt
 	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
 		S.take_overspeed_damage(damage)
-	handle_wrecks(broken_before)
+	handle_wrecks(broken_before, rows_before)
 
 /// Тряска в зале: выше NST_VIB_HIGH экран у людей рядом слегка дрожит (пиксели, не тайлы), турбина гремит на опорах.
 /obj/machinery/power/submarine_turbine_generator/proc/update_vibration_effects()
@@ -722,6 +880,15 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	// Баланс энергии вала: пар даёт, генератор и трение забирают.
 	shaft_energy = max(0, shaft_energy + (steam_power - electric_power / NST_GEN_EFF - friction_power) * dt)
 	rpm = shaft_rpm()
+
+	// Пуск с нуля это цикл: усталость лопастей.
+	if(rpm < NST_START_RPM_LO)
+		was_stopped = TRUE
+	else if(was_stopped && rpm > NST_START_RPM_HI)
+		was_stopped = FALSE
+		add_cycle()
+	// Эрозия лопастей влажным паром (медленная).
+	apply_blade_wear(dt, rpm)
 
 	// Защиты.
 	if(!stop_tripped && rpm >= NST_RPM_STOP)
@@ -917,7 +1084,12 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 			state_class = "bad"
 		else if(S.health_frac < 0.9)
 			state_class = "average"
-		section_list += list(list("name" = (S.stage == NST_STAGE_HP) ? "High-pressure" : "Low-pressure [S.stage - 1]", "health" = round(S.health_frac * 100), "broken" = S.broken, "flow" = round(S.last_flow, 0.1), "kw" = round(S.last_work / 1000, 0.1), "class" = state_class))
+		var/list/row_list = list()
+		if(S.has_sensor && !S.broken)
+			for(var/row in S.rows)
+				var/row_pct = round(row * 100)
+				row_list += list(list("p" = row_pct, "c" = (row_pct < 50) ? "bad" : ((row_pct < 90) ? "average" : "good")))
+		section_list += list(list("name" = (S.stage == NST_STAGE_HP) ? "High-pressure" : "Low-pressure [S.stage - 1]", "health" = round(S.health_frac * 100), "broken" = S.broken, "flow" = round(S.last_flow, 0.1), "kw" = round(S.last_work / 1000, 0.1), "class" = state_class, "sensor" = S.has_sensor, "rows" = row_list, "lost" = S.lost_rows(), "grade" = S.grade_text()))
 	data["sections"] = section_list
 	data["missing"] = 3 - length(section_list)
 	// Давления по ходу пара: перед турбиной, после высокого, после первой низкого, у конденсатора.
