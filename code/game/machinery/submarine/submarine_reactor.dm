@@ -114,13 +114,25 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_FEED_PUMP_RPM_MAX     3000   // об/мин при скорости 100% (для показа на пульте)
 #define NSR_FEED_PUMP_SPINUP      10     // % скорости в секунду при разгоне: от нуля до 100% за 10 секунд
 #define NSR_FEED_PUMP_SPINDOWN    6      // % скорости в секунду при торможении и при выбеге без питания: около 17 секунд до остановки
-#define NSR_PUMP_HEAT_DRY         4      // единиц нагрева в секунду при сухом ходе на полных оборотах (пропорционально оборотам): около 25 секунд до выхода из строя
-#define NSR_PUMP_HEAT_BLOCKED     1.5    // то же при работе против закрытой линии (нет порта, сосуд полон, напор выше предела)
-#define NSR_PUMP_COOL             2      // единиц в секунду остывает мотор, когда лишнего нагрева нет
+#define NSR_PUMP_HEAT_DRY         3      // единиц нагрева в секунду при полном сухом ходе на полных оборотах (пропорционально оборотам); за вычетом охлаждения чистый рост 2 в секунду, около 50 секунд до выхода из строя
+#define NSR_PUMP_HEAT_BLOCKED     2      // то же при работе против закрытой линии (нет порта, сосуд полон, напор выше предела); чистый рост 1 в секунду
+#define NSR_PUMP_COOL             1      // единиц в секунду остывает мотор всегда (обдув), а не только когда нагрева нет
+#define NSR_PUMP_DRY_DEADZONE     0.6    // доля недодачи воды, до которой сухой ход не греет: насос с запасом по мощности просто выбирает приток, это не сухой ход
 #define NSR_PUMP_HEAT_WARN        60     // нагрев, с которого пульт предупреждает и мотор подаёт голос
 #define NSR_PUMP_HEAT_MAX         100    // нагрев, на котором мотор сгорает и насос встаёт
 #define NSR_PUMP_REPAIR_COOL      40     // чинить сгоревший мотор можно, когда он остыл ниже этого
 #define NSR_PUMP_REPAIR_WIRE      10     // кусков провода на перемотку мотора
+#define NSR_AUTO_PUMP_SET         70     // % уровня воды в сосуде, который по умолчанию держит автоматика насоса
+#define NSR_AUTO_PUMP_KP          5      // % скорости насоса на каждый % ошибки по уровню воды
+#define NSR_AUTO_PUMP_KI          0.15   // % скорости насоса в секунду на каждый % ошибки по уровню (интегральная часть)
+#define NSR_AUTO_PUMP_MIN_WATER   10     // моль воды на всасе, ниже которых автоматика не включает насос (защита от сухого хода)
+#define NSR_AUTO_PUMP_DRY_BACKOFF 8      // % скорости в секунду, на которые автоматика сбрасывает уставку при недодаче воды выше мёртвой зоны
+#define NSR_COND_AUTO_SET         1.0    // бар, давление пара перед конденсатором, которое по умолчанию держит автоматика
+#define NSR_COND_AUTO_SET_MIN     0.5    // бар, нижний предел уставки (ниже турбина всё равно не считает противодавление)
+#define NSR_COND_AUTO_SET_MAX     3      // бар, верхний предел уставки
+#define NSR_COND_AUTO_KP          15     // % охлаждения на каждый бар ошибки по давлению (пропорциональная часть)
+#define NSR_COND_AUTO_KI          1      // % охлаждения в секунду на каждый бар ошибки (интегральная часть)
+#define NSR_COND_AUTO_FILTER      4      // с, сглаживание измеренного давления: пар приходит порциями, регулятор не должен дёргаться за каждой
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             150    // C
@@ -787,6 +799,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/cooling = 100
 	/// Сколько пара принято за последний тик, моль/с.
 	var/last_flow = 0
+	/// Автоматика: если включена, мощностью охлаждения управляет регулятор, который держит давление пара перед конденсатором. По умолчанию выключена.
+	var/auto = FALSE
+	/// Давление пара перед конденсатором, которое держит автоматика, бар.
+	var/auto_set = NSR_COND_AUTO_SET
+	/// Интегральная часть регулятора, % охлаждения.
+	var/auto_i = 0
+	/// Сглаженное давление пара перед конденсатором, бар.
+	var/auto_pressure = 0
 
 /obj/machinery/atmospherics/binary/submarine_condenser/Initialize()
 	. = ..()
@@ -810,6 +830,22 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/atmospherics/binary/submarine_condenser/hide(i)
 	update_underlays()
 
+/// Автоматика конденсатора: ПИ-регулятор держит давление пара перед конденсатором на уставке auto_set, меняя мощность охлаждения (cooling).
+/// Давление сглаживается: пар приходит порциями. Если давление выше уставки, охлаждение растёт, если ниже, падает до нуля и пар копится.
+/// Позже эту автоматику переведём в серверную (см. GDD), логика останется.
+/obj/machinery/atmospherics/binary/submarine_condenser/proc/run_auto(dt)
+	var/pressure = air1.return_pressure() / NSR_KPA_PER_BAR
+	auto_pressure += (pressure - auto_pressure) * min(1, dt / NSR_COND_AUTO_FILTER)
+	var/error = auto_pressure - auto_set
+	auto_i = clamp(auto_i + NSR_COND_AUTO_KI * error * dt, 0, 100)
+	cooling = clamp(auto_i + NSR_COND_AUTO_KP * error, 0, 100)
+
+/// Включает и выключает автоматику. При включении регулятор подхватывает текущую мощность без рывка, при выключении мощность остаётся как есть.
+/obj/machinery/atmospherics/binary/submarine_condenser/proc/toggle_auto()
+	auto = !auto
+	auto_i = cooling
+	auto_pressure = air1.return_pressure() / NSR_KPA_PER_BAR
+
 /obj/machinery/atmospherics/binary/submarine_condenser/Process(wait)
 	. = ..()
 	last_flow = 0
@@ -818,6 +854,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/dt = 2
 	if(wait > 0)
 		dt = clamp(wait / 10, 0.5, 5)
+	if(auto)
+		run_auto(dt)
 	// Конденсируется только пар. Прочие газы (воздух, попавший в паровую ветку) остаются на паровой стороне,
 	// так что в водяной ветке газов не бывает.
 	var/capacity = NSR_CONDENSER_CAPACITY * clamp(cooling, 0, 100) / 100 * dt
@@ -871,6 +909,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/dryness = 0
 	/// Когда мотор в следующий раз пожалуется вслух на перегрев.
 	var/next_heat_message = 0
+	/// Автоматика: если включена, уставкой скорости управляет регулятор, который держит уровень воды в сосуде. По умолчанию выключена.
+	var/auto = FALSE
+	/// Уровень воды в сосуде, который держит автоматика, %.
+	var/auto_set = NSR_AUTO_PUMP_SET
+	/// Интегральная часть регулятора, % скорости.
+	var/auto_i = 0
+	/// Потолок скорости для автоматики, % (опускается при недодаче воды и медленно возвращается).
+	var/auto_cap = 100
+	/// Что сейчас делает автоматика, для пульта (пусто, если всё в порядке).
+	var/auto_text = ""
 
 /obj/machinery/atmospherics/binary/submarine_feed_pump/Initialize()
 	. = ..()
@@ -944,12 +992,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	burnt_out = TRUE
 	speed = 0
 	spin = 0
+	auto = FALSE
+	auto_i = 0
+	auto_text = ""
 	color = "#4a3a3a"
 	visible_message(SPAN_DANGER("The motor of \the [src] burns out with a bang and a puff of smoke!"))
 	playsound(src, 'sound/machines/warning-buzzer.ogg', 70, TRUE)
 	QDEL_NULL(sound_token)
 
-/// Нагрев мотора за dt секунд по состоянию гидравлики: сухой ход нагревает быстро, работа против закрытой линии медленно, иначе мотор остывает.
+/// Нагрев мотора за dt секунд по состоянию гидравлики: полный сухой ход нагревает быстро, работа против закрытой линии медленно,
+/// небольшая недодача воды (до NSR_PUMP_DRY_DEADZONE) не греет вовсе. Обдув мотора остужает его всегда (NSR_PUMP_COOL).
 /obj/machinery/atmospherics/binary/submarine_feed_pump/proc/update_heat(dt)
 	var/load = spin / 100
 	var/gain = 0
@@ -957,13 +1009,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if("NO SUCTION")
 			gain = NSR_PUMP_HEAT_DRY * load
 		if("RUNNING")
-			gain = NSR_PUMP_HEAT_DRY * load * dryness
+			gain = NSR_PUMP_HEAT_DRY * load * max(0, dryness - NSR_PUMP_DRY_DEADZONE) / (1 - NSR_PUMP_DRY_DEADZONE)
 		if("NOT PIPED", "NO REACTOR", "NO INLET", "NO HEAD", "VESSEL FULL")
 			gain = NSR_PUMP_HEAT_BLOCKED * load
-	if(gain > 0)
-		heat = min(NSR_PUMP_HEAT_MAX, heat + gain * dt)
-	else
-		heat = max(0, heat - NSR_PUMP_COOL * dt)
+	heat = clamp(heat + (gain - NSR_PUMP_COOL) * dt, 0, NSR_PUMP_HEAT_MAX)
 	if(heat >= NSR_PUMP_HEAT_MAX)
 		burn_out()
 	else if(heat >= NSR_PUMP_HEAT_WARN && world.time >= next_heat_message)
@@ -998,6 +1047,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return
 	// Ротор идёт к уставке с разгоном и торможением. Без питания уставка считается нулевой: насос выбегает, но ещё какое-то время качает.
 	var/powered = !inoperable()
+	if(auto && powered)
+		run_auto(dt)
 	var/goal = powered ? speed : 0
 	if(spin < goal)
 		spin = min(goal, spin + NSR_FEED_PUMP_SPINUP * dt)
@@ -1013,6 +1064,50 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		pump_state = "NO POWER"
 	update_heat(dt)
 	update_sound()
+
+/// Почему автоматика не может сейчас качать воду (пустая строка, если может). Автоматика не даёт насосу крутиться вхолостую.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/auto_block_reason()
+	if(!core || QDELETED(core) || core.is_dead())
+		return "NO REACTOR"
+	if(!core.feed_inlet)
+		return "NO INLET"
+	if(!network1 || !network2)
+		return "NOT PIPED"
+	if(core.steam_pressure >= NSR_FEED_PUMP_HEAD)
+		return "NO HEAD"
+	if(air1.get_gas(GAS_LIQUID_WATER) < NSR_AUTO_PUMP_MIN_WATER)
+		return "NO WATER"
+	return ""
+
+/// Автоматика насоса: ПИ-регулятор держит уровень воды в сосуде на уставке auto_set, сам меняя скорость насоса (speed).
+/// Не качает, если качать нечем или некуда (auto_block_reason), и не даёт насосу работать с недодачей воды выше мёртвой зоны:
+/// потолок auto_cap опускается и медленно возвращается. Позже эту автоматику переведём в серверную (см. GDD), логика останется.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/run_auto(dt)
+	auto_text = auto_block_reason()
+	if(auto_text)
+		auto_i = 0
+		speed = 0
+		return
+	// Недодача воды выше мёртвой зоны: потолок скорости падает, пока приток не догонит насос.
+	if(dryness > NSR_PUMP_DRY_DEADZONE)
+		auto_cap = min(auto_cap, spin * (1 - dryness) / (1 - NSR_PUMP_DRY_DEADZONE))
+	else
+		auto_cap = min(100, auto_cap + 2 * dt)
+	if(auto_cap < 99)
+		auto_text = "LIMITED BY SUPPLY"
+	var/error = auto_set - core.coolant_level
+	auto_i = clamp(auto_i + NSR_AUTO_PUMP_KI * error * dt, 0, auto_cap)
+	speed = clamp(auto_i + NSR_AUTO_PUMP_KP * error, 0, auto_cap)
+
+/// Включает и выключает автоматику. При включении регулятор подхватывает текущую скорость без рывка, при выключении скорость остаётся как есть.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/toggle_auto(mob/user)
+	if(burnt_out)
+		to_chat(user, SPAN_WARNING("The pump motor is burnt out."))
+		return
+	auto = !auto
+	auto_i = speed
+	auto_cap = 100
+	auto_text = ""
 
 /// Гидравлика насоса за dt секунд при текущих оборотах. Возвращает состояние для пульта.
 /obj/machinery/atmospherics/binary/submarine_feed_pump/proc/pump_water(dt)
@@ -1191,7 +1286,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["hasPump"] = !!R.feed_pump
 	if(R.feed_pump)
 		var/obj/machinery/atmospherics/binary/submarine_feed_pump/pump = R.feed_pump
-		data["pumpSpeed"] = pump.speed
+		data["pumpSpeed"] = round(pump.speed, 0.1)
+		data["pumpAuto"] = pump.auto
+		data["pumpAutoSet"] = pump.auto_set
+		data["pumpAutoText"] = pump.auto_text
 		data["pumpHeat"] = round(pump.heat)
 		data["pumpHeatClass"] = (pump.heat >= NSR_PUMP_HEAT_WARN) ? "bad" : ((pump.heat >= NSR_PUMP_HEAT_WARN / 2) ? "average" : "good")
 		data["pumpBurnt"] = pump.burnt_out
@@ -1271,8 +1369,19 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			var/pump_amount = text2num(href_list["amount"])
 			if(!R.feed_pump)
 				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
+			else if(R.feed_pump.auto)
+				to_chat(user, SPAN_WARNING("The pump is in automatic mode. Switch the automation off to set its speed by hand."))
 			else if(pump_amount in list(-10, -1, 1, 10))
 				R.feed_pump.speed = clamp(R.feed_pump.speed + pump_amount, 0, 100)
+		if("pump_auto")
+			if(!R.feed_pump)
+				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
+			else
+				R.feed_pump.toggle_auto(user)
+		if("pump_auto_set")
+			var/level_amount = text2num(href_list["amount"])
+			if(R.feed_pump && (level_amount in list(-5, -1, 1, 5)))
+				R.feed_pump.auto_set = clamp(R.feed_pump.auto_set + level_amount, 10, 95)
 		if("feed_up", "feed_down")
 			if(R.feed_pump)
 				to_chat(user, SPAN_WARNING("The vessel is fed by the pump, not by the valve."))

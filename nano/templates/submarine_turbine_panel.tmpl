@@ -1,5 +1,5 @@
 <div class="item">
-	<i>This panel runs the steam turbine. Steam comes in through the admission (inlet) valve and leaves through the condenser, whose cooling sets the exhaust side. The speed governor holds the shaft at its setting by moving the admission valve; switch it off to do that by hand. The generator breaker can be closed only while the needle is in the green band. The stop valve shuts the steam off in an emergency. Keep an eye on the vibration: worn or wrecked sections and overspeed make it climb.</i>
+	<i>This panel runs the steam turbine. Steam comes in through the admission (inlet) valve and leaves through the condenser, whose cooling sets the exhaust side. The speed governor holds the shaft at its setting by moving the admission valve; switch it off to do that by hand. The generator breaker can be closed only while the needle is in the green band. The stop valve shuts the steam off in an emergency. Keep an eye on the vibration: worn or wrecked sections and overspeed make it climb, and above a point you feel it in the deck. The condenser can hold its pressure automatically.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
@@ -222,10 +222,26 @@
 				{{:data.cooling}} %
 			</div>
 			<div style="clear: both; padding-top: 4px;">
-				{{:helper.link('-10', null, {'action' : 'cool_move', 'amount' : -10}, (data.cooling > 0) ? null : 'disabled')}}
-				{{:helper.link('-1', null, {'action' : 'cool_move', 'amount' : -1}, (data.cooling > 0) ? null : 'disabled')}}
-				{{:helper.link('+1', null, {'action' : 'cool_move', 'amount' : 1}, (data.cooling < 100) ? null : 'disabled')}}
-				{{:helper.link('+10', null, {'action' : 'cool_move', 'amount' : 10}, (data.cooling < 100) ? null : 'disabled')}}
+				{{:helper.link('-10', null, {'action' : 'cool_move', 'amount' : -10}, (!data.condAuto && data.cooling > 0) ? null : 'disabled')}}
+				{{:helper.link('-1', null, {'action' : 'cool_move', 'amount' : -1}, (!data.condAuto && data.cooling > 0) ? null : 'disabled')}}
+				{{:helper.link('+1', null, {'action' : 'cool_move', 'amount' : 1}, (!data.condAuto && data.cooling < 100) ? null : 'disabled')}}
+				{{:helper.link('+10', null, {'action' : 'cool_move', 'amount' : 10}, (!data.condAuto && data.cooling < 100) ? null : 'disabled')}}
+			</div>
+			<div style="clear: both; padding-top: 6px;">
+				Automation:
+				{{if data.condAuto}}
+					<span class='good'><b>ON</b></span>, holds the steam pressure before the condenser at <b>{{:data.condAutoSet}} bar</b> (now {{:data.condPressure}})
+				{{else}}
+					<span class='average'><b>OFF</b></span> (manual cooling, pressure now {{:data.condPressure}} bar)
+				{{/if}}
+				<div style="padding-top: 4px;">
+					{{:helper.link(data.condAuto ? 'Switch off' : 'Switch on', null, {'action' : 'cond_auto'}, null, data.condAuto ? 'selected' : null)}}
+					pressure:
+					{{:helper.link('-0.5', null, {'action' : 'cond_auto_set', 'amount' : -0.5}, (data.condAutoSet > 0.5) ? null : 'disabled')}}
+					{{:helper.link('-0.1', null, {'action' : 'cond_auto_set', 'amount' : -0.1}, (data.condAutoSet > 0.5) ? null : 'disabled')}}
+					{{:helper.link('+0.1', null, {'action' : 'cond_auto_set', 'amount' : 0.1}, (data.condAutoSet < 3) ? null : 'disabled')}}
+					{{:helper.link('+0.5', null, {'action' : 'cond_auto_set', 'amount' : 0.5}, (data.condAutoSet < 3) ? null : 'disabled')}}
+				</div>
 			</div>
 		{{else}}
 			<span class='bad'>no condenser</span>

@@ -1,5 +1,5 @@
 <div class="item">
-	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. SCRAM drops every rod at once and locks them until the core has cooled.</i>
+	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
@@ -198,10 +198,29 @@
 			set {{:data.pumpSpeed}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (data.pumpSpeed > 0) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'pump_move', 'amount' : -1}, (data.pumpSpeed > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'pump_move', 'amount' : 1}, (data.pumpSpeed < 100) ? null : 'disabled')}}
-			{{:helper.link('+10', null, {'action' : 'pump_move', 'amount' : 10}, (data.pumpSpeed < 100) ? null : 'disabled')}}
+			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'pump_move', 'amount' : -1}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'pump_move', 'amount' : 1}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'pump_move', 'amount' : 10}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
+		</div>
+		<div style="clear: both; padding-top: 6px;">
+			Automation:
+			{{if data.pumpAuto}}
+				<span class='good'><b>ON</b></span>, holds the water level at <b>{{:data.pumpAutoSet}} %</b>
+			{{else}}
+				<span class='average'><b>OFF</b></span> (manual speed)
+			{{/if}}
+			{{if data.pumpAutoText}}
+				<div class='average'>{{:data.pumpAutoText}}</div>
+			{{/if}}
+			<div style="padding-top: 4px;">
+				{{:helper.link(data.pumpAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pump_auto'}, data.pumpBurnt ? 'disabled' : null, data.pumpAuto ? 'selected' : null)}}
+				level:
+				{{:helper.link('-5', null, {'action' : 'pump_auto_set', 'amount' : -5}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
+				{{:helper.link('-1', null, {'action' : 'pump_auto_set', 'amount' : -1}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
+				{{:helper.link('+1', null, {'action' : 'pump_auto_set', 'amount' : 1}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
+				{{:helper.link('+5', null, {'action' : 'pump_auto_set', 'amount' : 5}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
+			</div>
 		</div>
 	</div>
 </div>

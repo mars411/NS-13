@@ -99,6 +99,11 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_VIB_DANGER            7.1    // мм/с, опасно: секции изнашиваются от тряски сами
 #define NST_VIB_MAX               12     // мм/с, конец шкалы на пульте
 #define NST_VIB_DAMAGE            0.004  // доля здоровья в секунду на каждую единицу (вибрация / NST_VIB_DANGER - 1)
+#define NST_SHAKE_RANGE           10     // тайлов: так далеко от турбины экран слегка трясётся
+#define NST_SHAKE_PX_MIN          1      // пикселей сдвига экрана при NST_VIB_HIGH
+#define NST_SHAKE_PX_MAX          4      // пикселей сдвига экрана при NST_VIB_MAX (потолок, чтобы не бесило)
+#define NST_SHAKE_TIME            40     // децисекунд: одна «порция» тряски; между порциями до 2 с тишины
+#define NST_SHAKE_STEP            2      // децисекунд на один сдвиг картинки
 
 // Следование за нагрузкой: генератор отдаёт сети столько, сколько она потребляет
 #define NST_LOAD_MIN              2000   // Вт, подача при нулевом потреблении (чтобы было с чего начать)
@@ -463,6 +468,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/vibration = 0
 	/// Когда турбина в следующий раз пожалуется на тряску сообщением.
 	var/next_vib_message = 0
+	/// Когда можно снова включить звук вибрации (файлы длинные, поэтому не чаще раза за их длину).
+	var/next_vib_sound = 0
 	/// Петля звука работы (стоковый sound_player).
 	var/datum/sound_token/sound_token
 
@@ -617,13 +624,49 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		S.take_overspeed_damage(damage)
 	handle_wrecks(broken_before)
 
-/// Предупреждение в зале: выше NST_VIB_HIGH турбина гремит на опорах.
+/// Тряска в зале: выше NST_VIB_HIGH экран у людей рядом слегка дрожит (пиксели, не тайлы), турбина гремит на опорах.
 /obj/machinery/power/submarine_turbine_generator/proc/update_vibration_effects()
-	if(vibration < NST_VIB_HIGH || world.time < next_vib_message)
+	if(vibration < NST_VIB_HIGH)
 		return
-	next_vib_message = world.time + 12 SECONDS
-	visible_message(SPAN_WARNING("The whole turbine rattles on its mounts."))
-	playsound(src, 'sound/machines/airlock_creaking.ogg', 30, TRUE)
+	var/frac = clamp((vibration - NST_VIB_HIGH) / (NST_VIB_MAX - NST_VIB_HIGH), 0, 1)
+	var/base_px = NST_SHAKE_PX_MIN + (NST_SHAKE_PX_MAX - NST_SHAKE_PX_MIN) * frac
+	for(var/mob/living/M in range(NST_SHAKE_RANGE, src))
+		if(!M.client || M.stat == DEAD)
+			continue
+		// Дальше трёх тайлов тряска слабеет, на краю радиуса остаётся треть.
+		var/dist = get_dist(M, src)
+		var/falloff = dist <= 3 ? 1 : 1 - 0.65 * (dist - 3) / (NST_SHAKE_RANGE - 3)
+		M.nst_gentle_shake(NST_SHAKE_TIME, base_px * falloff)
+	if(world.time >= next_vib_sound)
+		var/heavy = vibration >= NST_VIB_DANGER
+		next_vib_sound = world.time + (heavy ? 21 SECONDS : 11.5 SECONDS)
+		playsound(src, heavy ? 'sound/machines/submarine_vibration_heavy.ogg' : 'sound/machines/submarine_vibration.ogg', heavy ? 45 : 30, FALSE, 4)
+	if(world.time >= next_vib_message)
+		next_vib_message = world.time + 12 SECONDS
+		visible_message(SPAN_WARNING("The whole turbine rattles on its mounts."))
+
+/// Мягкая тряска экрана: короткие сдвиги картинки на пару пикселей (стоковый shake_camera прыгает на целые тайлы, для вибрации он слишком резкий).
+/mob/proc/nst_gentle_shake(duration, pixels)
+	if(!client || shakecamera || pixels < 0.6)
+		return
+	shakecamera = 1
+	var/client/C = client
+	var/ox = C.pixel_x
+	var/oy = C.pixel_y
+	var/amp = round(pixels + 0.4)
+	var/steps = max(1, round(duration / NST_SHAKE_STEP))
+	for(var/i = 1 to steps)
+		var/nx = ox + rand(-amp, amp)
+		var/ny = oy + rand(-amp, amp)
+		if(i == 1)
+			animate(C, pixel_x = nx, pixel_y = ny, time = NST_SHAKE_STEP)
+		else
+			animate(pixel_x = nx, pixel_y = ny, time = NST_SHAKE_STEP)
+	animate(pixel_x = ox, pixel_y = oy, time = NST_SHAKE_STEP)
+	addtimer(new Callback(src, PROC_REF(nst_end_shake)), duration + NST_SHAKE_STEP)
+
+/mob/proc/nst_end_shake()
+	shakecamera = 0
 
 /// Гул турбины: петля звука, громкость по оборотам. Выключается, когда вал почти стоит.
 /obj/machinery/power/submarine_turbine_generator/proc/update_sound()
@@ -888,7 +931,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/obj/machinery/atmospherics/binary/submarine_condenser/C = get_condenser()
 	data["hasCondenser"] = !!C
 	if(C)
-		data["cooling"] = C.cooling
+		data["cooling"] = round(C.cooling, 0.1)
+		data["condAuto"] = C.auto
+		data["condAutoSet"] = C.auto_set
+		data["condPressure"] = round(C.air1.return_pressure() / NSR_KPA_PER_BAR, 0.1)
 		data["condenserFlow"] = round(C.last_flow, 0.1)
 		data["condenserMax"] = round(NSR_CONDENSER_CAPACITY * C.cooling / 100, 0.1)
 	var/obj/machinery/atmospherics/binary/submarine_relief_valve/V = get_relief()
@@ -962,6 +1008,19 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
 			if(!cond)
 				to_chat(user, SPAN_WARNING("No condenser is connected to this turbine."))
+			else if(cond.auto)
+				to_chat(user, SPAN_WARNING("The condenser is in automatic mode. Switch the automation off to set its cooling by hand."))
 			else if(cool_amount in list(-10, -1, 1, 10))
 				cond.cooling = clamp(cond.cooling + cool_amount, 0, 100)
+		if("cond_auto")
+			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
+			if(!cond)
+				to_chat(user, SPAN_WARNING("No condenser is connected to this turbine."))
+			else
+				cond.toggle_auto()
+		if("cond_auto_set")
+			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
+			var/set_amount = text2num(href_list["amount"])
+			if(cond && (set_amount in list(-0.5, -0.1, 0.1, 0.5)))
+				cond.auto_set = round(clamp(cond.auto_set + set_amount, NSR_COND_AUTO_SET_MIN, NSR_COND_AUTO_SET_MAX), 0.1)
 	return TOPIC_REFRESH
