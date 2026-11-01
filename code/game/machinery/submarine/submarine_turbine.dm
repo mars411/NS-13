@@ -15,7 +15,7 @@
 	  нагрузку 0, 25, 50, 100, 150, 200 кВт, чтобы проверять регулятор, автомат и сброс нагрузки. Потом уберём или оставим как балласт.
 	- Пульт турбины (/obj/machinery/computer/submarine_turbine_console): NanoUI, шаблон nano/templates/submarine_turbine_panel.tmpl.
 	  Управляет заслонкой, регулятором, автоматом, стопорным клапаном и мощностью конденсатора. Круглая шкала оборотов, число вибрации,
-	  описание в окне. Пульт можно таскать (pull), гаечный ключ закрепляет его.
+	  описание в окне.
 - Вибрация (ревизия 9): число в мм/с, растёт с оборотами, износом секций и разрушенной секцией. Тряски экрана нет (GDD, §2).
   Выше NST_VIB_HIGH пульт предупреждает и турбина гремит, выше NST_VIB_DANGER секции начинают изнашиваться сами.
 - Гул: петля звука генератора, громкость по оборотам (стоковый sound_player).
@@ -86,6 +86,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 // Предохранительный сброс пара
 #define NST_RELIEF_BAR            40     // бар, при таком давлении на входе клапан начинает сбрасывать пар в конденсатор
 #define NST_RELIEF_COEF           0.03   // моль/с на каждый кПа превышения
+#define NST_RELIEF_TRIP_BAR       25     // бар: когда стопорный клапан турбины закрыт, клапан работает как обход турбины и открывается уже с этого давления
 
 // Вибрация, мм/с. Число на пульте, не тряска экрана. Растёт с оборотами, износом секций и разрушенной секцией.
 #define NST_VIB_RPM_REF           10000  // об/мин, при которых коэффициент оборотов равен 1 (дальше растёт с квадратом)
@@ -367,6 +368,14 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	playsound(src, 'sound/items/Ratchet.ogg', 40, TRUE)
 	return TRUE
 
+/// Давление срабатывания сейчас. Если стопорный клапан турбины закрыт (трип), пар должен идти мимо турбины прямо в конденсатор:
+/// клапан открывается с NST_RELIEF_TRIP_BAR вместо обычных 40 бар, как турбинный обход на настоящей станции.
+/obj/machinery/atmospherics/binary/submarine_relief_valve/proc/get_set_bar()
+	for(var/obj/machinery/power/submarine_turbine_generator/G in GLOB.submarine_turbines)
+		if(G.turbine_id == turbine_id && G.stop_tripped)
+			return min(set_bar, NST_RELIEF_TRIP_BAR)
+	return set_bar
+
 /obj/machinery/atmospherics/binary/submarine_relief_valve/proc/get_state_text()
 	if(locked_shut)
 		return "LOCKED SHUT"
@@ -383,7 +392,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(wait > 0)
 		dt = clamp(wait / 10, 0.5, 5)
 	var/pressure_in = air1.return_pressure()
-	var/limit = set_bar * NSR_KPA_PER_BAR
+	var/limit = get_set_bar() * NSR_KPA_PER_BAR
 	if(pressure_in <= limit)
 		return
 	var/pressure_out = air2.return_pressure()
@@ -733,7 +742,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 
 /obj/machinery/computer/submarine_turbine_console
 	name = "turbine control panel"
-	desc = "A heavy control panel for the steam turbine: the admission (inlet) valve, the speed governor, the generator breaker, the stop valve and the condenser cooling. It is on a trolley frame: drag it with Ctrl+click, or bolt it to the deck with a wrench."
+	desc = "A heavy control panel for the steam turbine: the admission (inlet) valve, the speed governor, the generator breaker, the stop valve and the condenser cooling."
 	machine_name = "turbine control panel"
 	machine_desc = "Used to operate the steam turbine: admission valve, speed governor, generator breaker, stop valve and condenser cooling."
 	// Спрайт временный: блок управления из стокового Бэя, окрашенный. Заменить на свой.
@@ -742,8 +751,6 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	color = "#9fc4ff"
 	clicksound = "button"
 	atom_flags = ATOM_FLAG_NO_TEMP_CHANGE
-	// Как у пульта реактора: можно таскать (pull), гаечный ключ закрепляет. На карте лодки пульт ставится закреплённым.
-	anchored = FALSE
 	// Как у пульта реактора: не собирается из деталей, без экрана и клавиатуры.
 	construct_state = null
 	// ВРЕМЕННО: пульт работает без питания (до АКБ-контура), как пульт реактора. Убрать MACHINE_STAT_NOPOWER из этой строки вместе с ним.
@@ -752,6 +759,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	/// Метка турбины, которой управляет пульт. Должна совпадать с turbine_id генератора.
 	var/turbine_id = "main"
 	var/obj/machinery/power/submarine_turbine_generator/unit
+	/// Положение стрелки в прошлый раз, когда окно обновлялось: от него шкала плавно доезжает до нового значения (SVG-анимация).
+	var/last_rpm_angle
 
 /obj/machinery/computer/submarine_turbine_console/Initialize()
 	. = ..()
@@ -760,11 +769,6 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /obj/machinery/computer/submarine_turbine_console/Destroy()
 	GLOB.submarine_turbine_consoles -= src
 	unit = null
-	return ..()
-
-/obj/machinery/computer/submarine_turbine_console/use_tool(obj/item/tool, mob/living/user, list/click_params)
-	if(nsr_wrench_console(src, tool, user))
-		return TRUE
 	return ..()
 
 /obj/machinery/computer/submarine_turbine_console/on_update_icon()
@@ -822,6 +826,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	data["rpmWindowHigh"] = NST_RPM_SYNC_HI
 	// Круглая шкала: стрелка, засечка уставки регулятора и цветные зоны (рабочее окно, предупреждение, повреждения).
 	data["rpmAngle"] = nsr_gauge_angle(rpm_now / NST_RPM_EXPLODE)
+	data["rpmAnglePrev"] = isnull(last_rpm_angle) ? data["rpmAngle"] : last_rpm_angle
+	last_rpm_angle = data["rpmAngle"]
 	data["govAngle"] = nsr_gauge_angle(G.governor_set / NST_RPM_EXPLODE)
 	var/green_start = nsr_gauge_len(NST_RPM_SYNC_LO / NST_RPM_EXPLODE)
 	var/amber_start = nsr_gauge_len(NST_RPM_SYNC_HI / NST_RPM_EXPLODE)
@@ -891,7 +897,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		data["reliefState"] = V.get_state_text()
 		data["reliefClass"] = V.locked_shut ? "bad" : (V.last_flow > 0 ? "average" : "good")
 		data["reliefFlow"] = round(V.last_flow, 0.1)
-		data["reliefBar"] = V.set_bar
+		data["reliefBar"] = V.get_set_bar()
 	return data
 
 /obj/machinery/computer/submarine_turbine_console/ui_interact(mob/user, ui_key = "main", datum/nanoui/ui = null, force_open = 1)

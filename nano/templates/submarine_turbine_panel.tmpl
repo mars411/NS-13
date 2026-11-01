@@ -34,7 +34,9 @@
 			{{if data.governorOn && data.governorOk}}
 				<line x1="60" y1="9" x2="60" y2="16" stroke="#f0c040" stroke-width="3" transform="rotate({{:data.govAngle}} 60 60)"/>
 			{{/if}}
-			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.rpmAngle}} 60 60)"/>
+			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.rpmAngle}} 60 60)">
+				<animateTransform attributeName="transform" type="rotate" from="{{:data.rpmAnglePrev}} 60 60" to="{{:data.rpmAngle}} 60 60" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
+			</line>
 			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
 			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.rpm}}</text>
 			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>

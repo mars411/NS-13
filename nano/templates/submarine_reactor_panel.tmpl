@@ -161,9 +161,13 @@
 	<div class="itemContent">
 		<svg width="150" height="125" viewBox="0 0 120 100">
 			<circle cx="60" cy="60" r="40" fill="none" stroke="#3a3a3a" stroke-width="9" stroke-dasharray="188.5 400" transform="rotate(135 60 60)"/>
-			<circle cx="60" cy="60" r="40" fill="none" stroke-width="9" stroke-dasharray="{{:data.pumpFillLen}} 400" transform="rotate(135 60 60)" stroke="{{if data.pumpClass == 'good'}}#4caf50{{else}}{{if data.pumpClass == 'average'}}#d9a82b{{else}}#c0392b{{/if}}{{/if}}"/>
+			<circle cx="60" cy="60" r="40" fill="none" stroke-width="9" stroke-dasharray="{{:data.pumpFillLen}} 400" transform="rotate(135 60 60)" stroke="{{if data.pumpClass == 'good'}}#4caf50{{else}}{{if data.pumpClass == 'average'}}#d9a82b{{else}}#c0392b{{/if}}{{/if}}">
+				<animate attributeName="stroke-dasharray" from="{{:data.pumpFillPrev}} 400" to="{{:data.pumpFillLen}} 400" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
+			</circle>
 			<line x1="60" y1="9" x2="60" y2="16" stroke="#f0c040" stroke-width="3" transform="rotate({{:data.pumpTargetAngle}} 60 60)"/>
-			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.pumpAngle}} 60 60)"/>
+			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.pumpAngle}} 60 60)">
+				<animateTransform attributeName="transform" type="rotate" from="{{:data.pumpAnglePrev}} 60 60" to="{{:data.pumpAngle}} 60 60" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
+			</line>
 			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
 			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.pumpRpm}}</text>
 			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>
@@ -171,6 +175,24 @@
 		<div>
 			Rotor: <b>{{:data.pumpSpin}}</b>
 		</div>
+		<div>
+			Motor heat:
+			{{:helper.displayBar(data.pumpHeat, 0, 100, data.pumpHeatClass)}}
+			<div class="statusValue">
+				{{:data.pumpHeat}}
+			</div>
+		</div>
+		{{if data.pumpBurnt}}
+			<div class='bad' style="clear: both;">
+				<b>MOTOR BURNT OUT.</b> Let it cool, then rewind it with cable.
+			</div>
+		{{else}}
+			{{if data.pumpHeat >= 60}}
+				<div class='bad' style="clear: both;">
+					Motor overheating. Check that the pump has water to pump.
+				</div>
+			{{/if}}
+		{{/if}}
 		{{:helper.displayBar(data.pumpSpeed, 0, 100, 'good')}}
 		<div class="statusValue">
 			set {{:data.pumpSpeed}} %

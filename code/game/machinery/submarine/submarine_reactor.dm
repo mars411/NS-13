@@ -66,19 +66,6 @@
 GLOBAL_LIST_EMPTY(submarine_reactors)
 GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 
-/// Гаечный ключ закрепляет пульт на палубе и отпускает его. Отпущенный пульт можно таскать (Ctrl+клик, pull).
-/// Общая для пультов реактора и турбины. Возвращает TRUE, если инструмент был гаечным ключом (клик обработан).
-/proc/nsr_wrench_console(obj/machinery/computer/console, obj/item/tool, mob/user)
-	if(!isWrench(tool))
-		return FALSE
-	console.anchored = !console.anchored
-	playsound(console, 'sound/items/Ratchet.ogg', 50, TRUE)
-	if(console.anchored)
-		user.visible_message(SPAN_NOTICE("\The [user] bolts \the [console] to the deck."), SPAN_NOTICE("You bolt \the [console] to the deck."))
-	else
-		user.visible_message(SPAN_NOTICE("\The [user] unbolts \the [console] from the deck."), SPAN_NOTICE("You unbolt \the [console] from the deck. It can be dragged now (Ctrl+click)."))
-	return TRUE
-
 /// Длина закрашенной части круглой шкалы для доли frac (0-1). Шкала в пульте нарисована дугой в 270 градусов.
 /proc/nsr_gauge_len(frac)
 	return round(clamp(frac, 0, 1) * NSR_GAUGE_ARC, 0.1)
@@ -127,6 +114,13 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_FEED_PUMP_RPM_MAX     3000   // об/мин при скорости 100% (для показа на пульте)
 #define NSR_FEED_PUMP_SPINUP      10     // % скорости в секунду при разгоне: от нуля до 100% за 10 секунд
 #define NSR_FEED_PUMP_SPINDOWN    6      // % скорости в секунду при торможении и при выбеге без питания: около 17 секунд до остановки
+#define NSR_PUMP_HEAT_DRY         4      // единиц нагрева в секунду при сухом ходе на полных оборотах (пропорционально оборотам): около 25 секунд до выхода из строя
+#define NSR_PUMP_HEAT_BLOCKED     1.5    // то же при работе против закрытой линии (нет порта, сосуд полон, напор выше предела)
+#define NSR_PUMP_COOL             2      // единиц в секунду остывает мотор, когда лишнего нагрева нет
+#define NSR_PUMP_HEAT_WARN        60     // нагрев, с которого пульт предупреждает и мотор подаёт голос
+#define NSR_PUMP_HEAT_MAX         100    // нагрев, на котором мотор сгорает и насос встаёт
+#define NSR_PUMP_REPAIR_COOL      40     // чинить сгоревший мотор можно, когда он остыл ниже этого
+#define NSR_PUMP_REPAIR_WIRE      10     // кусков провода на перемотку мотора
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             150    // C
@@ -155,13 +149,37 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_CASING_TIME           (3 SECONDS)
 #define NSR_ALARM_REPEAT          (6 SECONDS)
 
+/// Снятая броневая плита секции реактора. Это настоящий тяжёлый предмет: его можно таскать (Ctrl+клик, pull).
+/// Закрутить плиту обратно можно, только когда она лежит рядом с секцией (в радиусе 1 тайла).
+/obj/structure/submarine_reactor_plate
+	name = "reactor armour plate"
+	desc = "A heavy lead-composite armour plate unbolted from a reactor section. Drag it with Ctrl+click. Leave it next to the section and use a wrench on the section to bolt it back on."
+	// Временно: спрайт брони из стокового Бэя, окрашенный. Заменить своим.
+	icon = 'icons/obj/robot_component.dmi'
+	icon_state = "armor"
+	color = "#6b6b75"
+	density = TRUE
+	anchored = FALSE
+
 /// Общий порядок снятия и установки броневой плиты для всех четырёх секций корпуса (три секции и ядро).
+/// Снятая плита ложится на тайл рабочего. Чтобы закрутить обратно, плита должна лежать рядом: её забирает секция.
 /// Возвращает TRUE, если плиту после этого нужно переключить: вызывающий сам меняет свой casing_open.
 /proc/nsr_wrench_casing(obj/machinery/hull, mob/living/user, is_open)
+	if(is_open && !(locate(/obj/structure/submarine_reactor_plate) in range(1, hull)))
+		to_chat(user, SPAN_WARNING("The armour plate has to lie next to \the [hull] to bolt it back on."))
+		return FALSE
 	hull.visible_message(SPAN_NOTICE("\The [user] starts [is_open ? "securing" : "unbolting"] the armour plate of \the [hull]."))
 	playsound(hull, 'sound/items/Ratchet.ogg', 50, TRUE)
 	if(!do_after(user, NSR_CASING_TIME, hull))
 		return FALSE
+	if(is_open)
+		var/obj/structure/submarine_reactor_plate/plate = locate(/obj/structure/submarine_reactor_plate) in range(1, hull)
+		if(!plate)
+			to_chat(user, SPAN_WARNING("The armour plate is gone."))
+			return FALSE
+		qdel(plate)
+	else
+		new /obj/structure/submarine_reactor_plate(get_turf(user))
 	hull.visible_message(SPAN_NOTICE("\The [user] [is_open ? "secures" : "removes"] the armour plate of \the [hull]."))
 	return TRUE
 
@@ -210,6 +228,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/submarine_reactor_section/on_update_icon()
 	// Временная индикация: со снятой бронёй секция полупрозрачна.
 	alpha = casing_open ? 150 : 255
+	desc = casing_open ? "The armour plate is off. The fuel channels, the coolant pipework and the bare vessel wall show through the open frame, and the radiation is much stronger here. Bolt the plate back on with a wrench." : initial(desc)
 
 // ----------------------------------------------------------------------------
 // ЯДРО РЕАКТОРА
@@ -642,6 +661,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	ClearOverlays()
 	// Временная индикация: со снятой бронёй ядро полупрозрачно.
 	alpha = casing_open ? 150 : 255
+	desc = casing_open ? "The core's armour plate is off. The control rod drives, the fuel channels and the coolant pipes of the vessel are bare, and the radiation is much stronger here. Bolt the plate back on with a wrench." : initial(desc)
 	if(is_dead())
 		color = "#554433"
 		return
@@ -841,8 +861,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/datum/sound_token/sound_token
 	/// Подача воды в напорную трубу за последний тик, моль/с.
 	var/last_flow = 0
-	/// Состояние для пульта: RUNNING, STOPPED, NO POWER, NOT PIPED, NO REACTOR, NO INLET, NO SUCTION, NO HEAD, VESSEL FULL.
+	/// Состояние для пульта: RUNNING, STOPPED, NO POWER, NOT PIPED, NO REACTOR, NO INLET, NO SUCTION, NO HEAD, VESSEL FULL, BURNT OUT.
 	var/pump_state = "STOPPED"
+	/// Нагрев мотора, 0-100. Растёт от сухого хода и работы против закрытой линии, иначе остывает. На NSR_PUMP_HEAT_MAX мотор сгорает.
+	var/heat = 0
+	/// TRUE, если мотор сгорел: насос не крутится, пока его не перемотают (NSR_PUMP_REPAIR_WIRE кусков провода, мотор должен остыть).
+	var/burnt_out = FALSE
+	/// Доля запрошенной воды, которой не хватило в последний тик, 0-1 (для расчёта нагрева от сухого хода).
+	var/dryness = 0
+	/// Когда мотор в следующий раз пожалуется вслух на перегрев.
+	var/next_heat_message = 0
 
 /obj/machinery/atmospherics/binary/submarine_feed_pump/Initialize()
 	. = ..()
@@ -862,6 +890,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Что делает ротор насоса: для пульта.
 /obj/machinery/atmospherics/binary/submarine_feed_pump/proc/get_spin_text()
+	if(burnt_out)
+		return "SEIZED"
 	if(spin <= 0)
 		return "STOPPED"
 	if(inoperable())
@@ -889,7 +919,56 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(isWrench(tool))
 		to_chat(user, SPAN_WARNING("\The [src] is bolted to the deck."))
 		return TRUE
+	// Сгоревший мотор перематывают проводом, когда он остыл.
+	if(isCoil(tool) && burnt_out)
+		var/obj/item/stack/coil = tool
+		if(heat > NSR_PUMP_REPAIR_COOL)
+			to_chat(user, SPAN_WARNING("The motor of \the [src] is still too hot to touch. Let it cool down first."))
+			return TRUE
+		if(coil.get_amount() < NSR_PUMP_REPAIR_WIRE)
+			to_chat(user, SPAN_WARNING("You need [NSR_PUMP_REPAIR_WIRE] pieces of cable to rewind the motor."))
+			return TRUE
+		user.visible_message(SPAN_NOTICE("\The [user] starts rewinding the burnt motor of \the [src]."))
+		if(!do_after(user, 6 SECONDS, src) || !burnt_out || !coil.use(NSR_PUMP_REPAIR_WIRE))
+			return TRUE
+		burnt_out = FALSE
+		heat = 0
+		color = initial(color)
+		user.visible_message(SPAN_NOTICE("\The [user] rewinds the motor of \the [src]."))
+		playsound(src, 'sound/items/Deconstruct.ogg', 50, TRUE)
+		return TRUE
 	return ..()
+
+/// Мотор сгорел от перегрева: насос встаёт, уставка сбрасывается, чинится проводом после остывания.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/burn_out()
+	burnt_out = TRUE
+	speed = 0
+	spin = 0
+	color = "#4a3a3a"
+	visible_message(SPAN_DANGER("The motor of \the [src] burns out with a bang and a puff of smoke!"))
+	playsound(src, 'sound/machines/warning-buzzer.ogg', 70, TRUE)
+	QDEL_NULL(sound_token)
+
+/// Нагрев мотора за dt секунд по состоянию гидравлики: сухой ход нагревает быстро, работа против закрытой линии медленно, иначе мотор остывает.
+/obj/machinery/atmospherics/binary/submarine_feed_pump/proc/update_heat(dt)
+	var/load = spin / 100
+	var/gain = 0
+	switch(pump_state)
+		if("NO SUCTION")
+			gain = NSR_PUMP_HEAT_DRY * load
+		if("RUNNING")
+			gain = NSR_PUMP_HEAT_DRY * load * dryness
+		if("NOT PIPED", "NO REACTOR", "NO INLET", "NO HEAD", "VESSEL FULL")
+			gain = NSR_PUMP_HEAT_BLOCKED * load
+	if(gain > 0)
+		heat = min(NSR_PUMP_HEAT_MAX, heat + gain * dt)
+	else
+		heat = max(0, heat - NSR_PUMP_COOL * dt)
+	if(heat >= NSR_PUMP_HEAT_MAX)
+		burn_out()
+	else if(heat >= NSR_PUMP_HEAT_WARN && world.time >= next_heat_message)
+		next_heat_message = world.time + 15 SECONDS
+		visible_message(SPAN_WARNING("The motor of \the [src] whines and smells of hot varnish."))
 
 /obj/machinery/atmospherics/binary/submarine_feed_pump/update_underlays()
 	if(..())
@@ -909,6 +988,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/dt = 2
 	if(wait > 0)
 		dt = clamp(wait / 10, 0.5, 5)
+	if(burnt_out)
+		// Сгоревший мотор стоит и остывает, пока его не перемотают.
+		spin = 0
+		last_flow = 0
+		pump_state = "BURNT OUT"
+		heat = max(0, heat - NSR_PUMP_COOL * dt)
+		update_sound()
+		return
 	// Ротор идёт к уставке с разгоном и торможением. Без питания уставка считается нулевой: насос выбегает, но ещё какое-то время качает.
 	var/powered = !inoperable()
 	var/goal = powered ? speed : 0
@@ -924,10 +1011,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Если питания нет и насос должен был работать, пульт показывает причину, даже пока ротор ещё крутится.
 	if(!powered && speed > 0)
 		pump_state = "NO POWER"
+	update_heat(dt)
 	update_sound()
 
 /// Гидравлика насоса за dt секунд при текущих оборотах. Возвращает состояние для пульта.
 /obj/machinery/atmospherics/binary/submarine_feed_pump/proc/pump_water(dt)
+	dryness = 0
 	if(spin <= 0)
 		return "STOPPED"
 	if(!network1 || !network2)
@@ -948,6 +1037,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return "VESSEL FULL"
 	var/wanted = (spin / 100) * NSR_FEED_PUMP_MAX * head_factor * dt
 	var/moved = min(wanted, available)
+	// Воды не хватает: чем меньше хватило, тем выше сухой ход.
+	if(wanted > 0)
+		dryness = clamp(1 - moved / wanted, 0, 1)
 	air1.adjust_gas(GAS_LIQUID_WATER, -moved)
 	air2.adjust_gas_temp(GAS_LIQUID_WATER, moved, air1.temperature)
 	last_flow = moved / dt
@@ -1001,7 +1093,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /obj/machinery/computer/submarine_reactor_console
 	name = "reactor control panel"
-	desc = "A heavy control panel with buttons for the control rods, the feedwater pump and the emergency SCRAM. The rods set how much steam the reactor makes, the pump keeps it supplied with water, and SCRAM drops every rod at once. It is on a trolley frame: drag it with Ctrl+click, or bolt it to the deck with a wrench."
+	desc = "A heavy control panel with buttons for the control rods, the feedwater pump and the emergency SCRAM. The rods set how much steam the reactor makes, the pump keeps it supplied with water, and SCRAM drops every rod at once."
 	machine_name = "reactor control panel"
 	machine_desc = "Used to operate the submarine reactor: control rods, feedwater valve, steam valve and emergency SCRAM."
 	// Спрайт временный: блок управления из стокового Бэя. Заменить на свой.
@@ -1010,8 +1102,6 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Нажатия кнопок, а не стук по клавиатуре, и на пульт нельзя залезть как на компьютер.
 	clicksound = "button"
 	atom_flags = ATOM_FLAG_NO_TEMP_CHANGE
-	// Пульт можно таскать (pull). Гаечный ключ закрепляет его на палубе; на настоящей карте лодки пульт ставится закреплённым (anchored = TRUE в карте).
-	anchored = FALSE
 	// Пульт не собирается из деталей: для него нет платы-чертежа, а значит нет деталей «экран» и «клавиатура».
 	// Без этой строки Бэй считает пульт сломанным или без экрана и не даёт с ним взаимодействовать
 	// («It is missing a screen, making it hard to interact with»).
@@ -1023,6 +1113,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Метка реактора, которым управляет пульт. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/reactor
+	/// Положение стрелки и дуги насоса в прошлый раз, когда окно обновлялось: от него шкала плавно доезжает до нового значения (SVG-анимация).
+	var/last_pump_angle
+	var/last_pump_fill
 
 /obj/machinery/computer/submarine_reactor_console/Initialize()
 	. = ..()
@@ -1031,11 +1124,6 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/computer/submarine_reactor_console/Destroy()
 	GLOB.submarine_reactor_consoles -= src
 	reactor = null
-	return ..()
-
-/obj/machinery/computer/submarine_reactor_console/use_tool(obj/item/tool, mob/living/user, list/click_params)
-	if(nsr_wrench_console(src, tool, user))
-		return TRUE
 	return ..()
 
 /obj/machinery/computer/submarine_reactor_console/on_update_icon()
@@ -1104,12 +1192,19 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(R.feed_pump)
 		var/obj/machinery/atmospherics/binary/submarine_feed_pump/pump = R.feed_pump
 		data["pumpSpeed"] = pump.speed
+		data["pumpHeat"] = round(pump.heat)
+		data["pumpHeatClass"] = (pump.heat >= NSR_PUMP_HEAT_WARN) ? "bad" : ((pump.heat >= NSR_PUMP_HEAT_WARN / 2) ? "average" : "good")
+		data["pumpBurnt"] = pump.burnt_out
 		data["pumpRpm"] = pump.get_rpm()
 		data["pumpRpmMax"] = NSR_FEED_PUMP_RPM_MAX
 		data["pumpSpin"] = pump.get_spin_text()
 		data["pumpAngle"] = nsr_gauge_angle(pump.spin / 100)
+		data["pumpAnglePrev"] = isnull(last_pump_angle) ? data["pumpAngle"] : last_pump_angle
+		last_pump_angle = data["pumpAngle"]
 		data["pumpTargetAngle"] = nsr_gauge_angle(pump.speed / 100)
 		data["pumpFillLen"] = nsr_gauge_len(pump.spin / 100)
+		data["pumpFillPrev"] = isnull(last_pump_fill) ? data["pumpFillLen"] : last_pump_fill
+		last_pump_fill = data["pumpFillLen"]
 		data["pumpState"] = pump.pump_state
 		data["pumpClass"] = (pump.pump_state == "RUNNING") ? "good" : ((pump.pump_state == "STOPPED") ? "average" : "bad")
 		data["pumpFlow"] = round(pump.last_flow, 0.1)
