@@ -21,6 +21,11 @@
 </div>
 
 <h3>Shaft and generator</h3>
+{{if data.overloaded}}
+<div class='bad'>
+	<b>GENERATOR OVERLOADED.</b> The windings burnt out when a section was wrecked under load. It cannot be connected until it is repaired: {{:data.genMissing}}.
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Shaft speed:

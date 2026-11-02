@@ -77,6 +77,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_RPM_TRIP_HI           10500  // выше автомат отключается сам; между SYNC_HI и TRIP_HI выдача линейно падает
 #define NST_RPM_STOP              11000  // стопорный клапан закрывается сам
 #define NST_RPM_STOP_RESET        6000   // сбросить стопорный клапан можно, когда обороты ниже этих
+#define NST_COND_TRIP_BAR         6      // бар у конденсатора: если давление выше этого держится NST_COND_TRIP_TIME секунд, стопорный клапан закрывается
+#define NST_COND_TRIP_TIME        5      // с
 #define NST_RPM_DAMAGE            12000  // выше этих оборотов секции получают повреждения
 #define NST_RPM_EXPLODE           16000  // на этих оборотах самая слабая целая секция разрушается
 #define NST_DAMAGE_RATE           0.02   // доля здоровья в секунду на каждую 1000 об/мин сверх NST_RPM_DAMAGE
@@ -330,7 +332,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	return "CRITICAL"
 
 /obj/machinery/atmospherics/binary/submarine_turbine_section/use_tool(obj/item/tool, mob/living/user, list/click_params)
-	// Секция закреплена на фундаменте: отвернуть её гаечным ключом нельзя.
+	// Крышка, лопасти, сварка и перестройка: см. submarine_turbine_service.dm.
+	if(service_tool(tool, user))
+		return TRUE
+	// Сама секция закреплена на фундаменте: отвернуть её гаечным ключом нельзя (ключом снимают только крышку).
 	if(isWrench(tool))
 		to_chat(user, SPAN_WARNING("\The [src] is bolted to its foundation."))
 		return TRUE
@@ -354,6 +359,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	last_flow = 0
 	last_work = 0
 	last_expansion = 0
+	// Крышка снята: секция не работает, а пар, который в неё всё же пустили, уходит в помещение.
+	if(cover_open && !broken)
+		vent_open_cover(dt)
+		return 0
 	if(broken || !network1 || !network2 || admission <= 0 || dt <= 0)
 		return 0
 	var/pressure_in = air1.return_pressure()
@@ -413,6 +422,13 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	last_flow = 0
 	last_work = 0
 	last_expansion = 0
+	cover_open = FALSE
+	unwelded = 0
+	wreck_cleared = FALSE
+	rebuild_steel = 0
+	rebuild_blades = 0
+	rebuild_pipe = FALSE
+	rebuild_sensor = FALSE
 	color = "#443a33"
 	visible_message(SPAN_DANGER("A blade tears loose and \the [src] bursts apart in a cloud of steam!"))
 	var/turf/here = get_turf(src)
@@ -425,6 +441,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		if(spill_out)
 			here.assume_air(spill_out)
 		explosion(here, NST_SECTION_EXPLOSION)
+	update_service_desc()
 	if(network1)
 		network1.update = 1
 	if(network2)
@@ -587,6 +604,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/next_vib_message = 0
 	/// Когда можно снова включить звук вибрации (файлы длинные, поэтому не чаще раза за их длину).
 	var/next_vib_sound = 0
+	/// Сколько секунд подряд давление у конденсатора выше NST_COND_TRIP_BAR.
+	var/cond_over = 0
 	/// TRUE, пока вал стоит: следующий разгон выше NST_START_RPM_HI считается пуском (цикл, усталость лопастей).
 	var/was_stopped = TRUE
 	/// Множитель влажности пара для эрозии лопастей. 1 без влагоотделителя; влагоотделитель (этап 3в-2, уровень Б) его понизит.
@@ -673,6 +692,9 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /obj/machinery/power/submarine_turbine_generator/proc/try_close_breaker(mob/user)
 	if(breaker_closed)
 		return TRUE
+	if(overloaded)
+		to_chat(user, SPAN_WARNING("Cannot connect: the generator is burnt out. Needed: [repair_missing()]."))
+		return FALSE
 	var/rpm_now = shaft_rpm()
 	if(rpm_now < NST_RPM_SYNC_LO || rpm_now > NST_RPM_SYNC_HI)
 		to_chat(user, SPAN_WARNING("Cannot connect: the shaft must be within [NST_RPM_SYNC_LO]-[NST_RPM_SYNC_HI] rpm (now [round(rpm_now)])."))
@@ -700,6 +722,9 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		return TRUE
 	if(shaft_rpm() >= NST_RPM_STOP_RESET)
 		to_chat(user, SPAN_WARNING("Cannot reset the stop valve: the shaft must slow below [NST_RPM_STOP_RESET] rpm first."))
+		return FALSE
+	if(lp2 && !QDELETED(lp2) && lp2.air2.return_pressure() / NSR_KPA_PER_BAR > NST_COND_TRIP_BAR * 0.5)
+		to_chat(user, SPAN_WARNING("Cannot reset the stop valve: the pressure at the condenser is still too high. Cool it down first."))
 		return FALSE
 	stop_tripped = FALSE
 	admission = 0
@@ -736,8 +761,14 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 			open_breaker("BLADE LOST")
 		. = TRUE
 	if(wrecked > 0)
+		var/was_closed = breaker_closed
 		shaft_energy *= NST_WRECK_ENERGY_KEEP ** wrecked
 		open_breaker("SECTION WRECKED")
+		// Разрушение под нагрузкой даёт скачок: генератор перегружается (ремонт в submarine_turbine_service.dm).
+		if(was_closed)
+			overload()
+		// Разрушенная секция закупорена, пар нужно сразу перекрыть.
+		trip_stop_valve("SECTION WRECKED")
 		. = TRUE
 
 /// Один цикл нагрузки на ротор (пуск, срабатывание защиты): малая усталость всем рядам всех секций.
@@ -752,8 +783,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /obj/machinery/power/submarine_turbine_generator/proc/apply_blade_wear(dt, rpm_now)
 	var/broken_before = count_broken()
 	var/rows_before = count_lost_rows()
+	update_separator(dt, rpm_now)
 	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
-		S.wear_blades(dt, rpm_now, wet_mult)
+		// Влагоотделитель стоит после высокого давления и защищает только секции низкого.
+		S.wear_blades(dt, rpm_now, (S.stage == NST_STAGE_HP) ? 1 : wet_mult)
 	handle_wrecks(broken_before, rows_before)
 
 /// Пересчитывает вибрацию: растёт с оборотами, износом секций, разрушенной секцией и перебором оборотов; число догоняет расчёт плавно.
@@ -881,6 +914,14 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	shaft_energy = max(0, shaft_energy + (steam_power - electric_power / NST_GEN_EFF - friction_power) * dt)
 	rpm = shaft_rpm()
 
+	// Давление у конденсатора слишком высокое и держится: конденсатор не справляется, стопорный клапан закрывается.
+	if(lp2 && !QDELETED(lp2) && !stop_tripped)
+		if(lp2.air2.return_pressure() / NSR_KPA_PER_BAR > NST_COND_TRIP_BAR)
+			cond_over += dt
+			if(cond_over >= NST_COND_TRIP_TIME)
+				trip_stop_valve("CONDENSER PRESSURE")
+		else
+			cond_over = 0
 	// Пуск с нуля это цикл: усталость лопастей.
 	if(rpm < NST_START_RPM_LO)
 		was_stopped = TRUE
@@ -1070,6 +1111,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	data["tripReason"] = G.trip_reason
 	data["hasGrid"] = !!G.powernet
 	data["stopTripped"] = G.stop_tripped
+	data["overloaded"] = G.overloaded
+	data["genMissing"] = G.overloaded ? G.repair_missing() : ""
 	data["steamKw"] = round(G.steam_power / 1000, 0.1)
 	data["outputKw"] = round(G.last_output / 1000, 0.1)
 	data["demandKw"] = round(G.last_demand / 1000, 0.1)
