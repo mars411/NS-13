@@ -139,11 +139,13 @@
 			<div style="padding-top: 2px;">
 				{{if value.sensor}}
 					Blade rows (in steam order):
+					<div style="padding-top: 3px;">
 					{{for value.rows}}
-						<span class='{{:value.c}}'>{{:value.p}}</span>
+						<span class='{{:value.c}}' style="display: inline-block; min-width: 44px; margin: 0 6px 3px 0; padding: 2px 0; text-align: center; border: 1px solid #40628a;">{{:value.p}}%</span>
 					{{/for}}
+					</div>
 					{{if value.lost}}
-						<span class='bad'>&nbsp;{{:value.lost}} row(s) LOST</span>
+						<span class='bad'>{{:value.lost}} row(s) LOST</span>
 					{{/if}}
 				{{else}}
 					Condition: <b>{{:value.grade}}</b> <i>(no scanning module, the rows are unknown)</i>
