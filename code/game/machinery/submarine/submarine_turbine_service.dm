@@ -161,7 +161,7 @@
 		cover_open = FALSE
 		update_service_desc()
 		user.visible_message(SPAN_NOTICE("\The [user] bolts the cover back onto \the [src]."))
-		playsound(src, 'sound/items/Ratchet.ogg', 50, TRUE)
+		playsound(src, NS_SND_WRENCH, 50, TRUE)
 		return TRUE
 	if(!service_safe(user))
 		return TRUE
@@ -171,7 +171,7 @@
 	cover_open = TRUE
 	update_service_desc()
 	user.visible_message(SPAN_NOTICE("\The [user] unbolts the cover of \the [src] and lifts it off."))
-	playsound(src, 'sound/items/Ratchet.ogg', 50, TRUE)
+	playsound(src, NS_SND_WRENCH, 50, TRUE)
 	return TRUE
 
 /// Пока крышка снята, секция не работает, а пар, который в неё всё же пустили, уходит в помещение.
@@ -232,7 +232,7 @@
 	if(!welder.remove_fuel(2, user))
 		return TRUE
 	user.visible_message(SPAN_NOTICE("\The [user] starts welding the new blades of \the [src] in place."))
-	playsound(src, 'sound/items/Welder.ogg', 50, TRUE)
+	playsound(src, NS_SND_WELD, 50, TRUE)
 	if(!do_after(user, NST_TIME_WELD, src) || !cover_open || unwelded <= 0)
 		return TRUE
 	unwelded = 0
@@ -260,7 +260,7 @@
 			if(!welder.remove_fuel(3, user))
 				return TRUE
 			user.visible_message(SPAN_NOTICE("\The [user] starts cutting the wreckage out of \the [src]."))
-			playsound(src, 'sound/items/Welder.ogg', 50, TRUE)
+			playsound(src, NS_SND_WELD, 50, TRUE)
 			if(!do_after(user, NST_TIME_CUT_WRECK, src) || wreck_cleared)
 				return TRUE
 			wreck_cleared = TRUE
@@ -275,7 +275,7 @@
 		if(!welder.remove_fuel(5, user))
 			return TRUE
 		user.visible_message(SPAN_NOTICE("\The [user] starts welding the rebuilt rotor of \the [src] together."))
-		playsound(src, 'sound/items/Welder.ogg', 50, TRUE)
+		playsound(src, NS_SND_WELD, 50, TRUE)
 		if(!do_after(user, NST_TIME_REBUILD_FINAL, src) || !broken || rebuild_missing())
 			return TRUE
 		finish_rebuild()
@@ -357,7 +357,7 @@
 	cover_open = FALSE
 	color = initial(color)
 	update_service_desc()
-	playsound(src, 'sound/items/Deconstruct.ogg', 50, TRUE)
+	playsound(src, NS_SND_BUILT, 50, TRUE)
 
 // ----------------------------------------------------------------------------
 // ГЕНЕРАТОР: ПЕРЕГРУЗКА И РЕМОНТ
@@ -376,7 +376,7 @@
 	overloaded = TRUE
 	repair_caps = 0
 	visible_message(SPAN_DANGER("The generator windings flash over and \the [src] goes dead with a smell of burnt insulation!"))
-	playsound(src, 'sound/effects/sparks4.ogg', 70, TRUE)
+	playsound(src, NS_SND_SPARKS, 70, TRUE)
 
 /// Текст для пульта и осмотра: что нужно для ремонта.
 /obj/machinery/power/submarine_turbine_generator/proc/repair_missing()
@@ -413,7 +413,7 @@
 			overloaded = FALSE
 			repair_caps = 0
 			user.visible_message(SPAN_NOTICE("\The [user] rewinds the windings of \the [src]. It hums again."))
-			playsound(src, 'sound/items/Deconstruct.ogg', 50, TRUE)
+			playsound(src, NS_SND_BUILT, 50, TRUE)
 			return TRUE
 	return ..()
 

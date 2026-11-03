@@ -97,6 +97,9 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_CYCLE_FATIGUE         0.004  // доля здоровья каждого ряда за один цикл: пуск с нуля, срабатывание стопорного клапана, защитный сброс нагрузки
 #define NST_START_RPM_LO          200    // вал считается остановленным ниже этих оборотов
 #define NST_START_RPM_HI          1000   // разгон выше этих оборотов после остановки считается пуском
+#define NST_SND_RPM_ON            300    // выше этих оборотов вал «работает»: один раз играет звук пуска, потом гул
+#define NST_SND_RPM_OFF           200    // ниже этих оборотов вал «остановился»: гул обрывается, один раз играет звук остановки
+#define NST_SND_LOOP_DELAY        (14 SECONDS) // гул включается после звука пуска (он ~16 с), чтобы они не накладывались
 
 // Регулятор оборотов
 #define NST_GOV_GAIN              1      // процентов хода заслонки в секунду на каждую 1000 об/мин ошибки (медленный)
@@ -407,7 +410,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(world.time >= next_shake_message)
 		next_shake_message = world.time + 8 SECONDS
 		visible_message(SPAN_DANGER("\The [src] shakes violently and screams on the blades!"))
-		playsound(src, 'sound/machines/warning-buzzer.ogg', 50, TRUE)
+		playsound(src, NS_SND_TRIP, 50, TRUE)
 	return FALSE
 
 /// Секция разрушена: лопасть срывается, пар вырывается в зал, взрыв меньше, чем у реактора. Замены лопасти и перестройки пока нет (этап 3в-2).
@@ -504,7 +507,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		visible_message(SPAN_NOTICE("\The [user] locks \the [src] shut."))
 	else
 		visible_message(SPAN_NOTICE("\The [user] unlocks \the [src]."))
-	playsound(src, 'sound/items/Ratchet.ogg', 40, TRUE)
+	playsound(src, NS_SND_WRENCH, 40, TRUE)
 	return TRUE
 
 /// Давление срабатывания сейчас. Если стопорный клапан турбины закрыт (трип), пар должен идти мимо турбины прямо в конденсатор:
@@ -612,6 +615,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/wet_mult = 1
 	/// Петля звука работы (стоковый sound_player).
 	var/datum/sound_token/sound_token
+	/// TRUE, пока вал «работает» по звуку (гистерезис NST_SND_RPM_ON / NST_SND_RPM_OFF).
+	var/snd_running = FALSE
+	/// Не раньше этого времени включается гул после звука пуска.
+	var/snd_loop_time = 0
 
 /obj/machinery/power/submarine_turbine_generator/Initialize()
 	. = ..()
@@ -683,7 +690,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	last_output = 0
 	trip_reason = reason
 	visible_message(SPAN_WARNING("The generator breaker trips open ([reason])!"))
-	playsound(src, 'sound/machines/warning-buzzer.ogg', 60, TRUE)
+	playsound(src, NS_SND_TRIP, 60, TRUE)
 	// Защитный сброс нагрузки на ходу бьёт по ресурсу лопастей (как любой цикл); ручное отключение и срабатывание от удара не считаются.
 	if(reason == "OVERSPEED" || reason == "UNDERSPEED")
 		add_cycle()
@@ -705,7 +712,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	breaker_closed = TRUE
 	trip_reason = ""
 	visible_message(SPAN_NOTICE("The generator breaker closes with a heavy clunk."))
-	playsound(src, 'sound/machines/switch2.ogg', 40, TRUE)
+	playsound(src, NS_SND_BREAKER, 40, TRUE)
 	return TRUE
 
 /obj/machinery/power/submarine_turbine_generator/proc/trip_stop_valve(reason)
@@ -713,7 +720,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		return
 	stop_tripped = TRUE
 	visible_message(SPAN_DANGER("The turbine stop valve slams shut ([reason])!"))
-	playsound(src, 'sound/machines/warning-buzzer.ogg', 80, TRUE)
+	playsound(src, NS_SND_TRIP, 80, TRUE)
 	add_cycle()
 
 /// Сброс стопорного клапана оператором. Только когда обороты упали ниже NST_RPM_STOP_RESET; заслонка при этом закрывается.
@@ -756,7 +763,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(rows_new > 0)
 		shaft_energy *= NST_ROW_LOSS_KEEP ** rows_new
 		visible_message(SPAN_DANGER("A bang from inside the turbine: a row of blades has torn loose!"))
-		playsound(src, 'sound/machines/warning-buzzer.ogg', 70, TRUE)
+		playsound(src, NS_SND_TRIP, 70, TRUE)
 		if(!wrecked)
 			open_breaker("BLADE LOST")
 		. = TRUE
@@ -831,7 +838,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(world.time >= next_vib_sound)
 		var/heavy = vibration >= NST_VIB_DANGER
 		next_vib_sound = world.time + (heavy ? 21 SECONDS : 11.5 SECONDS)
-		playsound(src, heavy ? 'sound/machines/submarine_vibration_heavy.ogg' : 'sound/machines/submarine_vibration.ogg', heavy ? 45 : 30, FALSE, 4)
+		playsound(src, heavy ? NS_SND_VIBRATION_HEAVY : NS_SND_VIBRATION, heavy ? 45 : 30, FALSE, 4)
 	if(world.time >= next_vib_message)
 		next_vib_message = world.time + 12 SECONDS
 		visible_message(SPAN_WARNING("The whole turbine rattles on its mounts."))
@@ -859,15 +866,22 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /mob/proc/nst_end_shake()
 	shakecamera = 0
 
-/// Гул турбины: петля звука, громкость по оборотам. Выключается, когда вал почти стоит.
+/// Звуки турбины: пуск (один раз), гул (петля, громкость по оборотам), остановка (один раз).
+/// У стокового sound_token нет регулировки частоты, поэтому обороты слышны только по громкости.
 /obj/machinery/power/submarine_turbine_generator/proc/update_sound()
-	if(rpm < 300)
-		if(sound_token)
-			QDEL_NULL(sound_token)
+	if(!snd_running && rpm >= NST_SND_RPM_ON)
+		snd_running = TRUE
+		snd_loop_time = world.time + NST_SND_LOOP_DELAY
+		playsound(src, NS_SND_TURBINE_START, 50, FALSE, 7)
+	else if(snd_running && rpm < NST_SND_RPM_OFF)
+		snd_running = FALSE
+		QDEL_NULL(sound_token)
+		playsound(src, NS_SND_TURBINE_STOP, 50, FALSE, 7)
+	if(!snd_running || world.time < snd_loop_time)
 		return
 	var/volume = 8 + 24 * clamp(rpm / NST_VIB_RPM_REF, 0, 1.2)
 	if(!sound_token)
-		sound_token = GLOB.sound_player.PlayLoopingSound(src, "nst_turbine_\ref[src]", 'sound/machines/engine.ogg', volume = volume, range = 9, falloff = 3, prefer_mute = TRUE)
+		sound_token = GLOB.sound_player.PlayLoopingSound(src, "nst_turbine_\ref[src]", NS_SND_TURBINE_LOOP, volume = volume, range = 9, falloff = 3, prefer_mute = TRUE)
 	else
 		sound_token.SetVolume(volume)
 
@@ -971,7 +985,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	step_index = (step_index % length(load_steps)) + 1
 	load_w = load_steps[step_index]
 	visible_message(SPAN_NOTICE("\The [user] sets \the [src] to [load_w / 1000] kW."))
-	playsound(src, 'sound/machines/switch2.ogg', 40, TRUE)
+	playsound(src, NS_SND_BREAKER, 40, TRUE)
 	update_desc()
 	return TRUE
 

@@ -359,6 +359,22 @@
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Fa" = (
+/obj/machinery/fabricator,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Qx" = (
+/obj/machinery/light/spot{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Qy" = (
+/obj/machinery/light/spot{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Tb" = (
 /obj/structure/table/standard,
 /obj/item/paper/reactor_test/blackout,
@@ -369,9 +385,30 @@
 /obj/item/paper/reactor_test/control_room,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Tg" = (
+/obj/structure/table/standard,
+/obj/item/device/scanner/gas,
+/obj/item/device/geiger,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Th" = (
 /obj/structure/table/standard,
 /obj/item/paper/reactor_test/hatches,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Tl" = (
+/obj/structure/table/standard,
+/obj/item/submarine_turbine_blade/small,
+/obj/item/submarine_turbine_blade/small,
+/obj/item/submarine_turbine_blade/large,
+/obj/item/submarine_turbine_blade/large,
+/obj/item/submarine_turbine_blade/large,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Ts" = (
+/obj/structure/table/standard,
+/obj/item/stack/material/steel/fifty,
+/obj/item/stack/material/steel/fifty,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Tt" = (
@@ -1708,13 +1745,13 @@ OC
 OC
 OC
 Zq
+Zj
 Ze
 Ze
 Ze
 Ze
 Ze
-Ze
-Ze
+Zn
 Zq
 mZ
 gn
@@ -1748,7 +1785,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Tg
 Zq
 mZ
 kn
@@ -1952,7 +1989,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Zn
 Zq
 OC
 OC
@@ -2017,7 +2054,7 @@ OC
 OC
 OC
 Zq
-Ze
+Zj
 Zq
 OC
 OC
@@ -2149,7 +2186,7 @@ OC
 OC
 OC
 Zq
-Ze
+Tg
 Ze
 Ze
 Ze
@@ -2157,7 +2194,7 @@ Ze
 Ze
 Zo
 Ze
-Ze
+Qy
 Zq
 OC
 OC
@@ -2285,7 +2322,7 @@ OC
 OC
 OC
 Zq
-Ze
+Qx
 Ze
 Ze
 Zk
@@ -2327,7 +2364,7 @@ Ze
 Ze
 Zw
 Ze
-Ze
+Qy
 Zq
 OC
 OC
@@ -2531,7 +2568,7 @@ Ze
 Ze
 Zh
 Ze
-Ze
+Qy
 Zq
 OC
 OC
@@ -2557,7 +2594,7 @@ OC
 OC
 OC
 Zq
-Ze
+Qx
 Ze
 Ze
 Zf
@@ -2863,7 +2900,7 @@ OC
 OC
 OC
 Zq
-Ze
+Qx
 Zf
 Ze
 Zf
@@ -2871,7 +2908,7 @@ Vw
 Ze
 Zh
 Ze
-Ze
+Qy
 Zq
 OC
 OC
@@ -3075,7 +3112,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Qy
 Zq
 OC
 OC
@@ -3101,7 +3138,7 @@ OC
 OC
 OC
 Zq
-Ze
+Qx
 Vk
 Ze
 Ze
@@ -3142,7 +3179,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Ts
 Ze
 Zq
 OC
@@ -3176,7 +3213,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Fa
 Zn
 Zq
 OC
@@ -3210,7 +3247,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Tl
 Ze
 Zq
 OC

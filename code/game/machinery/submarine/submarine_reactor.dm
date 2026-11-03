@@ -86,8 +86,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_MAX_HEAT_RATE         100    // ед. тепла в секунду при стержнях 100%
 #define NSR_CORE_HEAT_CAP         10     // ед. тепла на 1 C, «сухая» активная зона
 #define NSR_COOLANT_HEAT_CAP      40     // добавка к теплоёмкости при полном сосуде воды
-#define NSR_PASSIVE_LOSS          0.2    // ед. тепла/с на каждый C выше температуры отсека
-#define NSR_BOIL_CONDUCT          5      // ед. тепла/с, которые забирает кипение, на каждый C выше точки кипения
+#define NSR_PASSIVE_LOSS          0.08   // ед. тепла/с на каждый C выше температуры отсека (в ревизии 13 было 0.2: сухая зона теперь остывает хуже)
+#define NSR_BOIL_CONDUCT          2      // ед. тепла/с, которые забирает кипение, на каждый C выше точки кипения (в ревизии 13 было 5: теперь температура зоны заметно растёт с мощностью, а не залипает у точки кипения)
+#define NSR_DECAY_FRACTION        0.15   // доля полной тепловой мощности, которую даёт остаточное тепло (в жизни 6-7%, для игры больше). Это ЧАСТЬ мощности, а не прибавка: на устойчивом режиме стержни 100% дают ровно NSR_MAX_HEAT_RATE
+#define NSR_DECAY_BUILD_TAU       300    // с: за это время остаточное тепло приближается к уровню текущей мощности (копится)
+#define NSR_DECAY_TAU             1200   // с: за это время остаточное тепло после остановки падает в e раз (около 20 минут)
 #define NSR_MOLES_PER_HEAT        0.6    // моль пара на единицу тепла, ушедшего в кипение
 #define NSR_MOLES_PER_PERCENT     60     // моль воды в 1% уровня воды. Вода кипит в пар моль в моль, ничего не пропадает
 
@@ -135,9 +138,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_COND_AUTO_FILTER      4      // с, сглаживание измеренного давления: пар приходит порциями, регулятор не должен дёргаться за каждой
 
 // Пороги тревог и катастроф
-#define NSR_TEMP_WARN             150    // C
-#define NSR_TEMP_CRIT             250    // C
-#define NSR_MELTDOWN_TEMP         400    // C, расплав
+#define NSR_TEMP_WARN             200    // C (в ревизии 13 было 150)
+#define NSR_TEMP_CRIT             300    // C (было 250)
+#define NSR_MELTDOWN_TEMP         450    // C, расплав (было 400)
 #define NSR_PRESSURE_WARN         70     // бар
 #define NSR_PRESSURE_CRIT         90     // бар
 #define NSR_PRESSURE_BURST        110    // бар, взрыв сосуда
@@ -151,6 +154,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_RADS_OPEN_CASING_MULT 4      // множитель, если снята броня хотя бы с одной секции
 #define NSR_RADS_RUPTURE          30     // одиночный импульс при взрыве сосуда
 #define NSR_RADS_MELTDOWN         40     // каждый тик после расплава
+#define NSR_RADS_DECAY_MAX        2      // «лёгкая радиация» от остаточного тепла при полном его уровне (после остановки зона всё ещё фонит)
 
 // Управление и прочее
 #define NSR_ROD_COUNT             4      // число стержней, у каждого свой привод
@@ -181,7 +185,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		to_chat(user, SPAN_WARNING("The armour plate has to lie next to \the [hull] to bolt it back on."))
 		return FALSE
 	hull.visible_message(SPAN_NOTICE("\The [user] starts [is_open ? "securing" : "unbolting"] the armour plate of \the [hull]."))
-	playsound(hull, 'sound/items/Ratchet.ogg', 50, TRUE)
+	playsound(hull, NS_SND_WRENCH, 50, TRUE)
 	if(!do_after(user, NSR_CASING_TIME, hull))
 		return FALSE
 	if(is_open)
@@ -269,6 +273,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Уровень воды в сосуде, 0-100%.
 	var/coolant_level = 100
 	/// Среднее фактическое положение стержней, 0-100%. Считается из rod_pos, руками не менять. От него зависит тепловая мощность.
+	/// Остаточное тепло, доля от NSR_MAX_HEAT_RATE (0 .. NSR_DECAY_FRACTION). Растёт, пока реактор работает, после остановки медленно спадает (Е1).
+	var/decay_heat = 0
 	var/rods_pos = 0
 	/// Средняя цель стержней, 0-100%. Считается из rod_target, руками не менять.
 	var/rods_target = 0
@@ -479,7 +485,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	for(var/i in 1 to NSR_ROD_COUNT)
 		rod_target[i] = 0
 	update_rod_averages()
-	playsound(src, 'sound/machines/buzz-two.ogg', 60, FALSE)
+	playsound(src, NS_SND_SCRAM, 60, FALSE)
 	audible_message(SPAN_WARNING("\The [src] drops its control rods with a heavy clunk."))
 	queue_icon_update()
 	return TRUE
@@ -543,7 +549,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/rods_frac = rods_pos / 100
 	var/coolant_frac = coolant_level / 100
 
-	var/heat_in = rods_frac * NSR_MAX_HEAT_RATE
+	// Остаточное тепло: стремится к доле от мощности стержней, копится быстро, спадает медленно. SCRAM останавливает деление,
+	// но не его осколки: после остановки зона ещё долго греется и кипит воду, поэтому охлаждение нужно и после SCRAM.
+	var/decay_target = NSR_DECAY_FRACTION * rods_frac
+	var/decay_tau = (decay_heat < decay_target) ? NSR_DECAY_BUILD_TAU : NSR_DECAY_TAU
+	decay_heat += (decay_target - decay_heat) * min(1, dt / decay_tau)
+	if(decay_heat < 0.0005 && decay_target <= 0)
+		decay_heat = 0
+	// Сразу после подъёма стержней идёт (1 - доля) мощности, остальное набегает с NSR_DECAY_BUILD_TAU. На устойчивом режиме сумма равна rods_frac,
+	// поэтому пар при 100% стержней не превышает ёмкость конденсатора, как до ревизии 13.
+	var/heat_in = ((1 - NSR_DECAY_FRACTION) * rods_frac + decay_heat) * NSR_MAX_HEAT_RATE
 	var/heat_cap = NSR_CORE_HEAT_CAP + coolant_frac * NSR_COOLANT_HEAT_CAP
 	var/heat_loss = max(0, core_temperature - NSR_AMBIENT_TEMP) * NSR_PASSIVE_LOSS
 
@@ -588,9 +603,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		new_level = 2
 
 	if(new_level > alarm_level)
-		sound_alarm('sound/machines/buzz-two.ogg', 60, TRUE)
+		sound_alarm(NS_SND_ALARM_WARN, 60, TRUE)
 	if(new_level >= 2 && world.time >= next_alarm_time)
-		sound_alarm('sound/machines/warning-buzzer.ogg', 70)
+		sound_alarm(NS_SND_ALARM_CRIT, 70)
 		next_alarm_time = world.time + NSR_ALARM_REPEAT
 	alarm_level = new_level
 
@@ -611,9 +626,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			audible_message(SPAN_WARNING("\The [src] emits a warning tone."))
 
 /obj/machinery/submarine_reactor_core/proc/emit_radiation()
-	if(rods_pos <= 0)
+	var/rads = (rods_pos / 100) * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
+	if(rads <= 0.01)
 		return
-	var/rads = (rods_pos / 100) * NSR_RADS_RUNNING_MAX
 	if(count_open_casings())
 		rads *= NSR_RADS_OPEN_CASING_MULT
 	SSradiation.radiate(src, rads)
@@ -642,7 +657,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	zero_rods()
 	queue_icon_update()
 	visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
-	sound_alarm('sound/machines/warning-buzzer.ogg', 100)
+	sound_alarm(NS_SND_TRIP, 100)
 
 // --- Текст для пульта ---
 
@@ -958,7 +973,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return
 	var/volume = 6 + 16 * spin / 100
 	if(!sound_token)
-		sound_token = GLOB.sound_player.PlayLoopingSound(src, "nsr_pump_\ref[src]", 'sound/machines/pump.ogg', volume = volume, range = 6, falloff = 3, prefer_mute = TRUE)
+		sound_token = GLOB.sound_player.PlayLoopingSound(src, "nsr_pump_\ref[src]", NS_SND_PUMP_LOOP, volume = volume, range = 6, falloff = 3, prefer_mute = TRUE)
 	else
 		sound_token.SetVolume(volume)
 
@@ -983,7 +998,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		heat = 0
 		color = initial(color)
 		user.visible_message(SPAN_NOTICE("\The [user] rewinds the motor of \the [src]."))
-		playsound(src, 'sound/items/Deconstruct.ogg', 50, TRUE)
+		playsound(src, NS_SND_BUILT, 50, TRUE)
 		return TRUE
 	return ..()
 
@@ -997,7 +1012,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	auto_text = ""
 	color = "#4a3a3a"
 	visible_message(SPAN_DANGER("The motor of \the [src] burns out with a bang and a puff of smoke!"))
-	playsound(src, 'sound/machines/warning-buzzer.ogg', 70, TRUE)
+	playsound(src, NS_SND_TRIP, 70, TRUE)
 	QDEL_NULL(sound_token)
 
 /// Нагрев мотора за dt секунд по состоянию гидравлики: полный сухой ход нагревает быстро, работа против закрытой линии медленно,
@@ -1260,6 +1275,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["status"] = R.get_status_text()
 	data["statusClass"] = R.get_status_class()
 	data["temp"] = round(R.core_temperature)
+	data["decay"] = round(R.decay_heat * 100, 0.1)
+	data["decayMax"] = NSR_DECAY_FRACTION * 100
 	data["tempMax"] = NSR_MELTDOWN_TEMP
 	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
 	data["pressure"] = round(R.steam_pressure, 0.1)

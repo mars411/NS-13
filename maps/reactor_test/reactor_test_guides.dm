@@ -20,7 +20,9 @@
 2. Set the feedwater pump to about 100%. The pump needs power from the APC.
 3. Raise the control rods: use the All rods links, or move each rod by itself. Rods move slowly.
 4. Watch the temperature, the steam pressure and the water level. Keep the water level up.
-5. SCRAM drops all rods fast. It can be reset once the core has cooled."}
+5. SCRAM drops all rods fast. It can be reset once the core has cooled.
+6. The core keeps making residual heat after a SCRAM (up to 15% of full power, fading over about twenty minutes). Keep the feedwater pump running until the temperature has settled.
+7. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
 
 /obj/item/paper/reactor_test/hatches
 	name = "reactor test: hatches"
@@ -35,7 +37,8 @@ A hatch will not close while someone stands in it."}
 	info = {"\[large\]\[b\]Blackout test\[/b\]\[/large\]
 \[hr\]
 Switch off the main breaker of the APC at the west end of the start hall.
-The feedwater pump loses power and stops, and the core starts to dry out. SCRAM the reactor before it overheats."}
+The feedwater pump loses power and stops, and the core starts to dry out. SCRAM the reactor before it overheats.
+The rods drop, but the residual heat stays: with the pump dead it boils away about half the water in the next minutes. Restore power in time."}
 
 /obj/item/paper/reactor_test/hall
 	name = "reactor test: the hall"
@@ -43,7 +46,8 @@ The feedwater pump loses power and stops, and the core starts to dry out. SCRAM 
 \[hr\]
 The core and three sections form a 2x2 block. Steam leaves east of the core, passes a gauge and a manual valve and goes through the gap in the east wall to the turbine hall.
 Water comes back from the condenser through the cyan pipes of the south line (through the second gap in the wall) to the feedwater pump, and from the pump through a pipe to the inlet on the vessel.
-To test leaks, unwrench a water pipe with the wrench: the water runs out onto the floor as a puddle, and air does not get into the pipe."}
+To test leaks, unwrench a water pipe with the wrench: the water runs out onto the floor as a puddle, and air does not get into the pipe.
+The table by the north wall holds a gas analyzer and a Geiger counter: scan the steam pipes and watch the radiation near the core."}
 
 /obj/item/paper/reactor_test/warning
 	name = "reactor test: warning"
@@ -61,7 +65,8 @@ A wrench lies on the floor: unbolt an armour plate and the radiation grows fourf
 3. Watch the shaft speed. At 5000-10000 rpm click Close breaker: the generator now feeds the test load bank.
 4. Touch the load bank to change the load from 0 to 200 kW. The generator follows the load; the rods decide how much power the plant can make, about 2.4 kW per 1% of rods.
 5. The red relief valve dumps steam straight to the condenser above 40 bar. Touch it to lock it shut.
-6. The stop valve slams shut by itself at 11000 rpm. It can be reset only below 6000 rpm."}
+6. The stop valve slams shut by itself at 11000 rpm. It can be reset only below 6000 rpm.
+7. The autolathe in the south-east corner makes turbine blades from steel (two stacks of steel lie on the table beside it, spare blades on the other table). The blade service procedure is described on the turbine panel."}
 
 /obj/item/paper/reactor_test/turbine_warning
 	name = "reactor test: turbine warning"

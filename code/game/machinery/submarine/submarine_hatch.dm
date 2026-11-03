@@ -15,8 +15,8 @@
 */
 
 #define HATCH_TURN_TIME   (2 SECONDS) // сколько крутить штурвал, прежде чем дверь начнёт двигаться
-#define HATCH_OPEN_SOUND  'sound/machines/blastdoor_open.ogg'
-#define HATCH_CLOSE_SOUND 'sound/machines/blastdoor_close.ogg'
+#define HATCH_OPEN_SOUND  NS_SND_HATCH_OPEN
+#define HATCH_CLOSE_SOUND NS_SND_HATCH_CLOSE
 
 /obj/machinery/door/submarine_hatch
 	name = "pressure hatch"
@@ -85,7 +85,7 @@
 	user.visible_message(
 		SPAN_NOTICE("\The [user] starts turning the wheel of \the [src]."),
 		SPAN_NOTICE("You start turning the wheel of \the [src]. It is stiff and heavy."))
-	playsound(src, 'sound/items/Ratchet.ogg', 60, TRUE)
+	playsound(src, NS_SND_WRENCH, 60, TRUE)
 	add_fingerprint(user)
 	wheel_user = user
 	var/finished = do_after(user, HATCH_TURN_TIME, src)

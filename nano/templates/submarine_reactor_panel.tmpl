@@ -1,5 +1,5 @@
 <div class="item">
-	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled.</i>
+	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled, but the fission products keep heating the core for a long time (residual heat), so the core still needs water after a SCRAM.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
@@ -46,6 +46,17 @@
 		{{:helper.displayBar(data.temp, 0, data.tempMax, data.tempClass)}}
 		<div class="statusValue">
 			{{:data.temp}} C
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Residual heat:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.decay, 0, data.decayMax, 'average')}}
+		<div class="statusValue">
+			{{:data.decay}} % of rated power
 		</div>
 	</div>
 </div>
