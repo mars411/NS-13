@@ -4,7 +4,7 @@
 	path = "reactor_test"
 
 	lobby_screens = list('maps/example/lobby.png')
-	lobby_tracks = list(/singleton/audio/track/absconditus)
+	lobby_tracks = list(/singleton/audio/track/ns13_deep_sonar_hiss)
 
 	station_levels = list(1, 2, 3)
 	contact_levels = list(1, 2, 3)
