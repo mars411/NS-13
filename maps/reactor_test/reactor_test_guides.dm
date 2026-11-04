@@ -17,12 +17,13 @@
 	info = {"\[large\]\[b\]Reactor test lab: start-up\[/b\]\[/large\]
 \[hr\]
 1. Click the reactor panel on the north wall.
-2. Set the feedwater pump to about 100%. The pump needs power from the APC.
-3. Raise the control rods: use the All rods links, or move each rod by itself. Rods move slowly.
-4. Watch the temperature, the steam pressure and the water level. Keep the water level up.
-5. SCRAM drops all rods fast. It can be reset once the core has cooled.
-6. The core keeps making residual heat after a SCRAM (up to 15% of full power, fading over about twenty minutes). Keep the feedwater pump running until the temperature has settled.
-7. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
+2. Set the feedwater pump to about 100%. It fills the two steam generators with water. The pump needs power from the APC.
+3. Check that the main coolant pump runs (primary flow 100%). It drives the reactor water through the steam generators. If it is stopped, raise its speed.
+4. Raise the control rods: use the All rods links, or move each rod by itself. Rods move slowly.
+5. Watch the core temperature, the steam pressure and the water level of the steam generators. Keep their water up.
+6. SCRAM drops all rods fast. It can be reset once the core has cooled.
+7. The core keeps making residual heat after a SCRAM (up to 15% of full power, fading over about twenty minutes). Without the main pump only natural circulation is left: it copes with residual heat, not with power.
+8. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
 
 /obj/item/paper/reactor_test/hatches
 	name = "reactor test: hatches"
@@ -44,8 +45,8 @@ The rods drop, but the residual heat stays: with the pump dead it boils away abo
 	name = "reactor test: the hall"
 	info = {"\[large\]\[b\]Reactor hall\[/b\]\[/large\]
 \[hr\]
-The core and three sections form a 2x2 block. Steam leaves east of the core, passes a gauge and a manual valve and goes through the gap in the east wall to the turbine hall.
-Water comes back from the condenser through the cyan pipes of the south line (through the second gap in the wall) to the feedwater pump, and from the pump through a pipe to the inlet on the vessel.
+The core and three sections form a 2x2 block. The main coolant pump stands west of it. Two steam generators stand east of the core: the reactor water gives them its heat and boils clean water in them. The steam leaves through their ports, passes a gauge and a manual valve and goes through the gap in the east wall to the turbine hall.
+Water comes back from the condenser through the cyan pipes of the south line (through the second gap in the wall) to the feedwater pump, and from the pump through a pipe to the feedwater inlet, which fills both steam generators.
 To test leaks, unwrench a water pipe with the wrench: the water runs out onto the floor as a puddle, and air does not get into the pipe.
 The table by the north wall holds a gas analyzer and a Geiger counter: scan the steam pipes and watch the radiation near the core."}
 
@@ -53,7 +54,7 @@ The table by the north wall holds a gas analyzer and a Geiger counter: scan the 
 	name = "reactor test: warning"
 	info = {"\[large\]\[b\]Warning\[/b\]\[/large\]
 \[hr\]
-Close the steam valve with the rods up and the vessel bursts within a few minutes. Stay away.
+Close the steam valve with the rods up and a steam generator bursts within a few minutes. Stay away.
 A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold."}
 
 /obj/item/paper/reactor_test/turbine

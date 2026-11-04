@@ -53,6 +53,12 @@
 	- Водяная труба (submarine_water) только выпускает воду наружу, воздух помещения в неё не входит.
 	  Конденсатор пропускает дальше по холодной ветке только пар (воду), прочие газы остаются на паровой стороне.
 
+	ДВА КОНТУРА (ревизия 14, файл submarine_steam_generator.dm)
+	- Если на карте есть парогенераторы (/obj/machinery/submarine_steam_generator) с той же меткой reactor_id, ядро работает в режиме
+	  двух контуров (two_circuit): оно не кипит, а греет первичную воду, и тепло уходит в парогенераторы. Первичный контур держит
+	  главный насос (/obj/machinery/submarine_primary_pump) и естественная циркуляция. Паровой порт и питательный вход в этом режиме
+	  принадлежат парогенераторам и коллектору питательной воды. Без парогенераторов всё работает по-старому.
+
 	НЕ РЕАЛИЗОВАНО НАМЕРЕННО (TBD в GDD, не подменяю догадками)
 	- Износ стержней СУЗ и их замена (скафандр, радиация при замене).
 	- Подключение к АКБ-контуру: пульт пока не требует питания (stat_immune ниже).
@@ -65,6 +71,8 @@
 
 GLOBAL_LIST_EMPTY(submarine_reactors)
 GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
+GLOBAL_LIST_EMPTY(submarine_steam_gens)
+GLOBAL_LIST_EMPTY(submarine_primary_pumps)
 
 /// Длина закрашенной части круглой шкалы для доли frac (0-1). Шкала в пульте нарисована дугой в 270 градусов.
 /proc/nsr_gauge_len(frac)
@@ -136,6 +144,20 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_COND_AUTO_KP          15     // % охлаждения на каждый бар ошибки по давлению (пропорциональная часть)
 #define NSR_COND_AUTO_KI          1      // % охлаждения в секунду на каждый бар ошибки (интегральная часть)
 #define NSR_COND_AUTO_FILTER      4      // с, сглаживание измеренного давления: пар приходит порциями, регулятор не должен дёргаться за каждой
+
+// Два контура (ревизия 14)
+#define NSR_PRIMARY_HEAT_CAP      40     // ед. тепла на 1 C: вода первичного контура (добавка к NSR_CORE_HEAT_CAP, как полный сосуд в режиме одного контура)
+#define NSR_PRIMARY_PRESSURE      150    // бар, давление первичного контура. До компенсатора давления (следующая ревизия) постоянное
+#define NSR_NATURAL_CIRC          0.08   // доля полного расхода первичной воды без насоса (естественная циркуляция): тянет остаточное тепло и мощность до половины; на полной мощности без насоса и без SCRAM зона плавится минут через 8
+#define NSR_PRIMARY_PUMP_POWER    8000   // Вт при скорости 100%
+#define NSR_PRIMARY_PUMP_RPM_MAX  1800   // об/мин при скорости 100% (для показа на пульте)
+#define NSR_PRIMARY_PUMP_SPINUP   5      // % скорости в секунду при разгоне: 20 секунд до полных
+#define NSR_PRIMARY_PUMP_SPINDOWN 2.5    // % скорости в секунду при торможении и выбеге без питания: около 40 секунд до остановки (тяжёлый ротор)
+#define NSR_SG_CONDUCT            1      // ед. тепла/с на каждый C выше точки кипения вторичной воды при полном расходе, на ОДИН парогенератор (два вместе дают столько же, сколько давало кипение в сосуде)
+#define NSR_SG_COVER_LEVEL        25     // % уровня вторичной воды, ниже которого трубки парогенератора оголяются и теплоотдача падает пропорционально
+#define NSR_SG_MOLES_PER_PERCENT  30     // моль вторичной воды в 1% уровня парогенератора (полный 3000 моль; два вместе столько же, сколько был полный сосуд)
+#define NSR_SG_LINK_RANGE         3      // радиус поиска парового порта от парогенератора, тайлов
+#define NSR_SG_RUPTURE_RANGE      5      // параметр range для explosion() при разрыве парогенератора
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             200    // C (в ревизии 13 было 150)
@@ -314,6 +336,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Входной порт питательной воды на сосуде. Принимает воду из напорной трубы насоса и сливает её в сосуд.
 	var/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet/feed_inlet
 
+	/// Режим двух контуров (ревизия 14): ядро не кипит, греет первичную воду и отдаёт тепло парогенераторам. Включается, когда найден
+	/// хотя бы один парогенератор, и остаётся, даже если их потом разорвало (тогда теплоотвода нет, и это авария, а не возврат к котлу).
+	var/two_circuit = FALSE
+	/// Парогенераторы этого реактора (режим двух контуров).
+	var/list/steam_gens
+	/// Главный циркуляционный насос первичного контура.
+	var/obj/machinery/submarine_primary_pump/primary_pump
+
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
 	GLOB.submarine_reactors += src
@@ -323,11 +353,76 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	for(var/i in 1 to NSR_ROD_COUNT)
 		rod_pos += 0
 		rod_target += 0
+	steam_gens = list()
+	// Привязка деталей откладывается до конца загрузки карты: парогенераторы должны успеть зарегистрироваться, прежде чем ядро решит, в каком оно режиме.
+	return INITIALIZE_HINT_LATELOAD
+
+/obj/machinery/submarine_reactor_core/LateInitialize(mapload, ...)
+	link_parts()
+
+/// Привязывает всё, что стоит рядом: секции, парогенераторы, паровой порт (только без парогенераторов), питательный насос, вход, главный насос.
+/// Возвращает текст для пульта о том, что найдено.
+/obj/machinery/submarine_reactor_core/proc/link_parts()
 	find_sections()
+	find_steam_gens()
 	find_steam_port()
 	find_feed_pump()
 	find_feed_inlet()
+	find_primary_pump()
 	queue_icon_update()
+
+/// Ищет парогенераторы с той же меткой реактора (расстояние не важно) и привязывает их. Если найден хотя бы один, включает режим двух контуров.
+/obj/machinery/submarine_reactor_core/proc/find_steam_gens()
+	for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+		G.core = null
+	steam_gens = list()
+	for(var/obj/machinery/submarine_steam_generator/G in GLOB.submarine_steam_gens)
+		if(QDELETED(G) || G.reactor_id != reactor_id)
+			continue
+		steam_gens += G
+		G.core = src
+	if(length(steam_gens))
+		two_circuit = TRUE
+		// Паровые порты в этом режиме принадлежат парогенераторам.
+		if(steam_port)
+			steam_port.core = null
+			steam_port = null
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			G.find_steam_port()
+	return length(steam_gens)
+
+/// Ищет главный насос с той же меткой реактора (расстояние не важно). Возвращает TRUE, если найден.
+/obj/machinery/submarine_reactor_core/proc/find_primary_pump()
+	if(primary_pump)
+		primary_pump.core = null
+	primary_pump = null
+	for(var/obj/machinery/submarine_primary_pump/P in GLOB.submarine_primary_pumps)
+		if(QDELETED(P) || P.reactor_id != reactor_id)
+			continue
+		primary_pump = P
+		P.core = src
+		break
+	return !!primary_pump
+
+/// Расход первичной воды, доля от полного (0-1): от оборотов главного насоса, но не меньше естественной циркуляции.
+/obj/machinery/submarine_reactor_core/proc/primary_flow()
+	var/flow = NSR_NATURAL_CIRC
+	if(primary_pump && !QDELETED(primary_pump))
+		flow = max(flow, primary_pump.spin / 100)
+	return flow
+
+/// Уровень воды, который видит питательный насос, %: в режиме одного контура это сосуд, в режиме двух самый низкий уровень среди целых парогенераторов.
+/obj/machinery/submarine_reactor_core/proc/feed_level()
+	if(!two_circuit)
+		return coolant_level
+	var/lowest = 100
+	var/found = FALSE
+	for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+		if(G.ruptured)
+			continue
+		found = TRUE
+		lowest = min(lowest, G.coolant_level)
+	return found ? lowest : 0
 
 /obj/machinery/submarine_reactor_core/Destroy()
 	GLOB.submarine_reactors -= src
@@ -343,6 +438,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(feed_inlet)
 		feed_inlet.core = null
 		feed_inlet = null
+	for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+		G.core = null
+	steam_gens = null
+	if(primary_pump)
+		primary_pump.core = null
+		primary_pump = null
 	vessel_air = null
 	rod_pos = null
 	rod_target = null
@@ -372,6 +473,22 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Питательный насос вливает в сосуд воду (в молях). Возвращает, сколько моль влезло.
 /obj/machinery/submarine_reactor_core/proc/add_water(moles)
+	if(two_circuit)
+		// Питательная вода идёт в парогенераторы, поровну по свободному месту.
+		var/total_room = 0
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			if(!G.ruptured)
+				total_room += (100 - G.coolant_level) * NSR_SG_MOLES_PER_PERCENT
+		if(total_room <= 0)
+			return 0
+		var/given = min(moles, total_room)
+		. = 0
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			if(G.ruptured)
+				continue
+			var/share = given * ((100 - G.coolant_level) * NSR_SG_MOLES_PER_PERCENT) / total_room
+			. += G.add_water(share)
+		return .
 	var/room = (100 - coolant_level) * NSR_MOLES_PER_PERCENT
 	var/added = clamp(moles, 0, room)
 	coolant_level = min(100, coolant_level + added / NSR_MOLES_PER_PERCENT)
@@ -380,6 +497,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /// Ищет паровой порт рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если порт найден.
 /obj/machinery/submarine_reactor_core/proc/find_steam_port()
 	steam_port = null
+	if(two_circuit)
+		return FALSE
 	for(var/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/P in range(NSR_SECTION_LINK_RANGE, src))
 		if(P.reactor_id != reactor_id)
 			continue
@@ -514,7 +633,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 	simulate(dt)
 
-	if(steam_pressure >= NSR_PRESSURE_BURST)
+	if(two_circuit)
+		// В режиме двух контуров давление пара рвёт парогенератор, а не сосуд реактора (первичное давление пока постоянное).
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens.Copy())
+			if(!QDELETED(G) && !G.ruptured && G.steam_pressure >= NSR_PRESSURE_BURST)
+				G.rupture()
+	else if(steam_pressure >= NSR_PRESSURE_BURST)
 		rupture()
 		return
 	if(core_temperature >= NSR_MELTDOWN_TEMP)
@@ -562,6 +686,24 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/heat_cap = NSR_CORE_HEAT_CAP + coolant_frac * NSR_COOLANT_HEAT_CAP
 	var/heat_loss = max(0, core_temperature - NSR_AMBIENT_TEMP) * NSR_PASSIVE_LOSS
 
+	if(two_circuit)
+		// Два контура: ядро не кипит. Оно греет первичную воду, а тепло забирают парогенераторы (расход от главного насоса или естественный).
+		var/flow = primary_flow()
+		var/heat_out = 0
+		var/pressure_max = 0
+		steam_flow = 0
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			heat_out += G.transfer_heat(core_temperature, flow, dt)
+			steam_flow += G.steam_flow
+			pressure_max = max(pressure_max, G.steam_pressure)
+		// Первичный контур всегда полон воды и стоит под постоянным давлением (компенсатор давления будет в ревизии 15).
+		coolant_level = 100
+		core_temperature += (heat_in - heat_loss - heat_out) * dt / (NSR_CORE_HEAT_CAP + NSR_PRIMARY_HEAT_CAP)
+		core_temperature = max(core_temperature, NSR_AMBIENT_TEMP)
+		// Питательная заглушка и клапан пара в этом режиме не работают: воду подаёт насос, пар идёт в трубы парогенераторов.
+		steam_pressure = pressure_max
+		return
+
 	// Кипение: чем выше давление пара, тем выше точка кипения. Давление настоящее: из сосуда или из труб.
 	var/boil_point = NSR_BOIL_TEMP + pressure_bar * NSR_BOIL_TEMP_PER_BAR
 	var/boil_heat = 0
@@ -597,9 +739,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/new_level = 0
 	// Нехватка воды важна только когда реактор греется или греет.
 	var/coolant_matters = (rods_pos > 0 || core_temperature > NSR_BOIL_TEMP)
-	if(core_temperature >= NSR_TEMP_WARN || steam_pressure >= NSR_PRESSURE_WARN || (coolant_matters && coolant_level < NSR_COOLANT_WARN))
+	// В режиме двух контуров вода, которой может не хватить, это вода парогенераторов (самая низкая).
+	var/water_level = feed_level()
+	if(core_temperature >= NSR_TEMP_WARN || steam_pressure >= NSR_PRESSURE_WARN || (coolant_matters && water_level < NSR_COOLANT_WARN))
 		new_level = 1
-	if(core_temperature >= NSR_TEMP_CRIT || steam_pressure >= NSR_PRESSURE_CRIT || (coolant_matters && coolant_level < NSR_COOLANT_CRIT))
+	if(core_temperature >= NSR_TEMP_CRIT || steam_pressure >= NSR_PRESSURE_CRIT || (coolant_matters && water_level < NSR_COOLANT_CRIT))
 		new_level = 2
 
 	if(new_level > alarm_level)
@@ -711,11 +855,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Метка реактора, к которому подключён порт. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/core
+	/// Парогенератор, которому принадлежит порт (режим двух контуров). Тогда core пуст.
+	var/obj/machinery/submarine_steam_generator/sg
 
 /obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/Destroy()
 	if(core)
 		core.steam_port = null
 	core = null
+	if(sg)
+		sg.steam_port = null
+	sg = null
 	return ..()
 
 /obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/use_tool(obj/item/tool, mob/living/user, list/click_params)
@@ -1110,7 +1259,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		auto_cap = min(100, auto_cap + 2 * dt)
 	if(auto_cap < 99)
 		auto_text = "LIMITED BY SUPPLY"
-	var/error = auto_set - core.coolant_level
+	var/error = auto_set - core.feed_level()
 	auto_i = clamp(auto_i + NSR_AUTO_PUMP_KI * error * dt, 0, auto_cap)
 	speed = clamp(auto_i + NSR_AUTO_PUMP_KP * error, 0, auto_cap)
 
@@ -1282,12 +1431,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["pressure"] = round(R.steam_pressure, 0.1)
 	data["pressureMax"] = NSR_PRESSURE_BURST
 	data["pressureClass"] = level_class(R.steam_pressure, NSR_PRESSURE_WARN, NSR_PRESSURE_CRIT)
-	data["coolant"] = round(R.coolant_level, 0.1)
+	// В режиме двух контуров это самый низкий уровень воды среди парогенераторов.
+	var/water_level = R.feed_level()
+	data["coolant"] = round(water_level, 0.1)
 	// У воды всё наоборот: чем её меньше, тем хуже.
 	data["coolantClass"] = "good"
-	if(R.coolant_level < NSR_COOLANT_CRIT)
+	if(water_level < NSR_COOLANT_CRIT)
 		data["coolantClass"] = "bad"
-	else if(R.coolant_level < NSR_COOLANT_WARN)
+	else if(water_level < NSR_COOLANT_WARN)
 		data["coolantClass"] = "average"
 	data["rods"] = round(R.rods_pos, 0.1)
 	var/list/rod_list = list()
@@ -1299,7 +1450,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["feedwater"] = R.feedwater_valve
 	data["steamValve"] = R.steam_valve
 	data["steamFlow"] = round(R.steam_flow, 0.1)
-	data["hasPort"] = !!R.steam_port
+	data["hasPort"] = R.two_circuit || !!R.steam_port
 	data["hasPump"] = !!R.feed_pump
 	if(R.feed_pump)
 		var/obj/machinery/atmospherics/binary/submarine_feed_pump/pump = R.feed_pump
@@ -1324,6 +1475,32 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		data["pumpClass"] = (pump.pump_state == "RUNNING") ? "good" : ((pump.pump_state == "STOPPED") ? "average" : "bad")
 		data["pumpFlow"] = round(pump.last_flow, 0.1)
 		data["feedPressure"] = round(pump.air2.return_pressure() / NSR_KPA_PER_BAR, 0.1)
+	// Два контура (ревизия 14).
+	data["twoCircuit"] = R.two_circuit
+	if(R.two_circuit)
+		data["primaryPressure"] = NSR_PRIMARY_PRESSURE
+		data["primaryFlow"] = round(R.primary_flow() * 100)
+		data["hasPrimaryPump"] = !!R.primary_pump
+		if(R.primary_pump)
+			var/obj/machinery/submarine_primary_pump/pp = R.primary_pump
+			data["ppSpeed"] = round(pp.speed)
+			data["ppSpin"] = round(pp.spin)
+			data["ppRpm"] = pp.get_rpm()
+			data["ppRpmMax"] = NSR_PRIMARY_PUMP_RPM_MAX
+			data["ppState"] = pp.get_state_text()
+			data["ppClass"] = (pp.get_state_text() in list("AT SPEED", "SPINNING UP", "SPINNING DOWN")) ? "good" : "bad"
+		var/list/sg_list = list()
+		var/sg_index = 0
+		for(var/obj/machinery/submarine_steam_generator/G in R.steam_gens)
+			sg_index++
+			var/level_class = "good"
+			if(G.coolant_level < NSR_COOLANT_CRIT)
+				level_class = "bad"
+			else if(G.coolant_level < NSR_COOLANT_WARN)
+				level_class = "average"
+			var/state_text = G.get_state_text()
+			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER") ? "average" : "good")))
+		data["sgList"] = sg_list
 	data["scrammed"] = R.scrammed
 	data["casingsOpen"] = R.count_open_casings()
 	data["casingsTotal"] = R.count_casings()
@@ -1348,10 +1525,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		var/obj/machinery/submarine_reactor_core/found = get_reactor()
 		if(found)
 			var/section_count = found.find_sections()
-			var/port_text = found.find_steam_port() ? "steam port connected" : "no steam port (sealed test vessel)"
+			var/gen_count = found.find_steam_gens()
+			var/port_text = gen_count ? "[gen_count] steam generator(s), two-circuit mode" : (found.find_steam_port() ? "steam port connected" : "no steam port (sealed test vessel)")
 			var/pump_text = found.find_feed_pump() ? "feedwater pump connected" : "no feedwater pump (free water valve)"
 			var/inlet_text = found.find_feed_inlet() ? "feedwater inlet connected" : "no feedwater inlet"
-			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text], [inlet_text]."))
+			var/primary_text = found.find_primary_pump() ? ", main coolant pump connected" : (gen_count ? ", no main coolant pump (natural circulation only)" : "")
+			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text], [inlet_text][primary_text]."))
 		else
 			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
 		return TOPIC_REFRESH
@@ -1390,6 +1569,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				to_chat(user, SPAN_WARNING("The pump is in automatic mode. Switch the automation off to set its speed by hand."))
 			else if(pump_amount in list(-10, -1, 1, 10))
 				R.feed_pump.speed = clamp(R.feed_pump.speed + pump_amount, 0, 100)
+		if("ppump_move")
+			var/pp_amount = text2num(href_list["amount"])
+			if(!R.primary_pump)
+				to_chat(user, SPAN_WARNING("No main coolant pump is connected."))
+			else if(pp_amount in list(-10, -1, 1, 10))
+				R.primary_pump.speed = clamp(R.primary_pump.speed + pp_amount, 0, 100)
 		if("pump_auto")
 			if(!R.feed_pump)
 				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
@@ -1400,12 +1585,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			if(R.feed_pump && (level_amount in list(-5, -1, 1, 5)))
 				R.feed_pump.auto_set = clamp(R.feed_pump.auto_set + level_amount, 10, 95)
 		if("feed_up", "feed_down")
-			if(R.feed_pump)
+			if(R.two_circuit)
+				to_chat(user, SPAN_WARNING("The steam generators are fed by the pump, not by a valve."))
+			else if(R.feed_pump)
 				to_chat(user, SPAN_WARNING("The vessel is fed by the pump, not by the valve."))
 			else
 				R.adjust_feedwater(action == "feed_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
 		if("steam_up", "steam_down")
-			if(R.steam_port)
+			if(R.steam_port || R.two_circuit)
 				to_chat(user, SPAN_WARNING("The steam line is controlled by the valves on the pipes, not from this panel."))
 			else
 				R.adjust_steam_valve(action == "steam_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)

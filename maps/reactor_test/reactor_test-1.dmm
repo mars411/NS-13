@@ -363,6 +363,27 @@
 /obj/machinery/fabricator,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Qa" = (
+/obj/machinery/submarine_steam_generator,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Qg" = (
+/obj/machinery/submarine_primary_pump,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Qm" = (
+/obj/machinery/atmospherics/pipe/manifold/visible{
+	dir = 1
+	},
+/obj/machinery/meter,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Qp" = (
+/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Qx" = (
 /obj/machinery/light/spot{
 	dir = 1
@@ -2223,7 +2244,7 @@ Zq
 Ze
 Ze
 Ze
-Ze
+Qg
 Ze
 Ze
 Ze
@@ -2324,7 +2345,7 @@ OC
 Zq
 Qx
 Ze
-Ze
+Qa
 Zk
 Ze
 Ze
@@ -2393,9 +2414,9 @@ Zq
 Ty
 Ze
 Ze
-Zg
-Ze
-Ze
+Qm
+Qp
+Qa
 Zh
 Ze
 Ze
