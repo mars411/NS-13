@@ -371,6 +371,10 @@
 /obj/machinery/submarine_primary_pump,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Qk" = (
+/obj/machinery/submarine_makeup_pump,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Qm" = (
 /obj/machinery/atmospherics/pipe/manifold/visible{
 	dir = 1
@@ -394,6 +398,10 @@
 /obj/machinery/light/spot{
 	dir = 2
 	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Qz" = (
+/obj/machinery/submarine_pressurizer,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Tb" = (
@@ -2209,7 +2217,7 @@ OC
 Zq
 Tg
 Ze
-Ze
+Qk
 Ze
 Ze
 Ze
@@ -2277,7 +2285,7 @@ OC
 Zq
 Zj
 Ze
-Ze
+Qz
 Za
 Zi
 Ze

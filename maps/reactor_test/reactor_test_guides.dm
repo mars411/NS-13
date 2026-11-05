@@ -23,7 +23,9 @@
 5. Watch the core temperature, the steam pressure and the water level of the steam generators. Keep their water up.
 6. SCRAM drops all rods fast. It can be reset once the core has cooled.
 7. The core keeps making residual heat after a SCRAM (up to 15% of full power, fading over about twenty minutes). Without the main pump only natural circulation is left: it copes with residual heat, not with power.
-8. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
+8. The pressurizer keeps the reactor water under about 150 bar so it does not boil. Its automation is on at the start: heaters and spray hold the pressure. Watch the primary pressure and the pressurizer water level on the panel.
+9. The makeup pump (west wall of the reactor hall) adds water to the primary circuit (plus) or drains it (minus). It stands still at the start. Too much water leaves no steam bubble and the pressure jumps: keep the pressurizer level below 80%.
+10. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
 
 /obj/item/paper/reactor_test/hatches
 	name = "reactor test: hatches"
@@ -45,7 +47,7 @@ The rods drop, but the residual heat stays: with the pump dead it boils away abo
 	name = "reactor test: the hall"
 	info = {"\[large\]\[b\]Reactor hall\[/b\]\[/large\]
 \[hr\]
-The core and three sections form a 2x2 block. The main coolant pump stands west of it. Two steam generators stand east of the core: the reactor water gives them its heat and boils clean water in them. The steam leaves through their ports, passes a gauge and a manual valve and goes through the gap in the east wall to the turbine hall.
+The core and three sections form a 2x2 block. The main coolant pump stands west of it, the pressurizer (the yellow tank) stands above it and the makeup pump by the west wall. Two steam generators stand east of the core: the reactor water gives them its heat and boils clean water in them. The steam leaves through their ports, passes a gauge and a manual valve and goes through the gap in the east wall to the turbine hall.
 Water comes back from the condenser through the cyan pipes of the south line (through the second gap in the wall) to the feedwater pump, and from the pump through a pipe to the feedwater inlet, which fills both steam generators.
 To test leaks, unwrench a water pipe with the wrench: the water runs out onto the floor as a puddle, and air does not get into the pipe.
 The table by the north wall holds a gas analyzer and a Geiger counter: scan the steam pipes and watch the radiation near the core."}
@@ -55,7 +57,8 @@ The table by the north wall holds a gas analyzer and a Geiger counter: scan the 
 	info = {"\[large\]\[b\]Warning\[/b\]\[/large\]
 \[hr\]
 Close the steam valve with the rods up and a steam generator bursts within a few minutes. Stay away.
-A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold."}
+A wrench lies on the floor: unbolt an armour plate and the radiation grows fourfold.
+Overfill the primary circuit with the makeup pump and the vessel bursts. If the pressure falls and the pressurizer level drains, a relief valve may be stuck open: close its block valve at once."}
 
 /obj/item/paper/reactor_test/turbine
 	name = "reactor test: turbine"

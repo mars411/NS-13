@@ -129,9 +129,59 @@
 		Primary pressure:
 	</div>
 	<div class="itemContent">
-		{{:data.primaryPressure}} bar <i>(fixed for now: the pressurizer is not built yet)</i>
+		{{if data.hasPzr}}
+			{{:helper.displayBar(data.primaryPressure, 0, data.primaryBurst, data.primaryPressureClass)}}
+			<div class="statusValue">
+				{{:data.primaryPressure}} bar
+			</div>
+		{{else}}
+			{{:data.primaryPressure}} bar <i>(fixed: no pressurizer)</i>
+		{{/if}}
 	</div>
 </div>
+{{if data.hasPzr}}
+<div class="item">
+	<div class="itemLabel">
+		Pressurizer level:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.pzrLevel, 0, 100, data.pzrLevelClass)}}
+		<div class="statusValue">
+			{{:data.pzrLevel}} %
+			{{if data.pzrSolid}}
+				<span class='bad'><b>SOLID WATER</b></span>
+			{{/if}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Heaters / spray:
+	</div>
+	<div class="itemContent">
+		<span class='{{:data.pzrHeaterClass}}'><b>{{:data.pzrHeaterText}}</b></span>, heating {{:data.pzrHeating}} %, spray {{:data.pzrSpray}} %
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Relief valve:
+	</div>
+	<div class="itemContent">
+		<span class='{{:data.pzrReliefClass}}'><b>{{:data.pzrRelief}}</b></span>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Primary water:
+	</div>
+	<div class="itemContent">
+		{{:data.inventory}} % of the full amount
+		{{if data.voiding}}
+			<br><span class='bad'><b>STEAM IN THE CORE: cooling {{:data.coolEff}} %</b></span>
+		{{/if}}
+	</div>
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Primary flow:
@@ -337,6 +387,81 @@
 			{{:helper.link('-1', null, {'action' : 'ppump_move', 'amount' : -1}, (data.ppSpeed > 0) ? null : 'disabled')}}
 			{{:helper.link('+1', null, {'action' : 'ppump_move', 'amount' : 1}, (data.ppSpeed < 100) ? null : 'disabled')}}
 			{{:helper.link('+10', null, {'action' : 'ppump_move', 'amount' : 10}, (data.ppSpeed < 100) ? null : 'disabled')}}
+		</div>
+	</div>
+</div>
+{{/if}}
+{{if data.twoCircuit && data.hasPzr}}
+<div class="item">
+	<div class="itemLabel">
+		Pressure automation:
+	</div>
+	<div class="itemContent">
+		{{:helper.link(data.pzrAuto ? 'ON' : 'OFF', null, {'action' : 'pzr_auto'}, null, data.pzrAuto ? 'selected' : null)}}
+		setpoint {{:data.pzrSet}} bar
+		{{:helper.link('-5', null, {'action' : 'pzr_set', 'amount' : -5})}}
+		{{:helper.link('-1', null, {'action' : 'pzr_set', 'amount' : -1})}}
+		{{:helper.link('+1', null, {'action' : 'pzr_set', 'amount' : 1})}}
+		{{:helper.link('+5', null, {'action' : 'pzr_set', 'amount' : 5})}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Heaters:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.pzrHeater, 0, 100, 'good')}}
+		<div class="statusValue">
+			set {{:data.pzrHeater}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'pzr_heater', 'amount' : -10}, data.pzrAuto ? 'disabled' : null)}}
+			{{:helper.link('-1', null, {'action' : 'pzr_heater', 'amount' : -1}, data.pzrAuto ? 'disabled' : null)}}
+			{{:helper.link('+1', null, {'action' : 'pzr_heater', 'amount' : 1}, data.pzrAuto ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'pzr_heater', 'amount' : 10}, data.pzrAuto ? 'disabled' : null)}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Spray:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.pzrSpray, 0, 100, 'good')}}
+		<div class="statusValue">
+			set {{:data.pzrSpray}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'pzr_spray', 'amount' : -10}, data.pzrAuto ? 'disabled' : null)}}
+			{{:helper.link('-1', null, {'action' : 'pzr_spray', 'amount' : -1}, data.pzrAuto ? 'disabled' : null)}}
+			{{:helper.link('+1', null, {'action' : 'pzr_spray', 'amount' : 1}, data.pzrAuto ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'pzr_spray', 'amount' : 10}, data.pzrAuto ? 'disabled' : null)}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Relief valve:
+	</div>
+	<div class="itemContent">
+		{{:helper.link(data.pzrReliefManual ? 'Close' : 'Open by hand', null, {'action' : 'pzr_relief'}, data.pzrBlock ? 'disabled' : null, data.pzrReliefManual ? 'selected' : null)}}
+		{{:helper.link(data.pzrBlock ? 'Block valve: CLOSED' : 'Block valve: open', null, {'action' : 'pzr_block'}, null, data.pzrBlock ? 'selected' : null)}}
+	</div>
+</div>
+{{/if}}
+{{if data.twoCircuit && data.hasMakeup}}
+<div class="item">
+	<div class="itemLabel">
+		Makeup pump:
+	</div>
+	<div class="itemContent">
+		<span class='{{:data.mkClass}}'><b>{{:data.mkState}}</b></span>, set {{:data.mkSetting}} % (minus drains)
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'makeup_move', 'amount' : -10}, (data.mkSetting > -100) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'makeup_move', 'amount' : -1}, (data.mkSetting > -100) ? null : 'disabled')}}
+			{{:helper.link('Stop', null, {'action' : 'makeup_stop'}, (data.mkSetting != 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'makeup_move', 'amount' : 1}, (data.mkSetting < 100) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'makeup_move', 'amount' : 10}, (data.mkSetting < 100) ? null : 'disabled')}}
 		</div>
 	</div>
 </div>

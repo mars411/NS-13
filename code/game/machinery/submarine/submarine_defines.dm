@@ -23,4 +23,5 @@
 #define NS_SND_WRENCH           'sound/items/Ratchet.ogg'
 #define NS_SND_WELD             'sound/items/Welder.ogg'
 #define NS_SND_BUILT            'sound/items/Deconstruct.ogg'              // что-то собрано, починено
+#define NS_SND_RELIEF           'sound/machines/hiss.ogg'                  // предохранительный клапан компенсатора открылся
 #define NS_SND_SPARKS           'sound/effects/sparks4.ogg'

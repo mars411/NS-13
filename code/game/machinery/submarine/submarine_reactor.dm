@@ -73,6 +73,19 @@ GLOBAL_LIST_EMPTY(submarine_reactors)
 GLOBAL_LIST_EMPTY(submarine_reactor_consoles)
 GLOBAL_LIST_EMPTY(submarine_steam_gens)
 GLOBAL_LIST_EMPTY(submarine_primary_pumps)
+GLOBAL_LIST_EMPTY(submarine_pressurizers)
+GLOBAL_LIST_EMPTY(submarine_makeup_pumps)
+
+/// Давление насыщения воды при температуре, бар (таблица, между точками линейно). Ниже 100 C считается пропорционально.
+/proc/nsr_saturation_pressure(temp)
+	var/static/list/temps = list(100, 125, 150, 175, 200, 225, 250, 275, 300, 325, 350, 375)
+	var/static/list/pressures = list(1.01, 2.32, 4.76, 8.92, 15.54, 25.5, 39.7, 59.4, 85.9, 120.5, 165.2, 221)
+	if(temp <= 100)
+		return 1.01 * max(temp, 0) / 100
+	for(var/i in 1 to length(temps) - 1)
+		if(temp <= temps[i + 1])
+			return pressures[i] + (pressures[i + 1] - pressures[i]) * (temp - temps[i]) / (temps[i + 1] - temps[i])
+	return 221 + (temp - 375) * 8
 
 /// Длина закрашенной части круглой шкалы для доли frac (0-1). Шкала в пульте нарисована дугой в 270 градусов.
 /proc/nsr_gauge_len(frac)
@@ -147,7 +160,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 // Два контура (ревизия 14)
 #define NSR_PRIMARY_HEAT_CAP      40     // ед. тепла на 1 C: вода первичного контура (добавка к NSR_CORE_HEAT_CAP, как полный сосуд в режиме одного контура)
-#define NSR_PRIMARY_PRESSURE      150    // бар, давление первичного контура. До компенсатора давления (следующая ревизия) постоянное
+#define NSR_PRIMARY_PRESSURE      150    // бар, давление первичного контура в начале и когда компенсатора давления на карте нет (тогда оно постоянное, как в ревизии 14)
 #define NSR_NATURAL_CIRC          0.08   // доля полного расхода первичной воды без насоса (естественная циркуляция): тянет остаточное тепло и мощность до половины; на полной мощности без насоса и без SCRAM зона плавится минут через 8
 #define NSR_PRIMARY_PUMP_POWER    8000   // Вт при скорости 100%
 #define NSR_PRIMARY_PUMP_RPM_MAX  1800   // об/мин при скорости 100% (для показа на пульте)
@@ -158,6 +171,47 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_SG_MOLES_PER_PERCENT  30     // моль вторичной воды в 1% уровня парогенератора (полный 3000 моль; два вместе столько же, сколько был полный сосуд)
 #define NSR_SG_LINK_RANGE         3      // радиус поиска парового порта от парогенератора, тайлов
 #define NSR_SG_RUPTURE_RANGE      5      // параметр range для explosion() при разрыве парогенератора
+
+// Давление первичного контура, компенсатор давления и подпитка (ревизия 15)
+#define NSR_PRIMARY_BURST         200    // бар, при таком давлении первичного контура рвётся сосуд реактора
+#define NSR_PRIMARY_WARN_HIGH     165    // бар, тревога первой ступени по высокому давлению
+#define NSR_PRIMARY_CRIT_HIGH     185    // бар, критическая тревога по высокому давлению
+#define NSR_PRIMARY_WARN_LOW      135    // бар, тревога по падению давления (только когда реактор работает или горячий)
+#define NSR_PRIMARY_CRIT_LOW      100    // бар, критическая тревога по падению давления
+#define NSR_PRIMARY_SWELL         0.3    // бар на каждый C нагрева первичной воды (вода расширяется и сжимает паровой пузырь компенсатора)
+#define NSR_PRIMARY_LOSS          0.003  // доля превышения над 1 баром, которая уходит в секунду (компенсатор отдаёт тепло в отсек); держать давление нагревателями нужно всегда
+#define NSR_VOID_SLOPE            1.5    // насколько быстро падает охлаждение, когда давление ниже давления насыщения воды при температуре ядра (вода кипит в ядре, паровая плёнка)
+#define NSR_VOID_MIN              0.05   // доля охлаждения, которая остаётся при полной паровой плёнке: при ней на полной мощности ядро плавится
+#define NSR_PZR_SETPOINT          150    // бар, уставка автоматики по умолчанию
+#define NSR_PZR_SET_MIN           100    // бар, нижний предел уставки
+#define NSR_PZR_SET_MAX           160    // бар, верхний предел уставки (предохранительный клапан открывается раньше взрыва, но не раньше этого)
+#define NSR_PZR_HEAT_RATE         1.5    // бар/с, на сколько нагреватели поднимают давление при 100%
+#define NSR_PZR_HEATER_POWER      12000  // Вт при нагревателях 100%
+#define NSR_PZR_SPRAY_RATE        2      // бар/с, на сколько впрыск снижает давление при 100% и полном расходе первичной воды (впрыск идёт от главного насоса)
+#define NSR_PZR_RELIEF_OPEN       170    // бар, при этом давлении предохранительный клапан открывается сам
+#define NSR_PZR_RELIEF_CLOSE      160    // бар, ниже этого давления клапан закрывается сам
+#define NSR_PZR_RELIEF_RATE       1.2    // бар/с, на сколько открытый клапан снижает давление
+#define NSR_PZR_RELIEF_DRAIN      0.08   // % запаса первичной воды в секунду, которые уносит открытый клапан
+#define NSR_PZR_RELIEF_STICK_PCT  3      // % шанс, что клапан после закрытия залипнет открытым (его изолирует блок-клапан на пульте)
+#define NSR_PZR_LEVEL_NOM         50     // % уровня воды в компенсаторе при запасе 100% и температуре NSR_PZR_LEVEL_T_REF
+#define NSR_PZR_LEVEL_PER_INV     2      // % уровня на каждый % запаса первичной воды
+#define NSR_PZR_LEVEL_PER_C       0.1    // % уровня на каждый C температуры ядра (расширение воды)
+#define NSR_PZR_LEVEL_T_REF       130    // C, температура, при которой запас 100% даёт NSR_PZR_LEVEL_NOM
+#define NSR_PZR_LEVEL_WARN_HIGH   80     // %, тревога: уровень в компенсаторе слишком высок
+#define NSR_PZR_LEVEL_CRIT_HIGH   92     // %
+#define NSR_PZR_LEVEL_WARN_LOW    30     // %, тревога: уровень слишком низок (только когда реактор работает или горячий)
+#define NSR_PZR_LEVEL_CRIT_LOW    18     // %
+#define NSR_PZR_SOLID_LEVEL       95     // %, выше этого контур «сплошной воды»: парового пузыря нет, давление скачет
+#define NSR_PZR_SOLID_GAIN        0.6    // бар/с на каждый % выше NSR_PZR_SOLID_LEVEL (расчётный уровень может быть выше 100)
+#define NSR_PZR_SOLID_SWELL_MULT  6      // во сколько раз сильнее давление отвечает на нагрев воды при сплошной воде
+#define NSR_PZR_HEATER_MIN_LEVEL  15     // %, ниже этого уровня нагреватели оголены и не работают
+#define NSR_PZR_EMPTY_DECAY       2      // бар/с, на сколько давление падает дополнительно, когда компенсатор пуст (пузыря нет)
+#define NSR_PZR_AUTO_BASE         30     // % нагревателей, которые автоматика держит при нулевой ошибке давления
+#define NSR_PZR_AUTO_KP           8      // % нагревателей на каждый бар ошибки (пропорциональная часть)
+#define NSR_PZR_AUTO_KI           0.05   // % в секунду на каждый бар ошибки (интегральная часть)
+#define NSR_PZR_AUTO_I_MAX        60     // % предел интегральной части
+#define NSR_MAKEUP_RATE           0.25   // % запаса первичной воды в секунду при подпитке 100% (при сливе в минус то же самое)
+#define NSR_MAKEUP_POWER          3000   // Вт при подпитке или сливе 100%
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             200    // C (в ревизии 13 было 150)
@@ -343,6 +397,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/list/steam_gens
 	/// Главный циркуляционный насос первичного контура.
 	var/obj/machinery/submarine_primary_pump/primary_pump
+	/// Компенсатор давления (ревизия 15). Без него первичное давление постоянное NSR_PRIMARY_PRESSURE и новых аварий нет.
+	var/obj/machinery/submarine_pressurizer/pressurizer
+	/// Насос подпитки и слива первичного контура (ревизия 15).
+	var/obj/machinery/submarine_makeup_pump/makeup_pump
+	/// Давление первичного контура, бар.
+	var/primary_pressure = NSR_PRIMARY_PRESSURE
+	/// Запас первичной воды, % от номинального (100 - полный контур). Убывает через клапан, растёт подпиткой, влияет на уровень в компенсаторе.
+	var/primary_inventory = 100
+	/// Охлаждение ядра, доля от нормального (1 - норма). Падает, когда давление ниже давления насыщения: вода кипит в ядре.
+	var/cooling_eff = 1
 
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
@@ -369,6 +433,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	find_feed_pump()
 	find_feed_inlet()
 	find_primary_pump()
+	find_pressurizer()
+	find_makeup_pump()
 	queue_icon_update()
 
 /// Ищет парогенераторы с той же меткой реактора (расстояние не важно) и привязывает их. Если найден хотя бы один, включает режим двух контуров.
@@ -403,6 +469,40 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		P.core = src
 		break
 	return !!primary_pump
+
+/// Ищет компенсатор давления с той же меткой реактора (расстояние не важно). Возвращает TRUE, если найден.
+/obj/machinery/submarine_reactor_core/proc/find_pressurizer()
+	if(pressurizer)
+		pressurizer.core = null
+	pressurizer = null
+	for(var/obj/machinery/submarine_pressurizer/P in GLOB.submarine_pressurizers)
+		if(QDELETED(P) || P.reactor_id != reactor_id)
+			continue
+		pressurizer = P
+		P.core = src
+		break
+	return !!pressurizer
+
+/// Ищет насос подпитки с той же меткой реактора. Возвращает TRUE, если найден.
+/obj/machinery/submarine_reactor_core/proc/find_makeup_pump()
+	if(makeup_pump)
+		makeup_pump.core = null
+	makeup_pump = null
+	for(var/obj/machinery/submarine_makeup_pump/P in GLOB.submarine_makeup_pumps)
+		if(QDELETED(P) || P.reactor_id != reactor_id)
+			continue
+		makeup_pump = P
+		P.core = src
+		break
+	return !!makeup_pump
+
+/// Расчётный уровень воды в компенсаторе, %: от запаса воды и от расширения при нагреве. Может выйти за 0..100 (за 100 это «сплошная вода»).
+/obj/machinery/submarine_reactor_core/proc/pzr_level_raw()
+	return NSR_PZR_LEVEL_NOM + NSR_PZR_LEVEL_PER_INV * (primary_inventory - 100) + NSR_PZR_LEVEL_PER_C * (core_temperature - NSR_PZR_LEVEL_T_REF)
+
+/// Уровень воды в компенсаторе для пульта и тревог, 0-100%.
+/obj/machinery/submarine_reactor_core/proc/pzr_level()
+	return clamp(pzr_level_raw(), 0, 100)
 
 /// Расход первичной воды, доля от полного (0-1): от оборотов главного насоса, но не меньше естественной циркуляции.
 /obj/machinery/submarine_reactor_core/proc/primary_flow()
@@ -444,6 +544,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(primary_pump)
 		primary_pump.core = null
 		primary_pump = null
+	if(pressurizer)
+		pressurizer.core = null
+		pressurizer = null
+	if(makeup_pump)
+		makeup_pump.core = null
+		makeup_pump = null
 	vessel_air = null
 	rod_pos = null
 	rod_target = null
@@ -634,10 +740,13 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	simulate(dt)
 
 	if(two_circuit)
-		// В режиме двух контуров давление пара рвёт парогенератор, а не сосуд реактора (первичное давление пока постоянное).
+		// В режиме двух контуров давление пара рвёт парогенератор, а давление первичного контура (если есть компенсатор) рвёт сосуд реактора.
 		for(var/obj/machinery/submarine_steam_generator/G in steam_gens.Copy())
 			if(!QDELETED(G) && !G.ruptured && G.steam_pressure >= NSR_PRESSURE_BURST)
 				G.rupture()
+		if(pressurizer && primary_pressure >= NSR_PRIMARY_BURST)
+			rupture()
+			return
 	else if(steam_pressure >= NSR_PRESSURE_BURST)
 		rupture()
 		return
@@ -688,7 +797,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 	if(two_circuit)
 		// Два контура: ядро не кипит. Оно греет первичную воду, а тепло забирают парогенераторы (расход от главного насоса или естественный).
-		var/flow = primary_flow()
+		// Давление ниже давления насыщения: вода кипит в ядре, паровая плёнка мешает теплоотдаче (расход падает).
+		cooling_eff = primary_cooling_eff()
+		var/flow = primary_flow() * cooling_eff
 		var/heat_out = 0
 		var/pressure_max = 0
 		steam_flow = 0
@@ -696,10 +807,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			heat_out += G.transfer_heat(core_temperature, flow, dt)
 			steam_flow += G.steam_flow
 			pressure_max = max(pressure_max, G.steam_pressure)
-		// Первичный контур всегда полон воды и стоит под постоянным давлением (компенсатор давления будет в ревизии 15).
+		// Первичный контур всегда считается полным: его запас воды и давление ведёт компенсатор (update_primary).
 		coolant_level = 100
+		var/prev_temp = core_temperature
 		core_temperature += (heat_in - heat_loss - heat_out) * dt / (NSR_CORE_HEAT_CAP + NSR_PRIMARY_HEAT_CAP)
 		core_temperature = max(core_temperature, NSR_AMBIENT_TEMP)
+		update_primary(dt, core_temperature - prev_temp)
 		// Питательная заглушка и клапан пара в этом режиме не работают: воду подаёт насос, пар идёт в трубы парогенераторов.
 		steam_pressure = pressure_max
 		return
@@ -735,6 +848,48 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 	steam_pressure = steam_air.return_pressure() / NSR_KPA_PER_BAR
 
+/// Охлаждение ядра как доля от нормального: 1, пока давление первичного контура выше давления насыщения воды при температуре ядра.
+/// Если давление упало ниже, вода кипит в ядре и охлаждение падает до NSR_VOID_MIN (вторая сторона аварии «потеря давления»). Без компенсатора всегда 1.
+/obj/machinery/submarine_reactor_core/proc/primary_cooling_eff()
+	if(!pressurizer || QDELETED(pressurizer))
+		return 1
+	var/saturation = nsr_saturation_pressure(core_temperature)
+	var/deficit = saturation - primary_pressure
+	if(deficit <= 0)
+		return 1
+	return max(NSR_VOID_MIN, 1 - NSR_VOID_SLOPE * deficit / saturation)
+
+/// Один шаг давления и запаса воды первичного контура. delta_temp: на сколько C изменилась температура ядра за этот шаг.
+/// Давление складывается из: расширения воды (нагрев сжимает паровой пузырь), нагревателей, впрыска, потерь тепла компенсатором,
+/// предохранительного клапана и «сплошной воды» (уровень выше NSR_PZR_SOLID_LEVEL). Запас воды: подпитка и слив, клапан.
+/// Без компенсатора давление постоянное NSR_PRIMARY_PRESSURE.
+/obj/machinery/submarine_reactor_core/proc/update_primary(dt, delta_temp)
+	if(!pressurizer || QDELETED(pressurizer))
+		primary_pressure = NSR_PRIMARY_PRESSURE
+		return
+	var/obj/machinery/submarine_pressurizer/pz = pressurizer
+	var/level_raw = pzr_level_raw()
+	var/flow = primary_flow()
+	var/pressure_change = NSR_PRIMARY_SWELL * delta_temp
+	if(level_raw >= NSR_PZR_SOLID_LEVEL)
+		// Парового пузыря нет: вода несжимаема, давление скачет и от нагрева, и от каждого лишнего процента.
+		pressure_change *= NSR_PZR_SOLID_SWELL_MULT
+		pressure_change += NSR_PZR_SOLID_GAIN * (level_raw - NSR_PZR_SOLID_LEVEL) * dt
+	else if(level_raw <= 0)
+		pressure_change -= NSR_PZR_EMPTY_DECAY * dt
+	if(pz.auto)
+		pz.run_auto(primary_pressure, dt)
+	pressure_change += NSR_PZR_HEAT_RATE * pz.update_heating(level_raw) * dt
+	pressure_change -= NSR_PZR_SPRAY_RATE * (pz.spray / 100) * flow * dt
+	pressure_change -= (primary_pressure - 1) * NSR_PRIMARY_LOSS * dt
+	if(pz.update_relief(primary_pressure))
+		pressure_change -= NSR_PZR_RELIEF_RATE * dt
+		primary_inventory -= NSR_PZR_RELIEF_DRAIN * dt
+	if(makeup_pump && !QDELETED(makeup_pump))
+		primary_inventory += (makeup_pump.flow / 100) * NSR_MAKEUP_RATE * dt
+	primary_inventory = clamp(primary_inventory, 0, 150)
+	primary_pressure = clamp(primary_pressure + pressure_change, 1, 400)
+
 /obj/machinery/submarine_reactor_core/proc/update_alarm()
 	var/new_level = 0
 	// Нехватка воды важна только когда реактор греется или греет.
@@ -745,6 +900,15 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		new_level = 1
 	if(core_temperature >= NSR_TEMP_CRIT || steam_pressure >= NSR_PRESSURE_CRIT || (coolant_matters && water_level < NSR_COOLANT_CRIT))
 		new_level = 2
+
+	// Давление и уровень первичного контура (если есть компенсатор). Низкие значения важны, только когда реактор работает или горячий.
+	if(two_circuit && pressurizer)
+		var/hot = (rods_pos > 0 || core_temperature > NSR_BOIL_TEMP)
+		var/pzr_now = pzr_level()
+		if(primary_pressure >= NSR_PRIMARY_WARN_HIGH || (hot && primary_pressure <= NSR_PRIMARY_WARN_LOW) || pzr_now >= NSR_PZR_LEVEL_WARN_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_WARN_LOW))
+			new_level = max(new_level, 1)
+		if(primary_pressure >= NSR_PRIMARY_CRIT_HIGH || (hot && primary_pressure <= NSR_PRIMARY_CRIT_LOW) || pzr_now >= NSR_PZR_LEVEL_CRIT_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_CRIT_LOW))
+			new_level = 2
 
 	if(new_level > alarm_level)
 		sound_alarm(NS_SND_ALARM_WARN, 60, TRUE)
@@ -1478,8 +1642,48 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Два контура (ревизия 14).
 	data["twoCircuit"] = R.two_circuit
 	if(R.two_circuit)
-		data["primaryPressure"] = NSR_PRIMARY_PRESSURE
+		data["primaryPressure"] = round(R.primary_pressure, 0.1)
+		data["primaryBurst"] = NSR_PRIMARY_BURST
 		data["primaryFlow"] = round(R.primary_flow() * 100)
+		data["coolEff"] = round(R.cooling_eff * 100)
+		data["voiding"] = R.cooling_eff < 0.98
+		data["hasPzr"] = !!R.pressurizer
+		var/hot = (R.rods_pos > 0 || R.core_temperature > NSR_BOIL_TEMP)
+		var/pressure_class = "good"
+		var/pzr_class = "good"
+		if(R.pressurizer)
+			var/pzr_now = R.pzr_level()
+			if(R.primary_pressure >= NSR_PRIMARY_CRIT_HIGH || (hot && R.primary_pressure <= NSR_PRIMARY_CRIT_LOW))
+				pressure_class = "bad"
+			else if(R.primary_pressure >= NSR_PRIMARY_WARN_HIGH || (hot && R.primary_pressure <= NSR_PRIMARY_WARN_LOW))
+				pressure_class = "average"
+			if(pzr_now >= NSR_PZR_LEVEL_CRIT_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_CRIT_LOW))
+				pzr_class = "bad"
+			else if(pzr_now >= NSR_PZR_LEVEL_WARN_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_WARN_LOW))
+				pzr_class = "average"
+			var/obj/machinery/submarine_pressurizer/pz = R.pressurizer
+			data["pzrLevel"] = round(pzr_now, 0.1)
+			data["pzrLevelClass"] = pzr_class
+			data["pzrSolid"] = R.pzr_level_raw() >= NSR_PZR_SOLID_LEVEL
+			data["pzrHeater"] = round(pz.heater)
+			data["pzrHeating"] = round(pz.heating * 100)
+			data["pzrHeaterText"] = pz.get_heater_text()
+			data["pzrHeaterClass"] = (pz.get_heater_text() in list("NO POWER", "UNCOVERED")) ? "bad" : "good"
+			data["pzrSpray"] = round(pz.spray)
+			data["pzrAuto"] = pz.auto
+			data["pzrSet"] = pz.setpoint
+			data["pzrRelief"] = pz.get_relief_text()
+			data["pzrReliefClass"] = pz.relief_open ? "bad" : (pz.block_closed ? "average" : "good")
+			data["pzrReliefManual"] = pz.relief_manual
+			data["pzrBlock"] = pz.block_closed
+		data["primaryPressureClass"] = pressure_class
+		data["inventory"] = round(R.primary_inventory, 0.1)
+		data["hasMakeup"] = !!R.makeup_pump
+		if(R.makeup_pump)
+			var/obj/machinery/submarine_makeup_pump/mk = R.makeup_pump
+			data["mkSetting"] = mk.setting
+			data["mkState"] = mk.get_state_text()
+			data["mkClass"] = (mk.get_state_text() == "NO POWER") ? "bad" : "good"
 		data["hasPrimaryPump"] = !!R.primary_pump
 		if(R.primary_pump)
 			var/obj/machinery/submarine_primary_pump/pp = R.primary_pump
@@ -1530,6 +1734,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			var/pump_text = found.find_feed_pump() ? "feedwater pump connected" : "no feedwater pump (free water valve)"
 			var/inlet_text = found.find_feed_inlet() ? "feedwater inlet connected" : "no feedwater inlet"
 			var/primary_text = found.find_primary_pump() ? ", main coolant pump connected" : (gen_count ? ", no main coolant pump (natural circulation only)" : "")
+			if(gen_count)
+				primary_text += found.find_pressurizer() ? ", pressurizer connected" : ", no pressurizer (primary pressure fixed)"
+				primary_text += found.find_makeup_pump() ? ", makeup pump connected" : ", no makeup pump"
 			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text], [inlet_text][primary_text]."))
 		else
 			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
@@ -1575,6 +1782,49 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				to_chat(user, SPAN_WARNING("No main coolant pump is connected."))
 			else if(pp_amount in list(-10, -1, 1, 10))
 				R.primary_pump.speed = clamp(R.primary_pump.speed + pp_amount, 0, 100)
+		if("pzr_heater", "pzr_spray")
+			var/pz_amount = text2num(href_list["amount"])
+			if(!R.pressurizer)
+				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+			else if(R.pressurizer.auto)
+				to_chat(user, SPAN_WARNING("The pressure automation is on. Switch it off to set the heaters and the spray by hand."))
+			else if(pz_amount in list(-10, -1, 1, 10))
+				if(action == "pzr_heater")
+					R.pressurizer.heater = clamp(R.pressurizer.heater + pz_amount, 0, 100)
+				else
+					R.pressurizer.spray = clamp(R.pressurizer.spray + pz_amount, 0, 100)
+		if("pzr_auto")
+			if(!R.pressurizer)
+				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+			else
+				R.pressurizer.toggle_auto(user)
+		if("pzr_set")
+			var/set_amount = text2num(href_list["amount"])
+			if(R.pressurizer && (set_amount in list(-5, -1, 1, 5)))
+				R.pressurizer.setpoint = clamp(R.pressurizer.setpoint + set_amount, NSR_PZR_SET_MIN, NSR_PZR_SET_MAX)
+		if("pzr_relief")
+			if(!R.pressurizer)
+				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+			else if(R.pressurizer.block_closed)
+				to_chat(user, SPAN_WARNING("The relief valve is isolated by its block valve."))
+			else
+				R.pressurizer.relief_manual = !R.pressurizer.relief_manual
+		if("pzr_block")
+			if(!R.pressurizer)
+				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+			else
+				R.pressurizer.block_closed = !R.pressurizer.block_closed
+				if(R.pressurizer.block_closed)
+					R.pressurizer.relief_manual = FALSE
+		if("makeup_move")
+			var/mk_amount = text2num(href_list["amount"])
+			if(!R.makeup_pump)
+				to_chat(user, SPAN_WARNING("No makeup pump is connected."))
+			else if(mk_amount in list(-10, -1, 1, 10))
+				R.makeup_pump.setting = clamp(R.makeup_pump.setting + mk_amount, -100, 100)
+		if("makeup_stop")
+			if(R.makeup_pump)
+				R.makeup_pump.setting = 0
 		if("pump_auto")
 			if(!R.feed_pump)
 				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
