@@ -212,6 +212,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 #define NSR_PZR_AUTO_I_MAX        60     // % предел интегральной части
 #define NSR_MAKEUP_RATE           0.25   // % запаса первичной воды в секунду при подпитке 100% (при сливе в минус то же самое)
 #define NSR_MAKEUP_POWER          3000   // Вт при подпитке или сливе 100%
+#define NSR_ANNOUNCE_REPEAT       (90 SECONDS) // как часто повторять голосовое оповещение о высоком давлении, пока оно не упало
+#define NSR_ANNOUNCE_REARM        10     // бар, на сколько давление должно упасть ниже порога тревоги, чтобы оповещение сработало снова
 
 // Пороги тревог и катастроф
 #define NSR_TEMP_WARN             200    // C (в ревизии 13 было 150)
@@ -407,6 +409,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/primary_inventory = 100
 	/// Охлаждение ядра, доля от нормального (1 - норма). Падает, когда давление ниже давления насыщения: вода кипит в ядре.
 	var/cooling_eff = 1
+	/// Когда можно снова оповестить о высоком давлении первичного контура (0: сразу).
+	var/next_pressure_announce = 0
 
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
@@ -909,6 +913,15 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			new_level = max(new_level, 1)
 		if(primary_pressure >= NSR_PRIMARY_CRIT_HIGH || (hot && primary_pressure <= NSR_PRIMARY_CRIT_LOW) || pzr_now >= NSR_PZR_LEVEL_CRIT_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_CRIT_LOW))
 			new_level = 2
+
+	// Голосовое оповещение на всю лодку о высоком давлении первичного контура: раз в NSR_ANNOUNCE_REPEAT, пока давление не упало.
+	if(two_circuit && pressurizer)
+		if(primary_pressure >= NSR_PRIMARY_WARN_HIGH)
+			if(world.time >= next_pressure_announce)
+				ns_announce(NS_ANN_PRIMARY_PRESSURE)
+				next_pressure_announce = world.time + NSR_ANNOUNCE_REPEAT
+		else if(primary_pressure < NSR_PRIMARY_WARN_HIGH - NSR_ANNOUNCE_REARM)
+			next_pressure_announce = 0
 
 	if(new_level > alarm_level)
 		sound_alarm(NS_SND_ALARM_WARN, 60, TRUE)

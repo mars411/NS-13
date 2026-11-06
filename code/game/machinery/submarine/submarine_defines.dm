@@ -25,3 +25,8 @@
 #define NS_SND_BUILT            'sound/items/Deconstruct.ogg'              // что-то собрано, починено
 #define NS_SND_RELIEF           'sound/machines/hiss.ogg'                  // предохранительный клапан компенсатора открылся
 #define NS_SND_SPARKS           'sound/effects/sparks4.ogg'
+
+// Язык голосовых оповещений (см. submarine_announce.dm). Пока один общий на раунд, потом голосование или личная настройка.
+#define NS_ANNOUNCE_LANG_RU "ru"
+#define NS_ANNOUNCE_LANG_EN "en"
+#define NS_ANNOUNCE_LANG_DEFAULT NS_ANNOUNCE_LANG_RU
