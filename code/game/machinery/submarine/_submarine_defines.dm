@@ -29,7 +29,7 @@
 // Язык голосовых оповещений (см. submarine_announce.dm). Пока один общий на раунд, потом голосование или личная настройка.
 #define NS_ANNOUNCE_LANG_RU "ru"
 #define NS_ANNOUNCE_LANG_EN "en"
-#define NS_ANNOUNCE_LANG_DEFAULT NS_ANNOUNCE_LANG_RU
+#define NS_ANNOUNCE_LANG_DEFAULT NS_ANNOUNCE_LANG_EN
 
 // ============================================================================
 // Реактор, второй контур, компенсатор давления: числа и define'ы. Раньше лежали в submarine_reactor.dm.
