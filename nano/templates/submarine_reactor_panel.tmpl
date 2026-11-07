@@ -266,6 +266,11 @@
 		<div style="clear: both; padding-top: 2px;">
 			Tubes: <span class='{{:value.tubeClass}}'><b>{{:value.tube}}</b></span>, damage {{:value.tubeDamage}} %{{if value.tube == 'LEAKING'}}, leak {{:value.leakRate}} % of the primary water per second{{/if}}{{if value.plugged > 0}}, {{:value.plugged}} % plugged{{/if}}{{if value.contam > 0}}, <span class='average'>contamination {{:value.contam}}</span>{{/if}}
 		</div>
+		{{if value.valveClosed}}
+		<div class='average' style="clear: both; padding-top: 2px;">
+			Valve closed: the water keeps boiling into steam that stays inside, so the water level falls and the pressure rises until the valve is opened.
+		</div>
+		{{/if}}
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link(value.valveClosed ? 'Steam valve: CLOSED' : 'Steam valve: open', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
 		</div>

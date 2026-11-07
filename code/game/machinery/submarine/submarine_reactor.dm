@@ -266,10 +266,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/next_alarm_time = 0
 	/// 0 - звук тревог включён. Иначе уровень тревоги, при котором звук заглушили: он молчит, пока тревога не станет сильнее или не кончится (ревизия 16).
 	var/alarm_mute_level = 0
-	/// Табло (ревизия 17): уровень каждой плитки (id из nsr_alarm_labels, 0-2), подтверждённый уровень, плитка-«первопричина» нового события и прошлое повреждение топлива.
-	var/list/alarm_tiles = list()
-	var/list/alarm_ack = list()
-	var/alarm_first_out
+	/// Табло (ревизия 17, общий класс с ревизии 18): уровни плиток, подтверждения и «первопричина» нового события; ниже прошлое повреждение топлива.
+	var/datum/ns_annunciator/annunciator
 	var/alarm_last_damage = 0
 	/// Повреждение топлива, 0-100% (ревизия 16). Растёт, пока зона горячее NSR_DAMAGE_TEMP, и необратимо. При 100% зона плавится.
 	var/core_damage = 0
@@ -313,6 +311,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/submarine_reactor_core/Initialize()
 	. = ..()
 	GLOB.submarine_reactors += src
+	annunciator = new /datum/ns_annunciator(nsr_alarm_labels)
 	vessel_air = new /datum/gas_mixture(NSR_VESSEL_VOLUME, T0C + NSR_AMBIENT_TEMP)
 	rod_pos = list()
 	rod_target = list()
@@ -811,9 +810,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Уровень каждой плитки табло (id из nsr_alarm_labels): 0 норма, 1 предупреждение, 2 критично.
 /obj/machinery/submarine_reactor_core/proc/compute_alarm_tiles()
-	var/list/tiles = list()
-	for(var/id in nsr_alarm_labels)
-		tiles[id] = 0
+	var/list/tiles = annunciator.blank()
 	// Нехватка воды и низкие значения важны только когда реактор греется или греет.
 	var/hot = (rods_pos > 0 || core_temperature > NSR_BOIL_TEMP)
 	tiles["temp"] = nsr_high_level(core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
@@ -867,19 +864,13 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
 /obj/machinery/submarine_reactor_core/proc/acknowledge_alarms()
-	for(var/id in alarm_tiles)
-		if(alarm_tiles[id])
-			alarm_ack[id] = alarm_tiles[id]
+	annunciator.acknowledge()
 	if(alarm_level > 0)
 		alarm_mute_level = alarm_level
 
 /// Есть ли горящая плитка, которую ещё не подтвердили (она мигает).
 /obj/machinery/submarine_reactor_core/proc/has_unacked_alarm()
-	for(var/id in alarm_tiles)
-		var/lvl = alarm_tiles[id]
-		if(lvl && lvl > alarm_ack[id])
-			return TRUE
-	return FALSE
+	return annunciator.has_unacked()
 
 /obj/machinery/submarine_reactor_core/proc/update_alarm()
 	var/list/tiles = compute_alarm_tiles()
@@ -891,26 +882,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if(id == "valve" || (id == "damage" && !damage_rising))
 			continue
 		new_level = max(new_level, tiles[id])
-	// Табло: подтверждение теряется, когда плитка погасла или ослабла, поэтому новое ухудшение снова мигает; «первопричина» это первая плитка нового события.
-	var/was_active = FALSE
-	for(var/id in alarm_tiles)
-		if(alarm_tiles[id])
-			was_active = TRUE
-			break
-	var/now_active = FALSE
-	for(var/id in tiles)
-		var/lvl = tiles[id]
-		if(!lvl)
-			alarm_ack -= id
-			continue
-		now_active = TRUE
-		if(!was_active && !alarm_first_out)
-			alarm_first_out = id
-		if(alarm_ack[id] > lvl)
-			alarm_ack[id] = lvl
-	if(!now_active)
-		alarm_first_out = null
-	alarm_tiles = tiles
+	// Табло: подтверждение, «первопричина» и мигание ведёт общий класс.
+	annunciator.update(tiles)
 
 	// Голосовое оповещение на всю лодку о высоком давлении первичного контура: один раз за превышение, снова только после того,
 	// как давление упало хотя бы на NSR_ANNOUNCE_REARM бар ниже порога. Сигнал на пультах звучит как обычно, голос не повторяется.
@@ -1709,11 +1682,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["alarmLevel"] = R.alarm_level
 	data["alarmMuted"] = R.alarm_mute_level > 0
 	data["alarmUnacked"] = R.has_unacked_alarm()
-	var/list/tile_list = list()
-	for(var/id in nsr_alarm_labels)
-		var/lvl = R.alarm_tiles[id] || 0
-		tile_list += list(list("label" = nsr_alarm_labels[id], "level" = lvl, "blink" = (lvl > 0 && lvl > (R.alarm_ack[id] || 0)), "first" = (R.alarm_first_out == id)))
-	data["alarmTiles"] = tile_list
+	data["alarmTiles"] = R.annunciator.ui_tiles()
 	data["damage"] = round(R.core_damage, 0.1)
 	data["damageClass"] = (R.core_damage >= NSR_DAMAGE_CRIT) ? "bad" : ((R.core_damage >= NSR_DAMAGE_WARN) ? "average" : "good")
 	data["leaking"] = R.leaking

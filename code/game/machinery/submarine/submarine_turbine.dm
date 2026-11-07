@@ -123,6 +123,10 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_VIB_HIGH              4.5    // мм/с, предупреждение
 #define NST_VIB_DANGER            7.1    // мм/с, опасно: секции изнашиваются от тряски сами
 #define NST_VIB_MAX               12     // мм/с, конец шкалы на пульте
+#define NST_ANN_COND_WARN_BAR     2.5    // бар у конденсатора: плитка табло желтеет (красной она становится на NST_COND_TRIP_BAR)
+#define NST_ANN_INLET_WARN_BAR    40     // бар перед турбиной: плитка желтеет (начинает сбрасывать клапан NST_RELIEF_BAR)
+#define NST_ANN_INLET_CRIT_BAR    60     // бар перед турбиной: плитка красная
+#define NST_ANN_BLADE_WARN        0.9    // доля здоровья секции, ниже которой плитка износа желтеет (красная ниже половины или при потере секции)
 #define NST_VIB_DAMAGE            0.004  // доля здоровья в секунду на каждую единицу (вибрация / NST_VIB_DANGER - 1)
 #define NST_VIB_ROW               2      // мм/с от каждого потерянного ряда лопастей (дисбаланс ротора) на NST_VIB_RPM_REF
 #define NST_SHAKE_RANGE           10     // тайлов: так далеко от турбины экран слегка трясётся
@@ -142,6 +146,20 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 // ----------------------------------------------------------------------------
 
 /// Сколько моль газа gas_id во всех смесях сети труб.
+/// Плитки табло турбины (ревизия 18): порядок и подписи.
+var/global/list/nst_alarm_labels = list(
+	"overspeed" = "OVERSPEED",
+	"vibration" = "VIBRATION",
+	"stop" = "STOP VALVE SHUT",
+	"breaker" = "BREAKER TRIPPED",
+	"overload" = "GEN OVERLOAD",
+	"governor" = "GOVERNOR FAILED",
+	"cond" = "CONDENSER PRESS",
+	"inlet" = "STEAM INLET HIGH",
+	"blades" = "BLADE DAMAGE",
+	"relief" = "RELIEF VALVE"
+)
+
 /proc/nst_network_gas(datum/pipe_network/net, gas_id)
 	. = 0
 	if(!net)
@@ -619,10 +637,15 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	var/snd_running = FALSE
 	/// Не раньше этого времени включается гул после звука пуска.
 	var/snd_loop_time = 0
+	/// Табло тревог турбины (ревизия 18).
+	var/datum/ns_annunciator/annunciator
+	/// Причина, по которой закрылся стопорный клапан, для табло (ручная остановка не красная).
+	var/stop_reason = ""
 
 /obj/machinery/power/submarine_turbine_generator/Initialize()
 	. = ..()
 	GLOB.submarine_turbines += src
+	annunciator = new /datum/ns_annunciator(nst_alarm_labels)
 	find_parts()
 
 /obj/machinery/power/submarine_turbine_generator/Destroy()
@@ -719,6 +742,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	if(stop_tripped)
 		return
 	stop_tripped = TRUE
+	stop_reason = reason
 	visible_message(SPAN_DANGER("The turbine stop valve slams shut ([reason])!"))
 	playsound(src, NS_SND_TRIP, 80, TRUE)
 	add_cycle()
@@ -734,6 +758,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		to_chat(user, SPAN_WARNING("Cannot reset the stop valve: the pressure at the condenser is still too high. Cool it down first."))
 		return FALSE
 	stop_tripped = FALSE
+	stop_reason = ""
 	admission = 0
 	visible_message(SPAN_NOTICE("The turbine stop valve is reset and the admission valve is closed."))
 	return TRUE
@@ -956,6 +981,43 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	apply_vibration_wear(dt)
 	update_vibration_effects()
 	update_sound()
+	annunciator.update(compute_alarm_tiles())
+
+/// Уровень каждой плитки табло (id из nst_alarm_labels): 0 норма, 1 предупреждение, 2 критично.
+/obj/machinery/power/submarine_turbine_generator/proc/compute_alarm_tiles()
+	var/list/tiles = annunciator.blank()
+	tiles["overspeed"] = nsr_high_level(rpm, NST_RPM_TRIP_HI, NST_RPM_DAMAGE)
+	tiles["vibration"] = nsr_high_level(vibration, NST_VIB_HIGH, NST_VIB_DANGER)
+	if(stop_tripped)
+		tiles["stop"] = (stop_reason == "EMERGENCY STOP") ? 1 : 2
+	if(!breaker_closed && trip_reason && trip_reason != "MANUAL")
+		tiles["breaker"] = (trip_reason == "BLADE LOST" || trip_reason == "SECTION WRECKED") ? 2 : 1
+	if(overloaded)
+		tiles["overload"] = 2
+	if(!governor_ok)
+		tiles["governor"] = 1
+	var/inlet_bar = 0
+	if(hp && !QDELETED(hp))
+		inlet_bar = hp.air1.return_pressure() / NSR_KPA_PER_BAR
+		tiles["inlet"] = nsr_high_level(inlet_bar, NST_ANN_INLET_WARN_BAR, NST_ANN_INLET_CRIT_BAR)
+	if(lp2 && !QDELETED(lp2))
+		tiles["cond"] = nsr_high_level(lp2.air2.return_pressure() / NSR_KPA_PER_BAR, NST_ANN_COND_WARN_BAR, NST_COND_TRIP_BAR)
+	var/blades = 0
+	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
+		if(S.broken || S.health_frac < 0.5)
+			blades = 2
+		else if(S.health_frac < NST_ANN_BLADE_WARN || S.lost_rows() > 0)
+			blades = max(blades, 1)
+	tiles["blades"] = blades
+	for(var/obj/machinery/atmospherics/binary/submarine_relief_valve/V in GLOB.submarine_relief_valves)
+		if(V.turbine_id != turbine_id)
+			continue
+		if(V.locked_shut)
+			tiles["relief"] = (inlet_bar >= NST_ANN_INLET_WARN_BAR) ? 2 : 1
+		else if(V.last_flow > 0)
+			tiles["relief"] = 1
+		break
+	return tiles
 
 // ----------------------------------------------------------------------------
 // НАГРУЗОЧНЫЙ БЛОК (ТЕСТ)
@@ -1079,6 +1141,8 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 	data["turbineId"] = turbine_id
 	if(!G)
 		return data
+	data["alarmTiles"] = G.annunciator.ui_tiles()
+	data["alarmUnacked"] = G.annunciator.has_unacked()
 	var/rpm_now = round(G.rpm)
 	data["rpm"] = rpm_now
 	data["rpmMax"] = NST_RPM_EXPLODE
@@ -1203,6 +1267,11 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 		return TOPIC_HANDLED
 
 	switch(action)
+		if("alarm_ack")
+			if(G.annunciator.has_unacked())
+				G.annunciator.acknowledge()
+			else
+				to_chat(user, SPAN_NOTICE("No unacknowledged alarm."))
 		if("adm_move")
 			var/adm_amount = text2num(href_list["amount"])
 			if(!(adm_amount in list(-10, -1, 1, 10)))

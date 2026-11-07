@@ -37,6 +37,11 @@
 	/// Кто сейчас крутит штурвал. Двоим сразу крутить нельзя.
 	var/mob/wheel_user
 
+/obj/machinery/door/submarine_hatch/Initialize()
+	. = ..()
+	// Переборочная дверь держит взрыв лучше обычной: одним взрывом (даже реактора) её не разрушить.
+	set_damage_resistance(DAMAGE_EXPLODE, NS_HATCH_BLAST_RESIST)
+
 /obj/machinery/door/submarine_hatch/Destroy()
 	wheel_user = null
 	return ..()
