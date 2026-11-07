@@ -29,8 +29,27 @@
 		<div style="float: left; padding: 4px 12px 0 0;">
 			<span class='{{:data.statusClass}}'><b>{{:data.status}}</b></span>
 		</div>
-		{{:helper.link(data.alarmMuted ? 'Alarm muted: unmute' : 'Mute alarm', data.alarmMuted ? 'volume-off' : 'volume-on', {'action' : 'alarm_mute'}, (data.alarmMuted || data.alarmLevel > 0) ? null : 'disabled', data.alarmMuted ? 'selected' : null)}}
+		{{:helper.link(data.alarmMuted ? 'Alarm muted: unmute' : 'Acknowledge / mute', data.alarmMuted ? 'volume-off' : 'volume-on', {'action' : 'alarm_mute'}, (data.alarmMuted || data.alarmLevel > 0 || data.alarmUnacked) ? null : 'disabled', data.alarmMuted ? 'selected' : null)}}
 	</div>
+</div>
+<style>
+	.nsrTile { float: left; width: 23%; margin: 0 1% 5px 0; padding: 6px 2px; text-align: center; font-size: 11px; font-weight: bold; border: 1px solid #444444; }
+	.nsrT0 { background: #1b1b1b; color: #5c5c5c; }
+	.nsrT1 { background: #c9a227; color: #000000; border-color: #f0d060; }
+	.nsrT2 { background: #b22222; color: #ffffff; border-color: #ff6060; }
+	.nsrBlink { animation: nsrblink 0.9s step-start infinite; -webkit-animation: nsrblink 0.9s step-start infinite; }
+	.nsrFirst { display: block; font-size: 9px; letter-spacing: 1px; }
+	@keyframes nsrblink { 50% { opacity: 0.2; } }
+	@-webkit-keyframes nsrblink { 50% { opacity: 0.2; } }
+</style>
+<div style="clear: both; padding: 4px 0;">
+	{{for data.alarmTiles}}
+		<div class="nsrTile nsrT{{:value.level}} {{if value.blink}}nsrBlink{{/if}}">
+			{{:value.label}}
+			{{if value.first}}<span class="nsrFirst">FIRST</span>{{/if}}
+		</div>
+	{{/for}}
+	<div style="clear: both;"></div>
 </div>
 <div class="item">
 	<div class="itemLabel">
@@ -222,6 +241,7 @@
 	<div class="itemContent">
 		{{if data.hasPrimaryPump}}
 			<span class='{{:data.ppClass}}'><b>{{:data.ppState}}</b></span>, rotor {{:data.ppSpin}} %, {{:data.ppRpm}} rpm
+			<div style="clear: both;">Bearing wear: <span class='{{:data.ppWearClass}}'>{{:data.ppWear}} %</span>{{if data.ppSeized}} <span class='bad'>(rotor jammed: stop the reactor, replace the bearings on site)</span>{{/if}}</div>
 		{{else}}
 			<span class='bad'>none: natural circulation only</span>
 		{{/if}}
@@ -243,6 +263,9 @@
 			{{:value.heat}} heat/s taken from the primary, {{:value.flow}} mol/s of steam, {{:value.pressure}} bar
 		</div>
 		{{if !value.ruptured}}
+		<div style="clear: both; padding-top: 2px;">
+			Tubes: <span class='{{:value.tubeClass}}'><b>{{:value.tube}}</b></span>, damage {{:value.tubeDamage}} %{{if value.tube == 'LEAKING'}}, leak {{:value.leakRate}} % of the primary water per second{{/if}}{{if value.plugged > 0}}, {{:value.plugged}} % plugged{{/if}}{{if value.contam > 0}}, <span class='average'>contamination {{:value.contam}}</span>{{/if}}
+		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link(value.valveClosed ? 'Steam valve: CLOSED' : 'Steam valve: open', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
 		</div>

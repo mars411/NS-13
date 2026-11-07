@@ -85,6 +85,35 @@ GLOBAL_LIST_EMPTY(submarine_makeup_pumps)
 			return pressures[i] + (pressures[i + 1] - pressures[i]) * (temp - temps[i]) / (temps[i + 1] - temps[i])
 	return 221 + (temp - 375) * 8
 
+/// Плитки табло тревог (ревизия 17): порядок и подписи. Плитка жёлтая при предупреждении, красная при критической тревоге, мигает, пока её не подтвердили.
+var/global/list/nsr_alarm_labels = list(
+	"temp" = "CORE TEMP",
+	"steam" = "STEAM PRESSURE",
+	"water" = "SG WATER LOW",
+	"cooling" = "COOLING LOST",
+	"ppress_hi" = "PRIMARY PRESS HIGH",
+	"ppress_lo" = "PRIMARY PRESS LOW",
+	"plevel_hi" = "PZR LEVEL HIGH",
+	"plevel_lo" = "PZR LEVEL LOW",
+	"damage" = "FUEL DAMAGE",
+	"leak" = "PRIMARY LEAK",
+	"sg" = "STEAM GENERATOR",
+	"valve" = "STEAM VALVE CLOSED",
+	"pump" = "MAIN PUMP"
+)
+
+/// Уровень тревоги по верхнему порогу: 2, если значение не ниже критического, 1, если не ниже предупредительного, иначе 0.
+/proc/nsr_high_level(value, warn, crit)
+	if(value >= crit)
+		return 2
+	return (value >= warn) ? 1 : 0
+
+/// То же по нижнему порогу: 2, если значение не выше критического, 1, если не выше предупредительного.
+/proc/nsr_low_level(value, warn, crit)
+	if(value <= crit)
+		return 2
+	return (value <= warn) ? 1 : 0
+
 /// Радиус взрыва по энергии. Растёт с кубическим корнем энергии (вдвое больше энергии даёт радиус в 1,26 раза больше). ref_energy даёт ref_range.
 /proc/nsr_blast_range(energy, ref_energy, ref_range)
 	var/range = ref_range * (energy / max(ref_energy, 0.01)) ** (1 / 3)
@@ -237,6 +266,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/next_alarm_time = 0
 	/// 0 - звук тревог включён. Иначе уровень тревоги, при котором звук заглушили: он молчит, пока тревога не станет сильнее или не кончится (ревизия 16).
 	var/alarm_mute_level = 0
+	/// Табло (ревизия 17): уровень каждой плитки (id из nsr_alarm_labels, 0-2), подтверждённый уровень, плитка-«первопричина» нового события и прошлое повреждение топлива.
+	var/list/alarm_tiles = list()
+	var/list/alarm_ack = list()
+	var/alarm_first_out
+	var/alarm_last_damage = 0
 	/// Повреждение топлива, 0-100% (ревизия 16). Растёт, пока зона горячее NSR_DAMAGE_TEMP, и необратимо. При 100% зона плавится.
 	var/core_damage = 0
 	/// Течь первичного контура: сосуд лопнул без взрыва (холодный гидравлический разрыв). Вода уходит, пока есть давление. Заваривается сваркой в холодном сосуде без давления.
@@ -686,6 +720,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		core_temperature += (heat_in - heat_loss - heat_out) * dt / (NSR_CORE_HEAT_CAP + NSR_PRIMARY_HEAT_CAP)
 		core_temperature = max(core_temperature, NSR_AMBIENT_TEMP)
 		update_primary(dt, core_temperature - prev_temp)
+		// Течи трубок парогенераторов уносят воду первичного контура во вторичный (ревизия 17).
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			primary_inventory = max(0, primary_inventory - G.update_tubes(primary_pressure, core_temperature, dt))
 		// Питательная заглушка и клапан пара в этом режиме не работают: воду подаёт насос, пар идёт в трубы парогенераторов.
 		steam_pressure = pressure_max
 		return
@@ -772,25 +809,108 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	primary_inventory = clamp(primary_inventory, 0, 150)
 	primary_pressure = clamp(primary_pressure + pressure_change, 1, 400)
 
-/obj/machinery/submarine_reactor_core/proc/update_alarm()
-	var/new_level = 0
-	// Нехватка воды важна только когда реактор греется или греет.
-	var/coolant_matters = (rods_pos > 0 || core_temperature > NSR_BOIL_TEMP)
+/// Уровень каждой плитки табло (id из nsr_alarm_labels): 0 норма, 1 предупреждение, 2 критично.
+/obj/machinery/submarine_reactor_core/proc/compute_alarm_tiles()
+	var/list/tiles = list()
+	for(var/id in nsr_alarm_labels)
+		tiles[id] = 0
+	// Нехватка воды и низкие значения важны только когда реактор греется или греет.
+	var/hot = (rods_pos > 0 || core_temperature > NSR_BOIL_TEMP)
+	tiles["temp"] = nsr_high_level(core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
+	tiles["steam"] = nsr_high_level(steam_pressure, NSR_PRESSURE_WARN, NSR_PRESSURE_CRIT)
 	// В режиме двух контуров вода, которой может не хватить, это вода парогенераторов (самая низкая).
 	var/water_level = feed_level()
-	if(core_temperature >= NSR_TEMP_WARN || steam_pressure >= NSR_PRESSURE_WARN || (coolant_matters && water_level < NSR_COOLANT_WARN))
-		new_level = 1
-	if(core_temperature >= NSR_TEMP_CRIT || steam_pressure >= NSR_PRESSURE_CRIT || (coolant_matters && water_level < NSR_COOLANT_CRIT))
-		new_level = 2
+	if(hot)
+		if(water_level < NSR_COOLANT_CRIT)
+			tiles["water"] = 2
+		else if(water_level < NSR_COOLANT_WARN)
+			tiles["water"] = 1
+	if(two_circuit)
+		if(pressurizer)
+			var/pzr_now = pzr_level()
+			tiles["ppress_hi"] = nsr_high_level(primary_pressure, NSR_PRIMARY_WARN_HIGH, NSR_PRIMARY_CRIT_HIGH)
+			tiles["plevel_hi"] = nsr_high_level(pzr_now, NSR_PZR_LEVEL_WARN_HIGH, NSR_PZR_LEVEL_CRIT_HIGH)
+			if(hot)
+				tiles["ppress_lo"] = nsr_low_level(primary_pressure, NSR_PRIMARY_WARN_LOW, NSR_PRIMARY_CRIT_LOW)
+				tiles["plevel_lo"] = nsr_low_level(pzr_now, NSR_PZR_LEVEL_WARN_LOW, NSR_PZR_LEVEL_CRIT_LOW)
+		if(hot)
+			if(cooling_eff < 0.5)
+				tiles["cooling"] = 2
+			else if(cooling_eff < 0.9)
+				tiles["cooling"] = 1
+		var/sg_level = 0
+		var/valve_closed = FALSE
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			if(G.ruptured || G.tube_leak)
+				sg_level = 2
+			else if(G.tube_damage >= NSR_TUBE_WARN)
+				sg_level = max(sg_level, 1)
+			if(G.steam_valve_closed && !G.ruptured)
+				valve_closed = TRUE
+		tiles["sg"] = sg_level
+		// Закрытый клапан это решение оператора: плитка горит, но сирену не включает.
+		if(valve_closed && rods_pos > 0)
+			tiles["valve"] = 1
+		if(primary_pump && !QDELETED(primary_pump))
+			if(primary_pump.seized)
+				tiles["pump"] = hot ? 2 : 1
+			else if(primary_pump.wear >= NSR_PPUMP_WEAR_WARN)
+				tiles["pump"] = 1
+	// Повреждённое топливо остаётся на табло навсегда; сирену оно включает только пока растёт.
+	if(core_damage >= NSR_DAMAGE_CRIT)
+		tiles["damage"] = 2
+	else if(core_damage >= NSR_DAMAGE_WARN)
+		tiles["damage"] = 1
+	if(leaking)
+		tiles["leak"] = hot ? 2 : 1
+	return tiles
 
-	// Давление и уровень первичного контура (если есть компенсатор). Низкие значения важны, только когда реактор работает или горячий.
-	if(two_circuit && pressurizer)
-		var/hot = (rods_pos > 0 || core_temperature > NSR_BOIL_TEMP)
-		var/pzr_now = pzr_level()
-		if(primary_pressure >= NSR_PRIMARY_WARN_HIGH || (hot && primary_pressure <= NSR_PRIMARY_WARN_LOW) || pzr_now >= NSR_PZR_LEVEL_WARN_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_WARN_LOW))
-			new_level = max(new_level, 1)
-		if(primary_pressure >= NSR_PRIMARY_CRIT_HIGH || (hot && primary_pressure <= NSR_PRIMARY_CRIT_LOW) || pzr_now >= NSR_PZR_LEVEL_CRIT_HIGH || (hot && pzr_now <= NSR_PZR_LEVEL_CRIT_LOW))
-			new_level = 2
+/// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
+/obj/machinery/submarine_reactor_core/proc/acknowledge_alarms()
+	for(var/id in alarm_tiles)
+		if(alarm_tiles[id])
+			alarm_ack[id] = alarm_tiles[id]
+	if(alarm_level > 0)
+		alarm_mute_level = alarm_level
+
+/// Есть ли горящая плитка, которую ещё не подтвердили (она мигает).
+/obj/machinery/submarine_reactor_core/proc/has_unacked_alarm()
+	for(var/id in alarm_tiles)
+		var/lvl = alarm_tiles[id]
+		if(lvl && lvl > alarm_ack[id])
+			return TRUE
+	return FALSE
+
+/obj/machinery/submarine_reactor_core/proc/update_alarm()
+	var/list/tiles = compute_alarm_tiles()
+	var/damage_rising = core_damage > alarm_last_damage + 0.001
+	alarm_last_damage = core_damage
+	// Уровень сирены: худшая плитка, кроме информационных (закрытый клапан; повреждение топлива, пока оно не растёт).
+	var/new_level = 0
+	for(var/id in tiles)
+		if(id == "valve" || (id == "damage" && !damage_rising))
+			continue
+		new_level = max(new_level, tiles[id])
+	// Табло: подтверждение теряется, когда плитка погасла или ослабла, поэтому новое ухудшение снова мигает; «первопричина» это первая плитка нового события.
+	var/was_active = FALSE
+	for(var/id in alarm_tiles)
+		if(alarm_tiles[id])
+			was_active = TRUE
+			break
+	var/now_active = FALSE
+	for(var/id in tiles)
+		var/lvl = tiles[id]
+		if(!lvl)
+			alarm_ack -= id
+			continue
+		now_active = TRUE
+		if(!was_active && !alarm_first_out)
+			alarm_first_out = id
+		if(alarm_ack[id] > lvl)
+			alarm_ack[id] = lvl
+	if(!now_active)
+		alarm_first_out = null
+	alarm_tiles = tiles
 
 	// Голосовое оповещение на всю лодку о высоком давлении первичного контура: один раз за превышение, снова только после того,
 	// как давление упало хотя бы на NSR_ANNOUNCE_REARM бар ниже порога. Сигнал на пультах звучит как обычно, голос не повторяется.
@@ -834,6 +954,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			audible_message(SPAN_WARNING("\The [src] emits a warning tone."))
 
 /obj/machinery/submarine_reactor_core/proc/emit_radiation()
+	// Заражённые парогенераторы фонят сами по себе (ревизия 17).
+	if(two_circuit && steam_gens)
+		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
+			G.emit_contamination()
 	var/rads = (rods_pos / 100) * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
 	// Повреждённое топливо фонит и без работы: продукты деления в теплоносителе. Течь первичного контура фонит, пока в нём есть давление.
 	rads += (core_damage / 100) * NSR_RADS_DAMAGE_MAX
@@ -1584,6 +1708,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["statusClass"] = R.get_status_class()
 	data["alarmLevel"] = R.alarm_level
 	data["alarmMuted"] = R.alarm_mute_level > 0
+	data["alarmUnacked"] = R.has_unacked_alarm()
+	var/list/tile_list = list()
+	for(var/id in nsr_alarm_labels)
+		var/lvl = R.alarm_tiles[id] || 0
+		tile_list += list(list("label" = nsr_alarm_labels[id], "level" = lvl, "blink" = (lvl > 0 && lvl > (R.alarm_ack[id] || 0)), "first" = (R.alarm_first_out == id)))
+	data["alarmTiles"] = tile_list
 	data["damage"] = round(R.core_damage, 0.1)
 	data["damageClass"] = (R.core_damage >= NSR_DAMAGE_CRIT) ? "bad" : ((R.core_damage >= NSR_DAMAGE_WARN) ? "average" : "good")
 	data["leaking"] = R.leaking
@@ -1695,6 +1825,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			data["ppRpmMax"] = NSR_PRIMARY_PUMP_RPM_MAX
 			data["ppState"] = pp.get_state_text()
 			data["ppClass"] = (pp.get_state_text() in list("AT SPEED", "SPINNING UP", "SPINNING DOWN")) ? "good" : "bad"
+			data["ppWear"] = round(pp.wear)
+			data["ppWearClass"] = pp.seized ? "bad" : ((pp.wear >= NSR_PPUMP_WEAR_WARN) ? "average" : "good")
+			data["ppSeized"] = pp.seized
 		var/list/sg_list = list()
 		var/sg_index = 0
 		for(var/obj/machinery/submarine_steam_generator/G in R.steam_gens)
@@ -1705,7 +1838,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			else if(G.coolant_level < NSR_COOLANT_WARN)
 				level_class = "average"
 			var/state_text = G.get_state_text()
-			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER" || state_text == "VALVE CLOSED") ? "average" : "good"), "valveClosed" = G.steam_valve_closed, "ruptured" = G.ruptured))
+			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER" || state_text == "VALVE CLOSED") ? "average" : "good"), "valveClosed" = G.steam_valve_closed, "ruptured" = G.ruptured, "tube" = G.get_tube_text(), "tubeClass" = G.tube_leak ? "bad" : ((G.tube_damage >= NSR_TUBE_WARN) ? "average" : "good"), "tubeDamage" = round(G.tube_damage), "leakRate" = round(G.leak_rate, 0.01), "plugged" = round(G.tubes_plugged), "contam" = round(G.contamination)))
 		data["sgList"] = sg_list
 	data["scrammed"] = R.scrammed
 	data["casingsOpen"] = R.count_open_casings()
@@ -1782,6 +1915,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			var/pp_amount = text2num(href_list["amount"])
 			if(!R.primary_pump)
 				to_chat(user, SPAN_WARNING("No main coolant pump is connected."))
+			else if(R.primary_pump.seized)
+				to_chat(user, SPAN_WARNING("The main coolant pump rotor is jammed. The bearings have to be replaced on site."))
 			else if(pp_amount in list(-10, -1, 1, 10))
 				R.primary_pump.speed = clamp(R.primary_pump.speed + pp_amount, 0, 100)
 		if("pzr_heater", "pzr_spray")
@@ -1851,10 +1986,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if("alarm_mute")
 			if(R.alarm_mute_level)
 				R.alarm_mute_level = 0
-			else if(R.alarm_level > 0)
-				R.alarm_mute_level = R.alarm_level
+			else if(R.alarm_level > 0 || R.has_unacked_alarm())
+				R.acknowledge_alarms()
 			else
-				to_chat(user, SPAN_NOTICE("No alarm is sounding."))
+				to_chat(user, SPAN_NOTICE("No alarm is lit."))
 		if("sg_valve")
 			var/sg_n = text2num(href_list["n"])
 			var/obj/machinery/submarine_steam_generator/target_sg

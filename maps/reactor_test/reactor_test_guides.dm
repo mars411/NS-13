@@ -28,7 +28,10 @@
 10. Each steam generator has a steam valve button in the Steam generators block. Closed, it traps the steam: the pressure climbs and the generator bursts at 110 bar, so do not leave it closed. Opening it with a high pressure inside hammers the pipes.
 11. The Mute alarm button next to the status silences the siren. It comes back by itself if things get worse or after the alarm ends.
 12. A hot burst and a cold one are not the same. A hot vessel flashes into steam and explodes. A cold, water-filled one only cracks and leaks: cool it, drop the pressure and weld the crack. The fuel damage bar only grows when the core is hot and never goes back.
-13. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
+13. The alarm board under the status shows every alarm as a tile: yellow is a warning, red is critical, a blinking tile is not acknowledged yet. The tile marked FIRST lit first and usually points at the cause. Acknowledge / mute stops the blinking and the siren.
+14. A steam generator can spring a tube leak (the Tubes line shows LEAKING): the reactor water pours into the steam side, the primary water level drops and the generator fills. Raise the makeup pump, SCRAM, lower the primary pressure to cut the leak, and plug the tubes with a welder once the reactor is cold and both circuits are depressurised. A dry steam generator on a hot core ruins its tubes.
+15. The main coolant pump wears out when it pumps steam (cavitation), hot water or runs dry. At 100% wear it jams. Stop the reactor, let it cool and replace the bearings with a wrench. Without the pump only natural circulation is left.
+16. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
 
 /obj/item/paper/reactor_test/hatches
 	name = "reactor test: hatches"
