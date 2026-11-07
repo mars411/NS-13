@@ -26,7 +26,10 @@
 		Status:
 	</div>
 	<div class="itemContent">
-		<span class='{{:data.statusClass}}'><b>{{:data.status}}</b></span>
+		<div style="float: left; padding: 4px 12px 0 0;">
+			<span class='{{:data.statusClass}}'><b>{{:data.status}}</b></span>
+		</div>
+		{{:helper.link(data.alarmMuted ? 'Alarm muted: unmute' : 'Mute alarm', data.alarmMuted ? 'volume-off' : 'volume-on', {'action' : 'alarm_mute'}, (data.alarmMuted || data.alarmLevel > 0) ? null : 'disabled', data.alarmMuted ? 'selected' : null)}}
 	</div>
 </div>
 <div class="item">
@@ -62,6 +65,17 @@
 		{{:helper.displayBar(data.decay, 0, data.decayMax, 'average')}}
 		<div class="statusValue">
 			{{:data.decay}} % of rated power
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Fuel damage:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.damage, 0, 100, data.damageClass)}}
+		<div class="statusValue">
+			{{:data.damage}} %
 		</div>
 	</div>
 </div>
@@ -124,6 +138,11 @@
 </div>
 {{if data.twoCircuit}}
 <h3>Primary circuit</h3>
+{{if data.leaking}}
+<div class='notice'>
+	<b>PRIMARY LEAK.</b> The vessel is cracked and loses water while it has pressure. Cool it below 60 C, let the pressure drop below 5 bar and weld the crack.
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Primary pressure:
@@ -134,6 +153,9 @@
 			<div class="statusValue">
 				{{:data.primaryPressure}} bar
 			</div>
+			{{if data.primaryBurstNow < data.primaryBurst}}
+				<div class='bad' style="clear: both;">Hot metal: the vessel bursts at {{:data.primaryBurstNow}} bar now.</div>
+			{{/if}}
 		{{else}}
 			{{:data.primaryPressure}} bar <i>(fixed: no pressurizer)</i>
 		{{/if}}
@@ -177,7 +199,7 @@
 	<div class="itemContent">
 		{{:data.inventory}} % of the full amount
 		{{if data.voiding}}
-			<br><span class='bad'><b>STEAM IN THE CORE: cooling {{:data.coolEff}} %</b></span>
+			<br><span class='bad'><b>COOLING LOST: {{:data.coolEff}} % (steam in the core or too little water)</b></span>
 		{{/if}}
 	</div>
 </div>
@@ -220,6 +242,11 @@
 		<div style="clear: both; padding-top: 2px;">
 			{{:value.heat}} heat/s taken from the primary, {{:value.flow}} mol/s of steam, {{:value.pressure}} bar
 		</div>
+		{{if !value.ruptured}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(value.valveClosed ? 'Steam valve: CLOSED' : 'Steam valve: open', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
+		</div>
+		{{/if}}
 	</div>
 </div>
 {{/for}}
@@ -335,7 +362,7 @@
 			{{/if}}
 			<div style="padding-top: 4px;">
 				{{:helper.link(data.pumpAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pump_auto'}, data.pumpBurnt ? 'disabled' : null, data.pumpAuto ? 'selected' : null)}}
-				level:
+				<div style="float: left; padding: 4px 8px 0 8px;">level:</div>
 				{{:helper.link('-5', null, {'action' : 'pump_auto_set', 'amount' : -5}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
 				{{:helper.link('-1', null, {'action' : 'pump_auto_set', 'amount' : -1}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
 				{{:helper.link('+1', null, {'action' : 'pump_auto_set', 'amount' : 1}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
@@ -397,12 +424,19 @@
 		Pressure automation:
 	</div>
 	<div class="itemContent">
-		{{:helper.link(data.pzrAuto ? 'ON' : 'OFF', null, {'action' : 'pzr_auto'}, null, data.pzrAuto ? 'selected' : null)}}
-		setpoint {{:data.pzrSet}} bar
-		{{:helper.link('-5', null, {'action' : 'pzr_set', 'amount' : -5})}}
-		{{:helper.link('-1', null, {'action' : 'pzr_set', 'amount' : -1})}}
-		{{:helper.link('+1', null, {'action' : 'pzr_set', 'amount' : 1})}}
-		{{:helper.link('+5', null, {'action' : 'pzr_set', 'amount' : 5})}}
+		{{if data.pzrAuto}}
+			<span class='good'><b>ON</b></span>, holds <b>{{:data.pzrSet}} bar</b>
+		{{else}}
+			<span class='average'><b>OFF</b></span> (heaters and spray by hand)
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.pzrAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pzr_auto'}, null, data.pzrAuto ? 'selected' : null)}}
+			<div style="float: left; padding: 4px 8px 0 8px;">setpoint:</div>
+			{{:helper.link('-5', null, {'action' : 'pzr_set', 'amount' : -5})}}
+			{{:helper.link('-1', null, {'action' : 'pzr_set', 'amount' : -1})}}
+			{{:helper.link('+1', null, {'action' : 'pzr_set', 'amount' : 1})}}
+			{{:helper.link('+5', null, {'action' : 'pzr_set', 'amount' : 5})}}
+		</div>
 	</div>
 </div>
 <div class="item">

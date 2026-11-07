@@ -85,6 +85,11 @@ GLOBAL_LIST_EMPTY(submarine_makeup_pumps)
 			return pressures[i] + (pressures[i + 1] - pressures[i]) * (temp - temps[i]) / (temps[i + 1] - temps[i])
 	return 221 + (temp - 375) * 8
 
+/// Радиус взрыва по энергии. Растёт с кубическим корнем энергии (вдвое больше энергии даёт радиус в 1,26 раза больше). ref_energy даёт ref_range.
+/proc/nsr_blast_range(energy, ref_energy, ref_range)
+	var/range = ref_range * (energy / max(ref_energy, 0.01)) ** (1 / 3)
+	return round(clamp(range, ref_range * NSR_BLAST_RANGE_MIN, ref_range * NSR_BLAST_RANGE_MAX), 0.1)
+
 /// Длина закрашенной части круглой шкалы для доли frac (0-1). Шкала в пульте нарисована дугой в 270 градусов.
 /proc/nsr_gauge_len(frac)
 	return round(clamp(frac, 0, 1) * NSR_GAUGE_ARC, 0.1)
@@ -230,6 +235,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// 0 - норма, 1 - предупреждение, 2 - критично.
 	var/alarm_level = 0
 	var/next_alarm_time = 0
+	/// 0 - звук тревог включён. Иначе уровень тревоги, при котором звук заглушили: он молчит, пока тревога не станет сильнее или не кончится (ревизия 16).
+	var/alarm_mute_level = 0
+	/// Повреждение топлива, 0-100% (ревизия 16). Растёт, пока зона горячее NSR_DAMAGE_TEMP, и необратимо. При 100% зона плавится.
+	var/core_damage = 0
+	/// Течь первичного контура: сосуд лопнул без взрыва (холодный гидравлический разрыв). Вода уходит, пока есть давление. Заваривается сваркой в холодном сосуде без давления.
+	var/leaking = FALSE
 
 	/// Привязанные секции корпуса (три штуки). Само ядро тоже секция, его плита учитывается отдельно.
 	var/list/sections
@@ -502,6 +513,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	return length(sections) + 1
 
 /obj/machinery/submarine_reactor_core/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	if(leaking && isWelder(tool))
+		return weld_leak(tool, user)
 	if(!isWrench(tool))
 		return ..()
 	if(nsr_wrench_casing(src, user, casing_open))
@@ -601,13 +614,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		for(var/obj/machinery/submarine_steam_generator/G in steam_gens.Copy())
 			if(!QDELETED(G) && !G.ruptured && G.steam_pressure >= NSR_PRESSURE_BURST)
 				G.rupture()
-		if(pressurizer && primary_pressure >= NSR_PRIMARY_BURST)
-			rupture()
-			return
+		// Давление разрыва падает, когда сосуд горячий: горячий металл слабее (ревизия 16).
+		if(pressurizer && primary_pressure >= vessel_burst_pressure())
+			if(vessel_failure())
+				return
 	else if(steam_pressure >= NSR_PRESSURE_BURST)
 		rupture()
 		return
-	if(core_temperature >= NSR_MELTDOWN_TEMP)
+	// Расплав это не порог температуры, а накопленное повреждение топлива (ревизия 16).
+	update_damage(dt)
+	if(core_damage >= 100)
 		meltdown()
 		return
 
@@ -706,15 +722,20 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	steam_pressure = steam_air.return_pressure() / NSR_KPA_PER_BAR
 
 /// Охлаждение ядра как доля от нормального: 1, пока давление первичного контура выше давления насыщения воды при температуре ядра.
-/// Если давление упало ниже, вода кипит в ядре и охлаждение падает до NSR_VOID_MIN (вторая сторона аварии «потеря давления»). Без компенсатора всегда 1.
+/// Если давление упало ниже, вода кипит в ядре и охлаждение падает до NSR_VOID_MIN (вторая сторона аварии «потеря давления»).
+/// Если воды в контуре меньше NSR_INV_COVER процентов, охлаждение падает ещё и пропорционально остатку воды. Без компенсатора всегда 1.
 /obj/machinery/submarine_reactor_core/proc/primary_cooling_eff()
 	if(!pressurizer || QDELETED(pressurizer))
 		return 1
 	var/saturation = nsr_saturation_pressure(core_temperature)
 	var/deficit = saturation - primary_pressure
-	if(deficit <= 0)
-		return 1
-	return max(NSR_VOID_MIN, 1 - NSR_VOID_SLOPE * deficit / saturation)
+	var/eff = 1
+	if(deficit > 0)
+		eff = max(NSR_VOID_MIN, 1 - NSR_VOID_SLOPE * deficit / saturation)
+	// Когда воды в контуре почти не осталось, зона обнажается: охлаждение падает пропорционально, при пустом контуре его нет (ревизия 16).
+	if(primary_inventory < NSR_INV_COVER)
+		eff *= clamp(primary_inventory / NSR_INV_COVER, 0, 1)
+	return eff
 
 /// Один шаг давления и запаса воды первичного контура. delta_temp: на сколько C изменилась температура ядра за этот шаг.
 /// Давление складывается из: расширения воды (нагрев сжимает паровой пузырь), нагревателей, впрыска, потерь тепла компенсатором,
@@ -742,6 +763,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(pz.update_relief(primary_pressure))
 		pressure_change -= NSR_PZR_RELIEF_RATE * dt
 		primary_inventory -= NSR_PZR_RELIEF_DRAIN * dt
+	if(leaking)
+		// Течь в сосуде: чем выше давление, тем сильнее уходит вода и тем быстрее падает давление.
+		pressure_change -= (primary_pressure - 1) * NSR_LEAK_LOSS * dt
+		primary_inventory -= NSR_LEAK_DRAIN * (primary_pressure - 1) / NSR_PRIMARY_PRESSURE * dt
 	if(makeup_pump && !QDELETED(makeup_pump))
 		primary_inventory += (makeup_pump.flow / 100) * NSR_MAKEUP_RATE * dt
 	primary_inventory = clamp(primary_inventory, 0, 150)
@@ -777,9 +802,17 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		else if(primary_pressure < NSR_PRIMARY_WARN_HIGH - NSR_ANNOUNCE_REARM)
 			pressure_announced = FALSE
 
-	if(new_level > alarm_level)
+	// Заглушенный звук возвращается, когда тревога стала сильнее, чем была при заглушке. Если она ослабла, порог заглушки опускается вместе с ней,
+	// поэтому новое ухудшение после улучшения снова зазвучит. Когда тревога кончилась совсем, звук включается сам.
+	if(alarm_mute_level)
+		if(new_level < alarm_mute_level)
+			alarm_mute_level = new_level
+		else if(new_level > alarm_mute_level)
+			alarm_mute_level = 0
+	var/muted = alarm_mute_level > 0
+	if(new_level > alarm_level && !muted)
 		sound_alarm(NS_SND_ALARM_WARN, 60, TRUE)
-	if(new_level >= 2 && world.time >= next_alarm_time)
+	if(new_level >= 2 && !muted && world.time >= next_alarm_time)
 		sound_alarm(NS_SND_ALARM_CRIT, 70)
 		next_alarm_time = world.time + NSR_ALARM_REPEAT
 	alarm_level = new_level
@@ -802,16 +835,99 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /obj/machinery/submarine_reactor_core/proc/emit_radiation()
 	var/rads = (rods_pos / 100) * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
+	// Повреждённое топливо фонит и без работы: продукты деления в теплоносителе. Течь первичного контура фонит, пока в нём есть давление.
+	rads += (core_damage / 100) * NSR_RADS_DAMAGE_MAX
+	if(leaking)
+		rads += NSR_RADS_LEAK * clamp((primary_pressure - 1) / NSR_PRIMARY_PRESSURE, 0, 1)
 	if(rads <= 0.01)
 		return
 	if(count_open_casings())
 		rads *= NSR_RADS_OPEN_CASING_MULT
 	SSradiation.radiate(src, rads)
 
-// --- Катастрофы ---
+// --- Катастрофы (ревизия 16: «по-честному») ---
+// Исход зависит от состояния в момент отказа, а не от того, какой порог перешагнули: давление, температура, вода и пузырь в компенсаторе
+// вместе дают энергию взрыва (blast_energy), а радиус взрыва растёт с кубическим корнем энергии.
+//  - горячий сосуд лопнул под давлением: вода разом вскипает, большой взрыв;
+//  - холодный сосуд лопнул под давлением: вода почти несжимаема, взрыва нет, только течь (leaking);
+//  - зона расплавилась при воде и давлении: паровой взрыв расплава; при потерянной воде и давлении: тихий расплав без взрыва.
 
-/// Взрыв от давления. Рвёт сосуд и всё вокруг в радиусе, но батареи должны стоять дальше (вопрос карты).
+/// Накопление повреждения топлива. Скорость растёт с квадратом превышения температуры над NSR_DAMAGE_TEMP, при NSR_MELTDOWN_TEMP это NSR_DAMAGE_RATE процентов в секунду.
+/// Повреждение необратимо: остыв, зона остаётся повреждённой и фонит.
+/obj/machinery/submarine_reactor_core/proc/update_damage(dt)
+	if(core_temperature <= NSR_DAMAGE_TEMP || core_damage >= 100)
+		return
+	var/excess = (core_temperature - NSR_DAMAGE_TEMP) / (NSR_MELTDOWN_TEMP - NSR_DAMAGE_TEMP)
+	core_damage = min(100, core_damage + NSR_DAMAGE_RATE * excess * excess * dt)
+
+/// Давление, при котором рвётся сосуд первичного контура. Выше NSR_BURST_DERATE_TEMP горячий металл слабеет, и оно падает.
+/obj/machinery/submarine_reactor_core/proc/vessel_burst_pressure()
+	return NSR_PRIMARY_BURST * clamp(1 - max(0, core_temperature - NSR_BURST_DERATE_TEMP) / NSR_BURST_DERATE_SPAN, NSR_BURST_DERATE_MIN, 1)
+
+/// Энергия взрыва в МДж, если сосуд лопнет или зона упадёт в воду прямо сейчас. yield_: какая доля тепла жидкой воды идёт во взрыв.
+/// Газовый пузырь даёт энергию по давлению (в «сплошной воде» его нет), перегретая вода даёт её вскипанием. Вода, уже ставшая паром, как жидкость не считается.
+/obj/machinery/submarine_reactor_core/proc/blast_energy(yield_)
+	var/gas = 0
+	var/flash = 0
+	if(two_circuit)
+		var/bubble = NSR_PZR_GAS_M3 * 0.5
+		if(pressurizer && !QDELETED(pressurizer))
+			bubble = NSR_PZR_GAS_M3 * (100 - pzr_level()) / 100
+		gas = NSR_BLAST_BAR_M3 * max(0, primary_pressure - 1) * bubble
+		var/liquid = clamp(primary_pressure / max(nsr_saturation_pressure(core_temperature), 1), 0, 1)
+		flash = yield_ * NSR_PRIMARY_KG_PER_PERCENT * primary_inventory * NSR_WATER_MJ_PER_KG_C * max(0, core_temperature - NSR_BOIL_TEMP) * liquid
+	else
+		gas = NSR_BLAST_BAR_M3 * max(0, steam_pressure - 1) * (NSR_VESSEL_VOLUME / 1000)
+		var/boil_point = NSR_BOIL_TEMP + steam_pressure * NSR_BOIL_TEMP_PER_BAR
+		flash = yield_ * NSR_VESSEL_KG_PER_PERCENT * coolant_level * NSR_WATER_MJ_PER_KG_C * max(0, boil_point - NSR_BOIL_TEMP)
+	return gas + flash
+
+/// Энергия, при которой взрыв сосуда имеет эталонный радиус NSR_RUPTURE_RANGE. Режим одного контура рвёт только пар, поэтому там эталон меньше.
+/obj/machinery/submarine_reactor_core/proc/blast_reference()
+	return two_circuit ? NSR_RUPTURE_ENERGY_REF : NSR_SG_ENERGY_REF
+
+/// Давление первичного контура достигло давления разрыва. Если энергии на взрыв хватает, сосуд рвётся (rupture), иначе (холодный, без пузыря) он только даёт течь.
+/// Возвращает TRUE, если сосуд разорван и реактор потерян.
+/obj/machinery/submarine_reactor_core/proc/vessel_failure()
+	if(blast_energy(NSR_BLAST_FLASH_YIELD) < NSR_BLAST_MIN)
+		start_leak()
+		return FALSE
+	rupture()
+	return TRUE
+
+/// Гидравлический разрыв: трещина в сосуде, взрыва нет. Давление резко падает, вода уходит, пока есть давление.
+/obj/machinery/submarine_reactor_core/proc/start_leak()
+	if(leaking)
+		return
+	leaking = TRUE
+	primary_pressure = max(1, primary_pressure * 0.6)
+	visible_message(SPAN_DANGER("\The [src] cracks with a bang, and water sprays from the vessel under pressure!"))
+	playsound(src, NS_SND_RELIEF, 80, TRUE)
+	sound_alarm(NS_SND_TRIP, 80)
+
+/// Сварка трещины. Заварить можно холодный сосуд без давления.
+/obj/machinery/submarine_reactor_core/proc/weld_leak(obj/item/tool, mob/living/user)
+	if(core_temperature > NSR_LEAK_REPAIR_TEMP || primary_pressure > NSR_LEAK_REPAIR_PRESSURE)
+		to_chat(user, SPAN_WARNING("The crack is too hot and under too much pressure to weld. Let the vessel cool below [NSR_LEAK_REPAIR_TEMP] C and drop below [NSR_LEAK_REPAIR_PRESSURE] bar first."))
+		return TRUE
+	var/obj/item/weldingtool/welder = tool
+	if(!welder.remove_fuel(3, user))
+		return TRUE
+	user.visible_message(SPAN_NOTICE("\The [user] starts welding the crack in \the [src]."))
+	playsound(src, NS_SND_WELD, 50, TRUE)
+	if(!do_after(user, NSR_LEAK_WELD_TIME, src) || !leaking)
+		return TRUE
+	if(core_temperature > NSR_LEAK_REPAIR_TEMP || primary_pressure > NSR_LEAK_REPAIR_PRESSURE)
+		return TRUE
+	leaking = FALSE
+	user.visible_message(SPAN_NOTICE("\The [user] welds the crack in \the [src] shut."))
+	playsound(src, NS_SND_BUILT, 50, TRUE)
+	return TRUE
+
+/// Взрыв от давления. Рвёт сосуд и всё вокруг; радиус по энергии (blast_energy): горячий контур даёт эталонный NSR_RUPTURE_RANGE, пустой и холодный меньше.
+/// Батареи должны стоять дальше (вопрос карты).
 /obj/machinery/submarine_reactor_core/proc/rupture()
+	var/blast_range = nsr_blast_range(blast_energy(NSR_BLAST_FLASH_YIELD), blast_reference(), NSR_RUPTURE_RANGE)
 	ruptured = TRUE
 	zero_rods()
 	steam_pressure = 0
@@ -824,15 +940,25 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(here && released)
 		here.assume_air(released)
 	SSradiation.radiate(src, NSR_RADS_RUPTURE)
-	explosion(here, NSR_RUPTURE_RANGE)
+	explosion(here, blast_range)
 
-/// Расплав от потери воды. Взрыва нет, но зона остаётся радиоактивной навсегда.
+/// Расплав: повреждение топлива дошло до 100%. Если в этот момент вокруг есть вода и давление, расплав падает в воду и она вскипает разом (паровой взрыв,
+/// сила по blast_energy). Если воды или давления нет (потеря теплоносителя), расплав тихий, но зона остаётся радиоактивной навсегда.
 /obj/machinery/submarine_reactor_core/proc/meltdown()
+	var/energy = blast_energy(NSR_BLAST_FCI_YIELD)
+	var/blast_range = nsr_blast_range(energy, blast_reference(), NSR_RUPTURE_RANGE)
 	melted = TRUE
+	core_damage = 100
 	zero_rods()
 	queue_icon_update()
-	visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
 	sound_alarm(NS_SND_TRIP, 100)
+	if(energy < NSR_BLAST_MIN)
+		visible_message(SPAN_DANGER("\The [src] collapses into a glowing molten mass!"))
+		return
+	visible_message(SPAN_DANGER("\The [src] collapses into a molten mass, and the water around it flashes into steam in one blast!"))
+	var/turf/here = get_turf(src)
+	if(here)
+		explosion(here, blast_range)
 
 // --- Текст для пульта ---
 
@@ -841,6 +967,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return "CORE MELTDOWN"
 	if(ruptured)
 		return "VESSEL RUPTURED"
+	if(leaking)
+		return "PRIMARY LEAK"
 	if(alarm_level >= 2)
 		return "CRITICAL"
 	if(alarm_level >= 1)
@@ -853,7 +981,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Класс цвета NanoUI для статуса: good (зелёный), average (жёлтый), bad (красный).
 /obj/machinery/submarine_reactor_core/proc/get_status_class()
-	if(is_dead() || alarm_level >= 2)
+	if(is_dead() || leaking || alarm_level >= 2)
 		return "bad"
 	if(alarm_level >= 1)
 		return "average"
@@ -1454,6 +1582,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["dead"] = R.is_dead()
 	data["status"] = R.get_status_text()
 	data["statusClass"] = R.get_status_class()
+	data["alarmLevel"] = R.alarm_level
+	data["alarmMuted"] = R.alarm_mute_level > 0
+	data["damage"] = round(R.core_damage, 0.1)
+	data["damageClass"] = (R.core_damage >= NSR_DAMAGE_CRIT) ? "bad" : ((R.core_damage >= NSR_DAMAGE_WARN) ? "average" : "good")
+	data["leaking"] = R.leaking
+	data["burstPressure"] = round(R.vessel_burst_pressure())
 	data["temp"] = round(R.core_temperature)
 	data["decay"] = round(R.decay_heat * 100, 0.1)
 	data["decayMax"] = NSR_DECAY_FRACTION * 100
@@ -1511,6 +1645,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(R.two_circuit)
 		data["primaryPressure"] = round(R.primary_pressure, 0.1)
 		data["primaryBurst"] = NSR_PRIMARY_BURST
+		data["primaryBurstNow"] = round(R.vessel_burst_pressure())
 		data["primaryFlow"] = round(R.primary_flow() * 100)
 		data["coolEff"] = round(R.cooling_eff * 100)
 		data["voiding"] = R.cooling_eff < 0.98
@@ -1570,7 +1705,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			else if(G.coolant_level < NSR_COOLANT_WARN)
 				level_class = "average"
 			var/state_text = G.get_state_text()
-			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER") ? "average" : "good")))
+			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER" || state_text == "VALVE CLOSED") ? "average" : "good"), "valveClosed" = G.steam_valve_closed, "ruptured" = G.ruptured))
 		data["sgList"] = sg_list
 	data["scrammed"] = R.scrammed
 	data["casingsOpen"] = R.count_open_casings()
@@ -1713,6 +1848,28 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				to_chat(user, SPAN_WARNING("The steam line is controlled by the valves on the pipes, not from this panel."))
 			else
 				R.adjust_steam_valve(action == "steam_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
+		if("alarm_mute")
+			if(R.alarm_mute_level)
+				R.alarm_mute_level = 0
+			else if(R.alarm_level > 0)
+				R.alarm_mute_level = R.alarm_level
+			else
+				to_chat(user, SPAN_NOTICE("No alarm is sounding."))
+		if("sg_valve")
+			var/sg_n = text2num(href_list["n"])
+			var/obj/machinery/submarine_steam_generator/target_sg
+			var/sg_count = 0
+			for(var/obj/machinery/submarine_steam_generator/G in R.steam_gens)
+				sg_count++
+				if(sg_count == sg_n)
+					target_sg = G
+					break
+			if(!target_sg)
+				return TOPIC_HANDLED
+			if(target_sg.ruptured)
+				to_chat(user, SPAN_WARNING("The steam generator is ruptured."))
+			else
+				target_sg.set_steam_valve(!target_sg.steam_valve_closed)
 		if("scram")
 			R.scram()
 		if("reset")

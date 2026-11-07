@@ -15,7 +15,8 @@
 	  первичного контура придут отдельной ревизией, GDD §5.2).
 	- Главный циркуляционный насос (/obj/machinery/submarine_primary_pump) гонит первичную воду. Расход от его оборотов; без насоса
 	  (или когда он остановлен или выбегает) остаётся естественная циркуляция NSR_NATURAL_CIRC.
-	- Давление первичного контура пока постоянное (NSR_PRIMARY_PRESSURE). Компенсатор давления будет в следующей ревизии.
+	- Давление первичного контура ведёт компенсатор (submarine_pressurizer.dm), без него оно постоянное NSR_PRIMARY_PRESSURE.
+- Паровой клапан (ревизия 16): закрытый клапан отрезает парогенератор от труб, пар копится внутри и давление растёт (разрыв при NSR_PRESSURE_BURST).
 */
 
 // ----------------------------------------------------------------------------
@@ -52,8 +53,10 @@
 	var/ruptured = FALSE
 	/// Паровой порт на трубах. Если есть, пар и давление берутся оттуда.
 	var/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port/steam_port
-	/// Собственный газ запечатанного парогенератора, если порта нет.
+	/// Собственный газ запечатанного парогенератора: если порта нет, или если закрыт паровой клапан (тогда в нём копится пар и растёт давление).
 	var/datum/gas_mixture/vessel_air
+	/// Паровой клапан закрыт (ревизия 16): парогенератор отрезан от паровых труб, пар копится внутри. Закрывают и открывают с пульта реактора.
+	var/steam_valve_closed = FALSE
 
 /obj/machinery/submarine_steam_generator/Initialize()
 	. = ..()
@@ -99,12 +102,34 @@
 		steam_port = best
 	return !!steam_port
 
-/// Газ, в котором живёт пар парогенератора: газ порта на трубах или собственный газ запечатанного парогенератора.
+/// Газ, в котором живёт пар парогенератора: газ порта на трубах или собственный газ запечатанного парогенератора (нет порта или закрыт паровой клапан).
 /obj/machinery/submarine_steam_generator/proc/get_steam_air()
 	RETURN_TYPE(/datum/gas_mixture)
-	if(steam_port && !QDELETED(steam_port) && steam_port.air_contents)
+	if(!steam_valve_closed && steam_port && !QDELETED(steam_port) && steam_port.air_contents)
 		return steam_port.air_contents
 	return vessel_air
+
+/// Закрывает или открывает паровой клапан. При закрытии парогенератор запирает у себя столько пара, сколько было в его газовом объёме (давление то же, что в линии),
+/// и дальше пар копится внутри: давление растёт, пока не откроют клапан или не разорвёт парогенератор. При открытии накопленный пар разом уходит в трубы:
+/// если давление внутри намного выше давления в линии, трубы получают скачок давления. Возвращает TRUE, если состояние изменилось.
+/obj/machinery/submarine_steam_generator/proc/set_steam_valve(closed)
+	if(ruptured || closed == steam_valve_closed)
+		return FALSE
+	var/datum/gas_mixture/line = (steam_port && !QDELETED(steam_port)) ? steam_port.air_contents : null
+	if(closed)
+		if(line)
+			vessel_air.copy_from(line)
+			vessel_air.volume = line.volume
+		steam_valve_closed = TRUE
+		playsound(src, NS_SND_WRENCH, 50, TRUE)
+		return TRUE
+	steam_valve_closed = FALSE
+	if(line && vessel_air.total_moles > 0)
+		line.merge(vessel_air.remove_ratio(1))
+		if(steam_port.network)
+			steam_port.network.update = 1
+	playsound(src, NS_SND_HATCH_OPEN, 40, TRUE)
+	return TRUE
 
 /// Питательная вода входит в парогенератор (в молях). Возвращает, сколько моль влезло.
 /obj/machinery/submarine_steam_generator/proc/add_water(moles)
@@ -136,17 +161,26 @@
 	coolant_level = max(0, coolant_level - boil_moles / NSR_SG_MOLES_PER_PERCENT)
 	// Пар уходит в порт (или в собственный газ) с температурой кипения.
 	air.adjust_gas_temp(GAS_STEAM, boil_moles, boil_point + T0C)
-	if(steam_port && steam_port.network)
+	if(!steam_valve_closed && steam_port && steam_port.network)
 		steam_port.network.update = 1
 	steam_flow = boil_moles / dt
 	heat_transfer = heat
 	steam_pressure = air.return_pressure() / NSR_KPA_PER_BAR
 	return heat
 
-/// Взрыв от давления пара. Рвёт парогенератор и всё вокруг в радиусе. Необратимо. Первичный контур от этого пока не страдает (течи парогенератора будут в ревизии 16).
+/// Энергия взрыва парогенератора, МДж: расширение пара в паровом объёме (по давлению) плюс вскипание вторичной воды, разом потерявшей давление (ревизия 16).
+/obj/machinery/submarine_steam_generator/proc/blast_energy()
+	var/gas = NSR_BLAST_BAR_M3 * max(0, steam_pressure - 1) * NSR_SG_GAS_M3
+	var/boil_point = NSR_BOIL_TEMP + steam_pressure * NSR_BOIL_TEMP_PER_BAR
+	var/flash = NSR_BLAST_FLASH_YIELD * NSR_SG_KG_PER_PERCENT * coolant_level * NSR_WATER_MJ_PER_KG_C * max(0, boil_point - NSR_BOIL_TEMP)
+	return gas + flash
+
+/// Взрыв от давления пара. Рвёт парогенератор и всё вокруг; радиус по энергии (blast_energy), на давлении разрыва это NSR_SG_RUPTURE_RANGE. Необратимо.
+/// Первичный контур от этого пока не страдает (течь трубок парогенератора и заражение вторички будут отдельной ревизией).
 /obj/machinery/submarine_steam_generator/proc/rupture()
 	if(ruptured)
 		return
+	var/blast_range = nsr_blast_range(blast_energy(), NSR_SG_ENERGY_REF, NSR_SG_RUPTURE_RANGE)
 	ruptured = TRUE
 	steam_flow = 0
 	heat_transfer = 0
@@ -158,7 +192,7 @@
 		here.assume_air(released)
 	steam_pressure = 0
 	if(here)
-		explosion(here, NSR_SG_RUPTURE_RANGE)
+		explosion(here, blast_range)
 
 /// Состояние для пульта.
 /obj/machinery/submarine_steam_generator/proc/get_state_text()
@@ -168,6 +202,8 @@
 		return "NO STEAM PORT"
 	if(coolant_level <= 0)
 		return "DRY"
+	if(steam_valve_closed)
+		return "VALVE CLOSED"
 	if(coolant_level < NSR_SG_COVER_LEVEL)
 		return "LOW WATER"
 	if(heat_transfer > 0.5)
@@ -182,7 +218,7 @@
 	if(ruptured)
 		to_chat(user, SPAN_DANGER("It has burst. Steam is no longer made here."))
 	else if(distance <= 3)
-		to_chat(user, "Its gauge shows [round(coolant_level)]% water on the steam side and [round(steam_pressure, 0.1)] bar of steam.")
+		to_chat(user, "Its gauge shows [round(coolant_level)]% water on the steam side and [round(steam_pressure, 0.1)] bar of steam. Its steam valve is [steam_valve_closed ? "CLOSED" : "open"].")
 
 // ----------------------------------------------------------------------------
 // ГЛАВНЫЙ ЦИРКУЛЯЦИОННЫЙ НАСОС ПЕРВИЧНОГО КОНТУРА

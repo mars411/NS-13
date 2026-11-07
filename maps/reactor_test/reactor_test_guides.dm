@@ -25,7 +25,10 @@
 7. The core keeps making residual heat after a SCRAM (up to 15% of full power, fading over about twenty minutes). Without the main pump only natural circulation is left: it copes with residual heat, not with power.
 8. The pressurizer keeps the reactor water under about 150 bar so it does not boil. Its automation is on at the start: heaters and spray hold the pressure. Watch the primary pressure and the pressurizer water level on the panel.
 9. The makeup pump (west wall of the reactor hall) adds water to the primary circuit (plus) or drains it (minus). It stands still at the start. Too much water leaves no steam bubble and the pressure jumps: keep the pressurizer level below 80%.
-10. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
+10. Each steam generator has a steam valve button in the Steam generators block. Closed, it traps the steam: the pressure climbs and the generator bursts at 110 bar, so do not leave it closed. Opening it with a high pressure inside hammers the pipes.
+11. The Mute alarm button next to the status silences the siren. It comes back by itself if things get worse or after the alarm ends.
+12. A hot burst and a cold one are not the same. A hot vessel flashes into steam and explodes. A cold, water-filled one only cracks and leaks: cool it, drop the pressure and weld the crack. The fuel damage bar only grows when the core is hot and never goes back.
+13. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
 
 /obj/item/paper/reactor_test/hatches
 	name = "reactor test: hatches"
