@@ -273,6 +273,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/core_damage = 0
 	/// Течь первичного контура: сосуд лопнул без взрыва (холодный гидравлический разрыв). Вода уходит, пока есть давление. Заваривается сваркой в холодном сосуде без давления.
 	var/leaking = FALSE
+	/// Сколько «полных разрывов» течёт сейчас в физических трубах первичного контура (ревизия 18), 0 если труб нет или все целы.
+	var/pipe_leak_total = 0
 
 	/// Привязанные секции корпуса (три штуки). Само ядро тоже секция, его плита учитывается отдельно.
 	var/list/sections
@@ -647,7 +649,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		for(var/obj/machinery/submarine_steam_generator/G in steam_gens.Copy())
 			if(!QDELETED(G) && !G.ruptured && G.steam_pressure >= NSR_PRESSURE_BURST)
 				G.rupture()
-		// Давление разрыва падает, когда сосуд горячий: горячий металл слабее (ревизия 16).
+		// Давление разрыва падает, когда сосуд горячий: горячий металл слабее (ревизия 16). Трубы слабее сосуда и рвутся первыми, если давление растёт медленно (ревизия 18).
+		if(pressurizer)
+			stress_pipes(dt)
 		if(pressurizer && primary_pressure >= vessel_burst_pressure())
 			if(vessel_failure())
 				return
@@ -803,10 +807,48 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		// Течь в сосуде: чем выше давление, тем сильнее уходит вода и тем быстрее падает давление.
 		pressure_change -= (primary_pressure - 1) * NSR_LEAK_LOSS * dt
 		primary_inventory -= NSR_LEAK_DRAIN * (primary_pressure - 1) / NSR_PRIMARY_PRESSURE * dt
+	// Течь в трубах (ревизия 18): трещины слабо, разрыв сильно; воду и давление уносит так же, как течь сосуда, но быстрее.
+	pipe_leak_total = count_pipe_leak()
+	if(pipe_leak_total > 0)
+		pressure_change -= (primary_pressure - 1) * NSR_PIPE_LOSS * pipe_leak_total * dt
+		primary_inventory -= NSR_PIPE_DRAIN * (primary_pressure - 1) / NSR_PRIMARY_PRESSURE * pipe_leak_total * dt
 	if(makeup_pump && !QDELETED(makeup_pump))
 		primary_inventory += (makeup_pump.flow / 100) * NSR_MAKEUP_RATE * dt
 	primary_inventory = clamp(primary_inventory, 0, 150)
 	primary_pressure = clamp(primary_pressure + pressure_change, 1, 400)
+
+/// Трубы первичного контура этого реактора (ревизия 18).
+/obj/machinery/submarine_reactor_core/proc/primary_pipes()
+	var/list/mine = list()
+	for(var/obj/structure/submarine_primary_pipe/P in GLOB.submarine_primary_pipes)
+		if(P.reactor_id == reactor_id && !QDELETED(P))
+			mine += P
+	return mine
+
+/// Сколько «полных разрывов» сейчас течёт в трубах: трещина это NSR_PIPE_CRACK_WEIGHT, разрыв 1, не больше NSR_PIPE_LEAK_MAX.
+/obj/machinery/submarine_reactor_core/proc/count_pipe_leak()
+	var/total = 0
+	for(var/obj/structure/submarine_primary_pipe/P in primary_pipes())
+		total += P.leak_weight()
+	return min(total, NSR_PIPE_LEAK_MAX)
+
+/// Давление выше порога рвёт самый слабый сегмент: труба слабее сосуда (ревизия 18). Без труб на карте ничего не делает.
+/obj/machinery/submarine_reactor_core/proc/stress_pipes(dt)
+	var/over = primary_pressure - (vessel_burst_pressure() - NSR_PIPE_BURST_MARGIN)
+	if(over <= 0)
+		return
+	var/obj/structure/submarine_primary_pipe/weakest
+	for(var/obj/structure/submarine_primary_pipe/P in primary_pipes())
+		if(P.get_current_health() <= 0)
+			continue
+		if(!weakest || P.get_current_health() < weakest.get_current_health())
+			weakest = P
+	if(weakest)
+		weakest.damage_health(NSR_PIPE_STRESS_RATE * over * dt, DAMAGE_BRUTE)
+
+/// Идёт ли какая-то течь первичного контура (сосуд или трубы).
+/obj/machinery/submarine_reactor_core/proc/leak_active()
+	return leaking || pipe_leak_total > 0
 
 /// Уровень каждой плитки табло (id из nsr_alarm_labels): 0 норма, 1 предупреждение, 2 критично.
 /obj/machinery/submarine_reactor_core/proc/compute_alarm_tiles()
@@ -860,6 +902,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		tiles["damage"] = 1
 	if(leaking)
 		tiles["leak"] = hot ? 2 : 1
+	if(pipe_leak_total >= 1)
+		tiles["leak"] = 2
+	else if(pipe_leak_total > 0)
+		tiles["leak"] = max(tiles["leak"], 1)
 	return tiles
 
 /// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
@@ -1064,7 +1110,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return "CORE MELTDOWN"
 	if(ruptured)
 		return "VESSEL RUPTURED"
-	if(leaking)
+	if(pipe_leak_total >= 1)
+		return "LOSS OF COOLANT"
+	if(leak_active())
 		return "PRIMARY LEAK"
 	if(alarm_level >= 2)
 		return "CRITICAL"
@@ -1078,7 +1126,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Класс цвета NanoUI для статуса: good (зелёный), average (жёлтый), bad (красный).
 /obj/machinery/submarine_reactor_core/proc/get_status_class()
-	if(is_dead() || leaking || alarm_level >= 2)
+	if(is_dead() || leak_active() || alarm_level >= 2)
 		return "bad"
 	if(alarm_level >= 1)
 		return "average"
@@ -1686,6 +1734,18 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["damage"] = round(R.core_damage, 0.1)
 	data["damageClass"] = (R.core_damage >= NSR_DAMAGE_CRIT) ? "bad" : ((R.core_damage >= NSR_DAMAGE_WARN) ? "average" : "good")
 	data["leaking"] = R.leaking
+	var/pipes_total = 0
+	var/pipes_cracked = 0
+	var/pipes_broken = 0
+	for(var/obj/structure/submarine_primary_pipe/pipe in R.primary_pipes())
+		pipes_total++
+		if(pipe.leak_stage == 1)
+			pipes_cracked++
+		else if(pipe.leak_stage == 2)
+			pipes_broken++
+	data["pipeTotal"] = pipes_total
+	data["pipeCracked"] = pipes_cracked
+	data["pipeBroken"] = pipes_broken
 	data["burstPressure"] = round(R.vessel_burst_pressure())
 	data["temp"] = round(R.core_temperature)
 	data["decay"] = round(R.decay_heat * 100, 0.1)

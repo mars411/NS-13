@@ -31,7 +31,8 @@
 13. The alarm board under the status shows every alarm as a tile: yellow is a warning, red is critical, a blinking tile is not acknowledged yet. The tile marked FIRST lit first and usually points at the cause. Acknowledge / mute stops the blinking and the siren.
 14. A steam generator can spring a tube leak (the Tubes line shows LEAKING): the reactor water pours into the steam side, the primary water level drops and the generator fills. Raise the makeup pump, SCRAM, lower the primary pressure to cut the leak, and plug the tubes with a welder once the reactor is cold and both circuits are depressurised. A dry steam generator on a hot core ruins its tubes.
 15. The main coolant pump wears out when it pumps steam (cavitation), hot water or runs dry. At 100% wear it jams. Stop the reactor, let it cool and replace the bearings with a wrench. Without the pump only natural circulation is left.
-16. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
+16. The orange pipes around the reactor are the primary circuit. Hits, explosions and too much pressure crack them: a cracked pipe weeps hot water, a burst pipe is a loss of coolant. The primary water and pressure drain away, the water boils into steam in the room and leaves radioactive puddles. SCRAM, raise the makeup pump, stay out of the puddles (a mop cleans them). When the core is below 60 C and the pressure below 5 bar, weld the pipe.
+17. A gas analyzer and a Geiger counter lie on the table at the south wall. Hold the counter in hand and switch it on."}
 
 /obj/item/paper/reactor_test/hatches
 	name = "reactor test: hatches"

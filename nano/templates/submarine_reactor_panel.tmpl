@@ -162,6 +162,23 @@
 	<b>PRIMARY LEAK.</b> The vessel is cracked and loses water while it has pressure. Cool it below 60 C, let the pressure drop below 5 bar and weld the crack.
 </div>
 {{/if}}
+{{if data.pipeBroken > 0}}
+<div class='notice'>
+	<b>LOSS OF COOLANT.</b> A primary pipe has burst: the circuit loses its water and pressure, and the core loses its cooling. SCRAM now and raise the makeup pump. Once the core is below 60 C and the pressure below 5 bar, weld the pipe. Keep away from the puddles: they are radioactive.
+</div>
+{{/if}}
+{{if data.pipeTotal > 0}}
+<div class="item">
+	<div class="itemLabel">
+		Primary pipes:
+	</div>
+	<div class="itemContent">
+		<div class="statusValue">
+			{{:data.pipeTotal - data.pipeCracked - data.pipeBroken}} sound{{if data.pipeCracked > 0}}, <span class='average'>{{:data.pipeCracked}} cracked</span>{{/if}}{{if data.pipeBroken > 0}}, <span class='bad'>{{:data.pipeBroken}} BURST</span>{{/if}}
+		</div>
+	</div>
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Primary pressure:

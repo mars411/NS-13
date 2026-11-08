@@ -363,6 +363,42 @@
 /obj/machinery/fabricator,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Pa" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Pb" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Pc" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 10
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Pd" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 6
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Pe" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 5
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Pf" = (
+/obj/structure/submarine_primary_pipe/manifold{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Qa" = (
 /obj/machinery/submarine_steam_generator,
 /turf/simulated/floor/tiled,
@@ -2250,8 +2286,8 @@ OC
 OC
 Zq
 Ze
-Ze
-Ze
+Pd
+Pa
 Qg
 Ze
 Ze
@@ -2284,7 +2320,7 @@ OC
 OC
 Zq
 Zj
-Ze
+Pb
 Qz
 Za
 Zi
@@ -2318,8 +2354,8 @@ OC
 OC
 Zq
 Ze
-Ze
-Ze
+Pb
+Pf
 Zb
 Zm
 Yi
@@ -2352,11 +2388,11 @@ OC
 OC
 Zq
 Qx
-Ze
+Pc
 Qa
 Zk
-Ze
-Ze
+Pc
+Pe
 Zh
 Ze
 Ze
@@ -2390,7 +2426,7 @@ Ze
 Ze
 Zf
 Ze
-Ze
+Pb
 Zw
 Ze
 Qy
