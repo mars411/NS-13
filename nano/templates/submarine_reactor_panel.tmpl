@@ -1,5 +1,5 @@
 <div class="item">
-	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled, but the fission products keep heating the core for a long time (residual heat), so the core still needs water after a SCRAM.</i>
+	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled, but the fission products keep heating the core for a long time (residual heat), so the core still needs water after a SCRAM. Three automations are available and off by default (the pressure one aside): the rod automation holds the core temperature, the makeup automation holds the pressurizer water level, and the protection drops the rods by itself when something dangerous happens. Automation helps but does not think: a leak or a failed pump still needs an operator.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
@@ -316,10 +316,10 @@
 			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'rods_move', 'amount' : -10}, (data.rodsTarget > 0) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'rods_move', 'amount' : -1}, (data.rodsTarget > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'rods_move', 'amount' : 1}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
-			{{:helper.link('+10', null, {'action' : 'rods_move', 'amount' : 10}, (data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+			{{:helper.link('-10', null, {'action' : 'rods_move', 'amount' : -10}, (!data.rodsAuto && data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rods_move', 'amount' : -1}, (!data.rodsAuto && data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rods_move', 'amount' : 1}, (data.rodsAuto || data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rods_move', 'amount' : 10}, (data.rodsAuto || data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
 		</div>
 	</div>
 </div>
@@ -337,14 +337,39 @@
 			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -10}, (value.target > 0) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -1}, (value.target > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (value.locked || value.target >= 100) ? 'disabled' : null)}}
-			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (value.locked || value.target >= 100) ? 'disabled' : null)}}
+			{{:helper.link('-10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -10}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -1}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (data.rodsAuto || value.locked || value.target >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (data.rodsAuto || value.locked || value.target >= 100) ? 'disabled' : null)}}
 		</div>
 	</div>
 </div>
 {{/for}}
+{{if data.twoCircuit}}
+<div class="item">
+	<div class="itemLabel">
+		Rod automation:
+	</div>
+	<div class="itemContent">
+		{{if data.rodsAuto}}
+			<span class='good'><b>ON</b></span>, holds the core at <b>{{:data.rodsAutoSet}} C</b>
+		{{else}}
+			<span class='average'><b>OFF</b></span> (rods by hand)
+		{{/if}}
+		{{if data.rodsAutoText}}
+			<div class='average'>{{:data.rodsAutoText}}</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.rodsAuto ? 'Switch off' : 'Switch on', null, {'action' : 'rods_auto'}, (data.rodsAuto || data.automationAvailable) ? null : 'disabled', data.rodsAuto ? 'selected' : null)}}
+			<div style="float: left; padding: 4px 8px 0 8px;">temperature:</div>
+			{{:helper.link('-10', null, {'action' : 'rods_auto_set', 'amount' : -10}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rods_auto_set', 'amount' : -1}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rods_auto_set', 'amount' : 1}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'rods_auto_set', 'amount' : 10}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
+		</div>
+	</div>
+</div>
+{{/if}}
 {{if data.hasPump}}
 <div class="item">
 	<div class="itemLabel">
@@ -536,11 +561,30 @@
 	<div class="itemContent">
 		<span class='{{:data.mkClass}}'><b>{{:data.mkState}}</b></span>, set {{:data.mkSetting}} % (minus drains)
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'makeup_move', 'amount' : -10}, (data.mkSetting > -100) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'makeup_move', 'amount' : -1}, (data.mkSetting > -100) ? null : 'disabled')}}
-			{{:helper.link('Stop', null, {'action' : 'makeup_stop'}, (data.mkSetting != 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'makeup_move', 'amount' : 1}, (data.mkSetting < 100) ? null : 'disabled')}}
-			{{:helper.link('+10', null, {'action' : 'makeup_move', 'amount' : 10}, (data.mkSetting < 100) ? null : 'disabled')}}
+			{{:helper.link('-10', null, {'action' : 'makeup_move', 'amount' : -10}, (!data.mkAuto && data.mkSetting > -100) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'makeup_move', 'amount' : -1}, (!data.mkAuto && data.mkSetting > -100) ? null : 'disabled')}}
+			{{:helper.link('Stop', null, {'action' : 'makeup_stop'}, (!data.mkAuto && data.mkSetting != 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'makeup_move', 'amount' : 1}, (!data.mkAuto && data.mkSetting < 100) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'makeup_move', 'amount' : 10}, (!data.mkAuto && data.mkSetting < 100) ? null : 'disabled')}}
+		</div>
+		<div style="clear: both; padding-top: 6px;">
+			Automation:
+			{{if data.mkAuto}}
+				<span class='good'><b>ON</b></span>, holds the pressurizer water at <b>{{:data.mkAutoSet}} %</b>
+			{{else}}
+				<span class='average'><b>OFF</b></span> (manual setting)
+			{{/if}}
+			{{if data.mkAutoText}}
+				<div class='average'>{{:data.mkAutoText}}</div>
+			{{/if}}
+			<div style="padding-top: 4px;">
+				{{:helper.link(data.mkAuto ? 'Switch off' : 'Switch on', null, {'action' : 'makeup_auto'}, (data.mkAuto || data.automationAvailable) ? null : 'disabled', data.mkAuto ? 'selected' : null)}}
+				<div style="float: left; padding: 4px 8px 0 8px;">level:</div>
+				{{:helper.link('-5', null, {'action' : 'makeup_auto_set', 'amount' : -5}, (data.mkAutoSet > data.makeupAutoMin) ? null : 'disabled')}}
+				{{:helper.link('-1', null, {'action' : 'makeup_auto_set', 'amount' : -1}, (data.mkAutoSet > data.makeupAutoMin) ? null : 'disabled')}}
+				{{:helper.link('+1', null, {'action' : 'makeup_auto_set', 'amount' : 1}, (data.mkAutoSet < data.makeupAutoMax) ? null : 'disabled')}}
+				{{:helper.link('+5', null, {'action' : 'makeup_auto_set', 'amount' : 5}, (data.mkAutoSet < data.makeupAutoMax) ? null : 'disabled')}}
+			</div>
 		</div>
 	</div>
 </div>
@@ -570,8 +614,26 @@
 		{{:helper.link('SCRAM', 'alert', {'action' : 'scram'}, data.scrammed ? 'disabled' : null, 'redButton')}}
 		{{:helper.link('Reset SCRAM', 'unlocked', {'action' : 'reset'}, data.scrammed ? null : 'disabled')}}
 		{{if data.scrammed}}
-			<span class='bad'>&nbsp;SCRAM ENGAGED, rods locked</span>
+			<span class='bad'>&nbsp;SCRAM ENGAGED{{if data.scramReason}} ({{:data.scramReason}}){{/if}}, rods locked</span>
 		{{/if}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Protection:
+	</div>
+	<div class="itemContent">
+		{{if data.rpsEnabled}}
+			<span class='good'><b>ARMED</b></span>: drops the rods by itself on high core temperature, high or low primary pressure, high or low pressurizer level, high steam pressure, low steam generator water, a seized main pump or lost cooling.
+		{{else}}
+			<span class='average'><b>DISARMED</b></span>: nothing drops the rods but you.
+		{{/if}}
+		{{if data.rpsCondition}}
+			<div class='bad'>Trip condition: {{:data.rpsCondition}}</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.rpsEnabled ? 'Disarm' : 'Arm', null, {'action' : 'rps_toggle'}, (data.rpsEnabled || data.automationAvailable) ? null : 'disabled', data.rpsEnabled ? 'selected' : null)}}
+		</div>
 	</div>
 </div>
 {{/if}}

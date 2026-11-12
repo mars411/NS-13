@@ -99,7 +99,8 @@ var/global/list/nsr_alarm_labels = list(
 	"leak" = "PRIMARY LEAK",
 	"sg" = "STEAM GENERATOR",
 	"valve" = "STEAM VALVE CLOSED",
-	"pump" = "MAIN PUMP"
+	"pump" = "MAIN PUMP",
+	"rps" = "AUTO SCRAM"
 )
 
 /// Уровень тревоги по верхнему порогу: 2, если значение не ниже критического, 1, если не ниже предупредительного, иначе 0.
@@ -256,6 +257,20 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 	/// SCRAM: стержни сброшены в ноль и заблокированы до сброса.
 	var/scrammed = FALSE
+	/// Почему сброшены стержни (для пульта): "MANUAL" или причина срабатывания защиты. Пусто, пока SCRAM не включён.
+	var/scram_reason = ""
+	/// Автоматика стержней (ревизия 19): ПИ-регулятор держит температуру ядра auto_rods_set и сам ведёт все четыре стержня. По умолчанию выключена.
+	var/auto_rods = FALSE
+	/// Температура ядра, которую держит автоматика стержней, C.
+	var/auto_rods_set = NSR_AUTO_RODS_SET
+	/// Интегральная часть регулятора стержней, %.
+	var/auto_rods_i = 0
+	/// Что сейчас делает автоматика стержней, для пульта (пусто, если всё в порядке).
+	var/auto_rods_text = ""
+	/// Аварийная защита (RPS, ревизия 19): если включена, сама роняет стержни при опасном состоянии. По умолчанию выключена.
+	var/rps_enabled = FALSE
+	/// Последний SCRAM устроила защита (плитка AUTO SCRAM горит до сброса SCRAM).
+	var/rps_tripped = FALSE
 	/// Сосуд разорван давлением (взрыв). Необратимо.
 	var/ruptured = FALSE
 	/// Активная зона расплавилась. Необратимо.
@@ -608,10 +623,19 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	steam_valve = clamp(steam_valve + amount, 0, 100)
 	return TRUE
 
-/obj/machinery/submarine_reactor_core/proc/scram()
+/// Работает ли автоматика (подпитка, стержни, защита). Пока всегда да. Позже зависит от серверной на 1 палубе: если её убили или взломали,
+/// автоматика не работает и всё ведётся руками (см. GDD). Все автоматики и защита спрашивают только эту процедуру.
+/obj/machinery/submarine_reactor_core/proc/automation_available()
+	return TRUE
+
+/// reason: "MANUAL" для оператора или причина защиты (тогда загорается плитка AUTO SCRAM).
+/obj/machinery/submarine_reactor_core/proc/scram(reason = "MANUAL")
 	if(is_dead())
 		return FALSE
+	if(!scrammed)
+		scram_reason = reason
 	scrammed = TRUE
+	auto_rods_i = 0
 	for(var/i in 1 to NSR_ROD_COUNT)
 		rod_target[i] = 0
 	update_rod_averages()
@@ -620,14 +644,113 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	queue_icon_update()
 	return TRUE
 
-/// Сбрасывает SCRAM, если активная зона достаточно остыла. Возвращает TRUE при успехе.
+/// Что мешает сбросить SCRAM (пустая строка, если ничего). Включённая защита не даёт сброса, пока условие срабатывания остаётся.
+/obj/machinery/submarine_reactor_core/proc/reset_block_reason()
+	if(core_temperature > NSR_SCRAM_RESET_TEMP)
+		return "the core must cool below [NSR_SCRAM_RESET_TEMP] C first"
+	if(rps_enabled && automation_available())
+		var/why = rps_condition()
+		if(why)
+			return "the protection condition persists ([lowertext(why)])"
+	return ""
+
+/// Сбрасывает SCRAM, если активная зона достаточно остыла и защита не держит. Возвращает TRUE при успехе.
 /obj/machinery/submarine_reactor_core/proc/reset_scram()
 	if(is_dead() || !scrammed)
 		return FALSE
-	if(core_temperature > NSR_SCRAM_RESET_TEMP)
+	if(reset_block_reason())
 		return FALSE
 	scrammed = FALSE
+	scram_reason = ""
+	rps_tripped = FALSE
+	auto_rods_i = 0
 	return TRUE
+
+// --- Автоматика стержней и аварийная защита (ревизия 19) ---
+
+/// Почему автоматика стержней не может вести стержни сейчас (пустая строка, если может). Работает только в режиме двух контуров:
+/// там температура ядра обратно связана с мощностью через парогенераторы, в режиме одного контура ядро это котёл.
+/obj/machinery/submarine_reactor_core/proc/auto_rods_block_reason()
+	if(is_dead())
+		return "NO CONTROL"
+	if(scrammed)
+		return "SCRAM"
+	if(!automation_available())
+		return "NO AUTOMATION"
+	if(!two_circuit)
+		return "TWO-CIRCUIT ONLY"
+	if(primary_inventory < NSR_INV_COVER)
+		return "LOW COOLANT"
+	return ""
+
+/// ПИ-регулятор температуры ядра: ошибка = уставка - температура, все четыре стержня получают одну цель (0-100%). Стержни идут к ней с обычной
+/// конечной скоростью. Если вести нечем (SCRAM, мало воды, нет автоматики), цели не трогает и ждёт. Зовётся из simulate перед движением стержней.
+/obj/machinery/submarine_reactor_core/proc/run_auto_rods(dt)
+	auto_rods_text = auto_rods_block_reason()
+	if(auto_rods_text)
+		auto_rods_i = 0
+		if(auto_rods_text == "LOW COOLANT")
+			// Воды мало: стержни опускаются, пока оператор не разберётся.
+			for(var/i in 1 to NSR_ROD_COUNT)
+				rod_target[i] = 0
+			update_rod_averages()
+		return
+	var/error = auto_rods_set - core_temperature
+	auto_rods_i = clamp(auto_rods_i + NSR_AUTO_RODS_KI * error * dt, 0, 100)
+	var/target = clamp(auto_rods_i + NSR_AUTO_RODS_KP * error, 0, 100)
+	for(var/i in 1 to NSR_ROD_COUNT)
+		rod_target[i] = target
+	update_rod_averages()
+
+/// Включает и выключает автоматику стержней. При включении регулятор подхватывает текущую цель без рывка, при выключении цели остаются как есть.
+/obj/machinery/submarine_reactor_core/proc/toggle_auto_rods(mob/user)
+	auto_rods = !auto_rods
+	auto_rods_i = rods_target
+	auto_rods_text = ""
+	if(user)
+		to_chat(user, SPAN_NOTICE("Rod automation [auto_rods ? "on" : "off"]."))
+
+/// Реактор работает или горячий: низкие пороги защиты действуют только тогда (иначе холодный реактор «нарушал» бы их всегда).
+/obj/machinery/submarine_reactor_core/proc/rps_active()
+	return (rods_pos > 0 || rods_target > 0 || core_temperature > NSR_BOIL_TEMP)
+
+/// Какое условие защиты выполнено сейчас (текст) или пустая строка. Порядок задаёт, какая причина будет названа, если выполнено несколько.
+/obj/machinery/submarine_reactor_core/proc/rps_condition()
+	var/active = rps_active()
+	if(core_temperature >= NSR_RPS_TEMP)
+		return "HIGH CORE TEMP"
+	if(steam_pressure >= NSR_RPS_STEAM_PRESS)
+		return "HIGH STEAM PRESSURE"
+	if(two_circuit && pressurizer)
+		if(primary_pressure >= NSR_RPS_PRESS_HIGH)
+			return "HIGH PRIMARY PRESSURE"
+		if(pzr_level() >= NSR_RPS_LEVEL_HIGH)
+			return "HIGH PZR LEVEL"
+		if(active)
+			if(primary_pressure <= NSR_RPS_PRESS_LOW)
+				return "LOW PRIMARY PRESSURE"
+			if(pzr_level() <= NSR_RPS_LEVEL_LOW)
+				return "LOW PZR LEVEL"
+	if(active)
+		if(feed_level() < NSR_RPS_WATER)
+			return "LOW WATER"
+		if(two_circuit)
+			if(primary_pump && !QDELETED(primary_pump) && primary_pump.seized)
+				return "MAIN PUMP SEIZED"
+			if(cooling_eff < NSR_RPS_COOLING)
+				return "COOLING LOST"
+	return ""
+
+/// Защита: если включена и условие выполнено, роняет стержни, зажигает плитку, подаёт сигнал. Зовётся из Process.
+/obj/machinery/submarine_reactor_core/proc/check_rps()
+	if(!rps_enabled || scrammed || is_dead() || !automation_available())
+		return
+	var/reason = rps_condition()
+	if(!reason)
+		return
+	rps_tripped = TRUE
+	scram(reason)
+	sound_alarm(NS_SND_TRIP, 70)
 
 // --- Физика ---
 
@@ -658,6 +781,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	else if(steam_pressure >= NSR_PRESSURE_BURST)
 		rupture()
 		return
+	// Аварийная защита смотрит на состояние после этого шага и роняет стержни, пока повреждения ещё нет (ревизия 19).
+	check_rps()
 	// Расплав это не порог температуры, а накопленное повреждение топлива (ревизия 16).
 	update_damage(dt)
 	if(core_damage >= 100)
@@ -685,6 +810,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Один шаг физики. dt - длительность шага в секундах.
 /obj/machinery/submarine_reactor_core/proc/simulate(dt)
+	if(auto_rods)
+		run_auto_rods(dt)
 	move_rods(dt)
 	var/datum/gas_mixture/steam_air = get_steam_air()
 	var/pressure_bar = steam_air.return_pressure() / NSR_KPA_PER_BAR
@@ -813,6 +940,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		pressure_change -= (primary_pressure - 1) * NSR_PIPE_LOSS * pipe_leak_total * dt
 		primary_inventory -= NSR_PIPE_DRAIN * (primary_pressure - 1) / NSR_PRIMARY_PRESSURE * pipe_leak_total * dt
 	if(makeup_pump && !QDELETED(makeup_pump))
+		if(makeup_pump.auto)
+			makeup_pump.run_auto(level_raw, dt)
+			makeup_pump.update_flow()
 		primary_inventory += (makeup_pump.flow / 100) * NSR_MAKEUP_RATE * dt
 	primary_inventory = clamp(primary_inventory, 0, 150)
 	primary_pressure = clamp(primary_pressure + pressure_change, 1, 400)
@@ -906,6 +1036,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		tiles["leak"] = 2
 	else if(pipe_leak_total > 0)
 		tiles["leak"] = max(tiles["leak"], 1)
+	// Защита сработала: плитка горит до сброса SCRAM. Сирену она не включает: причина уже на табло.
+	if(rps_tripped)
+		tiles["rps"] = 2
 	return tiles
 
 /// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
@@ -925,7 +1058,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Уровень сирены: худшая плитка, кроме информационных (закрытый клапан; повреждение топлива, пока оно не растёт).
 	var/new_level = 0
 	for(var/id in tiles)
-		if(id == "valve" || (id == "damage" && !damage_rising))
+		if(id == "valve" || id == "rps" || (id == "damage" && !damage_rising))
 			continue
 		new_level = max(new_level, tiles[id])
 	// Табло: подтверждение, «первопричина» и мигание ведёт общий класс.
@@ -1119,7 +1252,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(alarm_level >= 1)
 		return "WARNING"
 	if(scrammed)
-		return "SCRAM"
+		return rps_tripped ? "AUTO SCRAM" : "SCRAM"
 	if(rods_pos <= 0 && core_temperature < NSR_BOIL_TEMP)
 		return "OFFLINE"
 	return "NOMINAL"
@@ -1842,9 +1975,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		data["hasMakeup"] = !!R.makeup_pump
 		if(R.makeup_pump)
 			var/obj/machinery/submarine_makeup_pump/mk = R.makeup_pump
-			data["mkSetting"] = mk.setting
+			data["mkSetting"] = round(mk.setting)
 			data["mkState"] = mk.get_state_text()
 			data["mkClass"] = (mk.get_state_text() == "NO POWER") ? "bad" : "good"
+			data["mkAuto"] = mk.auto
+			data["mkAutoSet"] = mk.auto_set
+			data["mkAutoText"] = mk.auto_text
 		data["hasPrimaryPump"] = !!R.primary_pump
 		if(R.primary_pump)
 			var/obj/machinery/submarine_primary_pump/pp = R.primary_pump
@@ -1870,6 +2006,21 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER" || state_text == "VALVE CLOSED") ? "average" : "good"), "valveClosed" = G.steam_valve_closed, "ruptured" = G.ruptured, "tube" = G.get_tube_text(), "tubeClass" = G.tube_leak ? "bad" : ((G.tube_damage >= NSR_TUBE_WARN) ? "average" : "good"), "tubeDamage" = round(G.tube_damage), "leakRate" = round(G.leak_rate, 0.01), "plugged" = round(G.tubes_plugged), "contam" = round(G.contamination)))
 		data["sgList"] = sg_list
 	data["scrammed"] = R.scrammed
+	data["scramReason"] = R.scram_reason
+	data["rodsAuto"] = R.auto_rods
+	data["rodsAutoSet"] = R.auto_rods_set
+	data["rodsAutoText"] = R.auto_rods_text
+	data["rodsAutoMin"] = NSR_AUTO_RODS_SET_MIN
+	data["rodsAutoMax"] = NSR_AUTO_RODS_SET_MAX
+	data["makeupAutoMin"] = NSR_AUTO_MAKEUP_SET_MIN
+	data["makeupAutoMax"] = NSR_AUTO_MAKEUP_SET_MAX
+	data["automationAvailable"] = R.automation_available()
+	data["rpsEnabled"] = R.rps_enabled
+	data["rpsTripped"] = R.rps_tripped
+	var/rps_now = ""
+	if(R.rps_enabled && R.automation_available())
+		rps_now = R.rps_condition()
+	data["rpsCondition"] = rps_now
 	data["casingsOpen"] = R.count_open_casings()
 	data["casingsTotal"] = R.count_casings()
 	return data
@@ -1921,6 +2072,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				return TOPIC_HANDLED
 			if(R.scrammed)
 				to_chat(user, SPAN_WARNING("The control rods are locked by SCRAM. Reset it first."))
+			else if(R.auto_rods)
+				to_chat(user, SPAN_WARNING("The rod automation is on. Switch it off to move the rods by hand."))
 			else
 				R.adjust_rods(rods_amount)
 		if("rod_move")
@@ -1930,6 +2083,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				return TOPIC_HANDLED
 			if(R.scrammed)
 				to_chat(user, SPAN_WARNING("The control rods are locked by SCRAM. Reset it first."))
+			else if(R.auto_rods)
+				to_chat(user, SPAN_WARNING("The rod automation is on. Switch it off to move the rods by hand."))
 			else
 				R.adjust_rod(rod, rod_amount)
 		if("pump_move")
@@ -1986,11 +2141,33 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			var/mk_amount = text2num(href_list["amount"])
 			if(!R.makeup_pump)
 				to_chat(user, SPAN_WARNING("No makeup pump is connected."))
+			else if(R.makeup_pump.auto)
+				to_chat(user, SPAN_WARNING("The makeup automation is on. Switch it off to set the pump by hand."))
 			else if(mk_amount in list(-10, -1, 1, 10))
 				R.makeup_pump.setting = clamp(R.makeup_pump.setting + mk_amount, -100, 100)
 		if("makeup_stop")
-			if(R.makeup_pump)
+			if(R.makeup_pump && R.makeup_pump.auto)
+				to_chat(user, SPAN_WARNING("The makeup automation is on. Switch it off to set the pump by hand."))
+			else if(R.makeup_pump)
 				R.makeup_pump.setting = 0
+		if("makeup_auto")
+			if(!R.makeup_pump)
+				to_chat(user, SPAN_WARNING("No makeup pump is connected."))
+			else
+				R.makeup_pump.toggle_auto(user)
+		if("makeup_auto_set")
+			var/mk_set_amount = text2num(href_list["amount"])
+			if(R.makeup_pump && (mk_set_amount in list(-5, -1, 1, 5)))
+				R.makeup_pump.auto_set = clamp(R.makeup_pump.auto_set + mk_set_amount, NSR_AUTO_MAKEUP_SET_MIN, NSR_AUTO_MAKEUP_SET_MAX)
+		if("rods_auto")
+			R.toggle_auto_rods(user)
+		if("rods_auto_set")
+			var/rods_set_amount = text2num(href_list["amount"])
+			if(rods_set_amount in list(-10, -5, -1, 1, 5, 10))
+				R.auto_rods_set = clamp(R.auto_rods_set + rods_set_amount, NSR_AUTO_RODS_SET_MIN, NSR_AUTO_RODS_SET_MAX)
+		if("rps_toggle")
+			R.rps_enabled = !R.rps_enabled
+			to_chat(user, SPAN_NOTICE("Reactor protection [R.rps_enabled ? "armed" : "disarmed"]."))
 		if("pump_auto")
 			if(!R.feed_pump)
 				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
@@ -2039,6 +2216,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if("reset")
 			if(!R.scrammed)
 				to_chat(user, SPAN_NOTICE("SCRAM is not engaged."))
-			else if(!R.reset_scram())
-				to_chat(user, SPAN_WARNING("Cannot reset SCRAM: the core must cool below [NSR_SCRAM_RESET_TEMP] C first."))
+			else
+				var/block_text = R.reset_block_reason()
+				if(block_text)
+					to_chat(user, SPAN_WARNING("Cannot reset SCRAM: [block_text]."))
+				else
+					R.reset_scram()
 	return TOPIC_REFRESH

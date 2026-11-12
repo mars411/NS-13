@@ -14,6 +14,8 @@
 	- Автоматика (ПИ-регулятор по давлению, уставка NSR_PZR_SETPOINT) по умолчанию включена: нагреватели и впрыск без неё надо вести руками.
 	- Насос подпитки (/obj/machinery/submarine_makeup_pump) добавляет воду в контур (плюс) или сливает (минус). Бак подпитки неограничен
 	  (запас воды и фильтр забортной воды пока не сделаны, см. GDD). Нужен щиток.
+	- Автоматика подпитки (ревизия 19, по умолчанию выключена): ПИ-регулятор держит уровень воды в компенсаторе на уставке и сам ведёт насос.
+	  Пока она включена, уставку расхода руками не поменять. Решает течь: вода, которую течь уносит, возвращается подпиткой.
 */
 
 // ----------------------------------------------------------------------------
@@ -173,6 +175,14 @@
 	var/setting = 0
 	/// Фактический расход, -100 .. 100: уставка, если есть питание.
 	var/flow = 0
+	/// Автоматика (ревизия 19): если включена, уставкой расхода ведёт регулятор, который держит уровень воды в компенсаторе. По умолчанию выключена.
+	var/auto = FALSE
+	/// Уровень воды в компенсаторе, который держит автоматика, %.
+	var/auto_set = NSR_AUTO_MAKEUP_SET
+	/// Интегральная часть регулятора, % расхода.
+	var/auto_i = 0
+	/// Что сейчас делает автоматика, для пульта (пусто, если всё в порядке).
+	var/auto_text = ""
 
 /obj/machinery/submarine_makeup_pump/Initialize()
 	. = ..()
@@ -191,14 +201,52 @@
 	core = null
 	return ..()
 
+/// Почему автоматика не может сейчас вести насос (пустая строка, если может).
+/obj/machinery/submarine_makeup_pump/proc/auto_block_reason()
+	if(!core || QDELETED(core) || core.is_dead())
+		return "NO REACTOR"
+	if(!core.automation_available())
+		return "NO AUTOMATION"
+	if(!core.pressurizer)
+		return "NO PRESSURIZER"
+	if(inoperable())
+		return "NO POWER"
+	return ""
+
+/// Автоматика подпитки: ПИ-регулятор держит уровень воды в компенсаторе (level_raw, %) на уставке auto_set и сам меняет уставку расхода (setting).
+/// Выше NSR_AUTO_MAKEUP_HI_CUT только сливает, чтобы не загнать контур в сплошную воду. Если вести нечем, насос стоит. Вызывает ядро на каждом шаге.
+/// Позже эту автоматику переведём в серверную (см. GDD), логика останется.
+/obj/machinery/submarine_makeup_pump/proc/run_auto(level_raw, dt)
+	auto_text = auto_block_reason()
+	if(auto_text)
+		auto_i = 0
+		setting = 0
+		return
+	var/error = auto_set - level_raw
+	auto_i = clamp(auto_i + NSR_AUTO_MAKEUP_KI * error * dt, -100, 100)
+	var/demand = clamp(auto_i + NSR_AUTO_MAKEUP_KP * error, -100, 100)
+	if(level_raw >= NSR_AUTO_MAKEUP_HI_CUT)
+		demand = min(demand, 0)
+	setting = demand
+
+/// Включает и выключает автоматику. При включении регулятор подхватывает текущую уставку без рывка, при выключении уставка остаётся как есть.
+/obj/machinery/submarine_makeup_pump/proc/toggle_auto(mob/user)
+	auto = !auto
+	auto_i = setting
+	auto_text = ""
+	if(user)
+		to_chat(user, SPAN_NOTICE("Makeup automation [auto ? "on" : "off"]."))
+
 /obj/machinery/submarine_makeup_pump/Process(wait)
 	// Родительский Process() не зовём: у /obj/machinery он возвращает PROCESS_KILL и остановил бы обработку.
-	if(inoperable())
-		flow = 0
-		return
-	flow = setting
+	update_flow()
 	if(flow != 0)
 		use_power_oneoff(NSR_MAKEUP_POWER * abs(flow) / 100)
+
+/// Расход по уставке: нулевой без питания, иначе равен уставке. Электричество тут не берётся (его берёт Process). Зовёт и ядро сразу после
+/// автоматики, чтобы расход не отставал от неё на целый тик.
+/obj/machinery/submarine_makeup_pump/proc/update_flow()
+	flow = inoperable() ? 0 : setting
 
 /// Состояние для пульта.
 /obj/machinery/submarine_makeup_pump/proc/get_state_text()
