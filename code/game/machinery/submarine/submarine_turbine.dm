@@ -104,6 +104,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 // Регулятор оборотов
 #define NST_GOV_GAIN              1      // процентов хода заслонки в секунду на каждую 1000 об/мин ошибки (медленный)
 #define NST_GOV_SET_DEFAULT       7500   // об/мин, уставка по умолчанию
+#define NST_AUTO_SYNC_HOLD        5      // секунд, сколько обороты должны держаться в рабочем окне, прежде чем регулятор сам включит автомат генератора
 #define NST_GOV_SET_MIN           3000
 #define NST_GOV_SET_MAX           10000
 #define NST_GOV_SET_STEP          500
@@ -609,6 +610,8 @@ var/global/list/nst_alarm_labels = list(
 	var/governor_set = NST_GOV_SET_DEFAULT
 	/// TRUE, если автомат генератора включён (генератор подключён к сети).
 	var/breaker_closed = FALSE
+	/// Сколько секунд обороты уже держатся в рабочем окне при включённом регуляторе (для автоподключения, ревизия 21).
+	var/auto_sync_timer = 0
 	/// TRUE, если стопорный клапан закрыт (сработал сам или по кнопке). Сбрасывается только вручную.
 	var/stop_tripped = FALSE
 	/// Мощность пара на валу за последний тик, Вт.
@@ -719,6 +722,13 @@ var/global/list/nst_alarm_labels = list(
 		add_cycle()
 
 /// Пытается подключить генератор к сети. Только в рабочем окне оборотов и если под генератором есть сеть.
+/// Может ли регулятор сам подключить генератор (ревизия 21): он включён и исправен, генератор цел, есть кабель, автомат не отключён вручную и не после
+/// поломки (потерянная лопасть, разрушенная секция), стопорный клапан не закрыт. После срабатывания по оборотам или по отсутствию сети подключает снова.
+/obj/machinery/power/submarine_turbine_generator/proc/auto_sync_ok()
+	if(!governor_on || !governor_ok || stop_tripped || breaker_closed || overloaded || !powernet)
+		return FALSE
+	return (trip_reason in list("", "UNDERSPEED", "OVERSPEED", "NO GRID"))
+
 /obj/machinery/power/submarine_turbine_generator/proc/try_close_breaker(mob/user)
 	if(breaker_closed)
 		return TRUE
@@ -931,6 +941,16 @@ var/global/list/nst_alarm_labels = list(
 
 	// Трение (парусность) растёт с кубом оборотов.
 	var/friction_power = NST_WINDAGE * (rpm_now / 1000) ** 3
+
+	// Автоподключение (ревизия 21): пока регулятор включён, он же и синхронизирует генератор. Когда обороты NST_AUTO_SYNC_HOLD секунд держатся
+	// в рабочем окне, он сам включает автомат. Регулятор выключен: подключать вручную, как раньше.
+	if(auto_sync_ok() && rpm_now >= NST_RPM_SYNC_LO && rpm_now <= NST_RPM_SYNC_HI)
+		auto_sync_timer += dt
+		if(auto_sync_timer >= NST_AUTO_SYNC_HOLD)
+			auto_sync_timer = 0
+			try_close_breaker(null)
+	else
+		auto_sync_timer = 0
 
 	// Генератор: рабочее окно, защита автомата, подача в сеть.
 	var/electric_power = 0
@@ -1186,6 +1206,7 @@ var/global/list/nst_alarm_labels = list(
 	data["governorOk"] = G.governor_ok
 	data["governorSet"] = G.governor_set
 	data["breaker"] = G.breaker_closed
+	data["autoSync"] = (G.governor_on && G.governor_ok)
 	data["tripReason"] = G.trip_reason
 	data["hasGrid"] = !!G.powernet
 	data["stopTripped"] = G.stop_tripped

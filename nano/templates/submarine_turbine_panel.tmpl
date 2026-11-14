@@ -135,6 +135,13 @@
 				<span class='bad'>&nbsp;no grid cable</span>
 			{{/if}}
 		{{/if}}
+		<div style="color: #a0a0a0;">
+			{{if data.autoSync}}
+				Auto-sync: the governor connects the generator by itself once the shaft stays in the working window for 5 s. A breaker you opened or one that tripped on damage is not reconnected by itself.
+			{{else}}
+				Auto-sync is off with the governor: connect the breaker by hand in the working window.
+			{{/if}}
+		</div>
 	</div>
 </div>
 
