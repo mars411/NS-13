@@ -369,6 +369,29 @@
 		</div>
 	</div>
 </div>
+<div class="item">
+	<div class="itemLabel">
+		Overdrive:
+	</div>
+	<div class="itemContent">
+		{{if data.boost}}
+			<span class='average'><b>ON</b></span>, power x{{:data.boostMult}}
+		{{else}}
+			{{if data.boostMult > 1.01}}
+				<span class='average'><b>OFF</b></span>, power x{{:data.boostMult}} (settling)
+			{{else}}
+				<span class='good'><b>OFF</b></span>
+			{{/if}}
+		{{/if}}
+		<div style="color: #a0a0a0;">+30 % heat from the same rods: more steam and electricity, but the margin to the limits shrinks, the radiation and the decay heat grow. Switches off by itself on SCRAM.</div>
+		{{if data.boostBlock && !data.boost}}
+			<div class='average'>{{:data.boostBlock}}</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.boost ? 'Switch off' : 'Switch on', null, {'action' : 'boost_toggle'}, (data.boost || !data.boostBlock) ? null : 'disabled', data.boost ? 'selected' : null)}}
+		</div>
+	</div>
+</div>
 {{/if}}
 {{if data.hasPump}}
 <div class="item">

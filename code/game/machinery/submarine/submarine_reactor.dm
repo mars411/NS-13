@@ -267,6 +267,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/auto_rods_i = 0
 	/// Что сейчас делает автоматика стержней, для пульта (пусто, если всё в порядке).
 	var/auto_rods_text = ""
+	/// Форсаж (ревизия 20): тепловая мощность растёт в NSR_BOOST_MULT раз при тех же стержнях. Выключается сам при SCRAM. По умолчанию выключен.
+	var/boost = FALSE
+	/// Текущий множитель мощности: плавно идёт к NSR_BOOST_MULT при форсаже и к 1 без него (NSR_BOOST_RATE в секунду).
+	var/boost_mult = 1
 	/// Аварийная защита (RPS, ревизия 19): если включена, сама роняет стержни при опасном состоянии. По умолчанию выключена.
 	var/rps_enabled = FALSE
 	/// Последний SCRAM устроила защита (плитка AUTO SCRAM горит до сброса SCRAM).
@@ -635,6 +639,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(!scrammed)
 		scram_reason = reason
 	scrammed = TRUE
+	boost = FALSE
 	auto_rods_i = 0
 	for(var/i in 1 to NSR_ROD_COUNT)
 		rod_target[i] = 0
@@ -709,6 +714,28 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	auto_rods_text = ""
 	if(user)
 		to_chat(user, SPAN_NOTICE("Rod automation [auto_rods ? "on" : "off"]."))
+
+/// Почему форсаж сейчас нельзя включить (пустая строка, если можно): нужны два контура и снятый SCRAM.
+/obj/machinery/submarine_reactor_core/proc/boost_block_reason()
+	if(is_dead())
+		return "NO CONTROL"
+	if(scrammed)
+		return "SCRAM"
+	if(!two_circuit)
+		return "TWO-CIRCUIT ONLY"
+	return ""
+
+/// Включает и выключает форсаж. Включать можно только при исправном реакторе в режиме двух контуров, выключить можно всегда.
+/obj/machinery/submarine_reactor_core/proc/toggle_boost(mob/user)
+	if(!boost)
+		var/why = boost_block_reason()
+		if(why)
+			if(user)
+				to_chat(user, SPAN_WARNING("Overdrive cannot be switched on: [lowertext(why)]."))
+			return
+	boost = !boost
+	if(user)
+		to_chat(user, SPAN_NOTICE("Overdrive [boost ? "on: more heat from the same rods, a smaller margin" : "off"]."))
 
 /// Реактор работает или горячий: низкие пороги защиты действуют только тогда (иначе холодный реактор «нарушал» бы их всегда).
 /obj/machinery/submarine_reactor_core/proc/rps_active()
@@ -819,16 +846,22 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/rods_frac = rods_pos / 100
 	var/coolant_frac = coolant_level / 100
 
+	// Форсаж: множитель мощности идёт к цели плавно (30 секунд), чтобы не было скачка. Без двух контуров форсажа нет.
+	if(boost && !two_circuit)
+		boost = FALSE
+	var/boost_goal = boost ? NSR_BOOST_MULT : 1
+	boost_mult += clamp(boost_goal - boost_mult, -NSR_BOOST_RATE * dt, NSR_BOOST_RATE * dt)
+
 	// Остаточное тепло: стремится к доле от мощности стержней, копится быстро, спадает медленно. SCRAM останавливает деление,
 	// но не его осколки: после остановки зона ещё долго греется и кипит воду, поэтому охлаждение нужно и после SCRAM.
-	var/decay_target = NSR_DECAY_FRACTION * rods_frac
+	var/decay_target = NSR_DECAY_FRACTION * rods_frac * boost_mult
 	var/decay_tau = (decay_heat < decay_target) ? NSR_DECAY_BUILD_TAU : NSR_DECAY_TAU
 	decay_heat += (decay_target - decay_heat) * min(1, dt / decay_tau)
 	if(decay_heat < 0.0005 && decay_target <= 0)
 		decay_heat = 0
 	// Сразу после подъёма стержней идёт (1 - доля) мощности, остальное набегает с NSR_DECAY_BUILD_TAU. На устойчивом режиме сумма равна rods_frac,
 	// поэтому пар при 100% стержней не превышает ёмкость конденсатора, как до ревизии 13.
-	var/heat_in = ((1 - NSR_DECAY_FRACTION) * rods_frac + decay_heat) * NSR_MAX_HEAT_RATE
+	var/heat_in = ((1 - NSR_DECAY_FRACTION) * rods_frac * boost_mult + decay_heat) * NSR_MAX_HEAT_RATE
 	var/heat_cap = NSR_CORE_HEAT_CAP + coolant_frac * NSR_COOLANT_HEAT_CAP
 	var/heat_loss = max(0, core_temperature - NSR_AMBIENT_TEMP) * NSR_PASSIVE_LOSS
 
@@ -1110,7 +1143,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(two_circuit && steam_gens)
 		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
 			G.emit_contamination()
-	var/rads = (rods_pos / 100) * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
+	var/rads = (rods_pos / 100) * boost_mult * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
 	// Повреждённое топливо фонит и без работы: продукты деления в теплоносителе. Течь первичного контура фонит, пока в нём есть давление.
 	rads += (core_damage / 100) * NSR_RADS_DAMAGE_MAX
 	if(leaking)
@@ -1253,6 +1286,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return "WARNING"
 	if(scrammed)
 		return rps_tripped ? "AUTO SCRAM" : "SCRAM"
+	if(boost_mult > 1.01)
+		return "OVERDRIVE"
 	if(rods_pos <= 0 && core_temperature < NSR_BOIL_TEMP)
 		return "OFFLINE"
 	return "NOMINAL"
@@ -1261,7 +1296,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/submarine_reactor_core/proc/get_status_class()
 	if(is_dead() || leak_active() || alarm_level >= 2)
 		return "bad"
-	if(alarm_level >= 1)
+	if(alarm_level >= 1 || boost_mult > 1.01)
 		return "average"
 	return "good"
 
@@ -2007,6 +2042,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		data["sgList"] = sg_list
 	data["scrammed"] = R.scrammed
 	data["scramReason"] = R.scram_reason
+	data["boost"] = R.boost
+	data["boostMult"] = round(R.boost_mult, 0.01)
+	data["boostBlock"] = R.boost_block_reason()
 	data["rodsAuto"] = R.auto_rods
 	data["rodsAutoSet"] = R.auto_rods_set
 	data["rodsAutoText"] = R.auto_rods_text
@@ -2159,6 +2197,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			var/mk_set_amount = text2num(href_list["amount"])
 			if(R.makeup_pump && (mk_set_amount in list(-5, -1, 1, 5)))
 				R.makeup_pump.auto_set = clamp(R.makeup_pump.auto_set + mk_set_amount, NSR_AUTO_MAKEUP_SET_MIN, NSR_AUTO_MAKEUP_SET_MAX)
+		if("boost_toggle")
+			R.toggle_boost(user)
 		if("rods_auto")
 			R.toggle_auto_rods(user)
 		if("rods_auto_set")

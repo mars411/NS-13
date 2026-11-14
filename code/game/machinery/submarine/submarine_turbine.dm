@@ -70,7 +70,7 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 #define NST_RPM_PER_RADS          9.5493 // об/мин на рад/с (60 / 2 пи)
 #define NST_WINDAGE               58.6   // Вт на (тыс. об/мин)^3: 30 кВт при 8000, около 240 кВт при 16000
 #define NST_GEN_EFF               0.95   // КПД генератора
-#define NST_GEN_MAX               250000 // Вт, максимум генератора
+#define NST_GEN_MAX               350000 // Вт, максимум генератора (250000 до ревизии 20)
 #define NST_RPM_SYNC_LO           5000   // рабочее окно: с этих оборотов генератор отдаёт полную мощность
 #define NST_RPM_SYNC_HI           10000  // до этих
 #define NST_RPM_TRIP_LO           4500   // ниже автомат отключается сам; между TRIP_LO и SYNC_LO выдача линейно растёт
