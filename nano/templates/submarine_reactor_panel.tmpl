@@ -103,6 +103,29 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
+		Fuel:
+	</div>
+	<div class="itemContent">
+		{{for data.fuel}}
+			<div>
+				{{:value.slot}}. {{:value.name}} TVEL
+				{{:helper.displayBar(value.burn, 0, 100, value.burnClass)}}
+				<div class="statusValue">
+					{{if value.empty}}empty{{else}}burnup {{:value.burn}} %, output {{:value.output}} %{{/if}}
+				</div>
+			</div>
+		{{/for}}
+		<div style="color: #a0a0a0;">
+			Rated power {{:data.fuelPower}} % of four fresh enriched elements, response {{:data.fuelResponse}} %.
+			{{if data.fuelNow}}The most burnt element lasts about {{:data.fuelNow}} min at the present power, {{:data.fuelFull}} min at full rods.{{else}}{{if data.fuelFull}}The most burnt element lasts about {{:data.fuelFull}} min at full rods.{{/if}}{{/if}}
+		</div>
+		<div style="color: #a0a0a0;">
+			Refuelling: {{:data.fuelSwap}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
 		Fuel damage:
 	</div>
 	<div class="itemContent">

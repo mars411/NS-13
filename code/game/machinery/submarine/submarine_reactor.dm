@@ -101,7 +101,8 @@ var/global/list/nsr_alarm_labels = list(
 	"valve" = "STEAM VALVE CLOSED",
 	"pump" = "MAIN PUMP",
 	"rps" = "AUTO SCRAM",
-	"xenon" = "XENON PIT"
+	"xenon" = "XENON PIT",
+	"fuel" = "FUEL LOW"
 )
 
 /// Уровень тревоги по верхнему порогу: 2, если значение не ниже критического, 1, если не ниже предупредительного, иначе 0.
@@ -249,6 +250,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/xenon_penalty = 0
 	/// Плотность потока нейтронов (доля мощности вместе с форсажем). Считается каждый шаг, руками не менять.
 	var/flux = 0
+	/// ТВЭЛы в ядре (ревизия 23): сами предметы лежат внутри ядра. Пустой слот ничего не даёт.
+	var/list/fuel_elements
+	/// Стартовая загрузка из четырёх свежих ТВЭЛов обогащённого урана. Карта без загрузки ставит FALSE и кладёт ТВЭЛы руками.
+	var/preload_fuel = TRUE
+	/// Средняя отдача ТВЭЛов относительно четырёх свежих обогащённых (1 = штатная мощность). Считается каждый шаг.
+	var/fuel_power = 0
+	/// Средняя реакция ТВЭЛов (1 = штатная, меньше = поток догоняет стержни медленнее).
+	var/fuel_response = 1
+	/// Положение стержней с учётом ксенона и отставания потока, 0-1. От него и от fuel_power зависит мощность.
+	var/react_rods = 0
 	var/rods_pos = 0
 	/// Средняя цель стержней, 0-100%. Считается из rod_target, руками не менять.
 	var/rods_target = 0
@@ -347,6 +358,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	for(var/i in 1 to NSR_ROD_COUNT)
 		rod_pos += 0
 		rod_target += 0
+	fuel_elements = list()
+	if(preload_fuel)
+		for(var/i in 1 to NSR_FUEL_SLOTS)
+			fuel_elements += new /obj/item/submarine_fuel_element(src)
+	update_fuel_stats()
 	steam_gens = list()
 	// Привязка деталей откладывается до конца загрузки карты: парогенераторы должны успеть зарегистрироваться, прежде чем ядро решит, в каком оно режиме.
 	return INITIALIZE_HINT_LATELOAD
@@ -577,11 +593,114 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/submarine_reactor_core/use_tool(obj/item/tool, mob/living/user, list/click_params)
 	if(leaking && isWelder(tool))
 		return weld_leak(tool, user)
+	if(istype(tool, /obj/item/submarine_fuel_element))
+		return load_fuel(tool, user)
+	if(isCrowbar(tool) && casing_open)
+		return unload_fuel(user)
 	if(!isWrench(tool))
 		return ..()
 	if(nsr_wrench_casing(src, user, casing_open))
 		casing_open = !casing_open
 		queue_icon_update()
+	return TRUE
+
+// --- Топливо (ревизия 23) ---
+
+/// Пересчитывает отдачу и реакцию всех ТВЭЛов. Отдача каждого ТВЭЛа падает до нуля на последних NSR_FUEL_TAIL процентах выгорания.
+/obj/machinery/submarine_reactor_core/proc/update_fuel_stats()
+	var/power_sum = 0
+	var/response_sum = 0
+	var/count = 0
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		power_sum += E.output()
+		response_sum += E.response()
+		count++
+	fuel_power = power_sum / NSR_FUEL_SLOTS
+	fuel_response = count ? response_sum / count : 1
+
+/// Выгорание: каждый ТВЭЛ выгорает пропорционально своему потоку в степени NSR_FUEL_BURN_EXP. Поток ТВЭЛа это положение стержней, умноженное на его мощность и форсаж.
+/obj/machinery/submarine_reactor_core/proc/burn_fuel(dt)
+	if(react_rods <= 0.001)
+		return
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		var/p = react_rods * E.power_mult() * boost_mult
+		if(p > 0.001)
+			E.set_burnup(E.burnup + 100 * (p ** NSR_FUEL_BURN_EXP) / NSR_FUEL_LIFE * dt)
+
+/// Выгорание самого выгоревшего ТВЭЛа, %. Пустой слот считается как полностью выгоревший.
+/obj/machinery/submarine_reactor_core/proc/fuel_worst_burnup()
+	. = (length(fuel_elements) < NSR_FUEL_SLOTS) ? 100 : 0
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		. = max(., E.burnup)
+
+/// Сколько минут проработает самый выгоревший ТВЭЛ при заданных стержнях (доля от 0 до 1, форсаж учитывается). Нуль ТВЭЛов или нулевой поток: null.
+/obj/machinery/submarine_reactor_core/proc/fuel_minutes_left(rods_level)
+	var/best
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		var/p = rods_level * E.power_mult() * boost_mult
+		if(p <= 0.001)
+			continue
+		var/rate = 100 * (p ** NSR_FUEL_BURN_EXP) / NSR_FUEL_LIFE
+		var/left = (100 - E.burnup) / rate / 60
+		if(isnull(best) || left < best)
+			best = left
+	return best
+
+/// Почему сейчас нельзя менять ТВЭЛы, пустая строка если можно. Плита ядра проверяется отдельно.
+/obj/machinery/submarine_reactor_core/proc/fuel_swap_block_reason()
+	if(rods_pos > 0.5 || rods_target > 0)
+		return "Insert all the control rods first."
+	if(core_temperature > NSR_FUEL_SWAP_TEMP)
+		return "The core is still too hot ([round(core_temperature)] C, it has to cool below [NSR_FUEL_SWAP_TEMP] C)."
+	if(two_circuit ? (primary_pressure > NSR_FUEL_SWAP_PRESSURE) : (steam_pressure > NSR_FUEL_SWAP_PRESSURE))
+		return "The vessel is still under pressure."
+	return ""
+
+/// Вставить ТВЭЛ в свободный слот (плита ядра снята, реактор холодный и остановлен).
+/obj/machinery/submarine_reactor_core/proc/load_fuel(obj/item/submarine_fuel_element/E, mob/living/user)
+	if(!casing_open)
+		to_chat(user, SPAN_WARNING("The fuel channels are behind the armour plate. Unbolt the plate with a wrench first."))
+		return TRUE
+	if(length(fuel_elements) >= NSR_FUEL_SLOTS)
+		to_chat(user, SPAN_WARNING("All the fuel channels are full. Pry a spent element out with a crowbar first."))
+		return TRUE
+	var/reason = fuel_swap_block_reason()
+	if(reason)
+		to_chat(user, SPAN_WARNING(reason))
+		return TRUE
+	user.visible_message(SPAN_NOTICE("\The [user] starts lowering \a [E] into \the [src]."))
+	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || length(fuel_elements) >= NSR_FUEL_SLOTS || !user.unEquip(E, src))
+		return TRUE
+	fuel_elements += E
+	update_fuel_stats()
+	playsound(src, NS_SND_WRENCH, 40, TRUE)
+	user.visible_message(SPAN_NOTICE("\The [user] lowers \a [E] into a fuel channel of \the [src]."))
+	return TRUE
+
+/// Вынуть самый выгоревший ТВЭЛ ломом.
+/obj/machinery/submarine_reactor_core/proc/unload_fuel(mob/living/user)
+	if(!casing_open)
+		return FALSE
+	if(!length(fuel_elements))
+		to_chat(user, SPAN_WARNING("All the fuel channels are empty."))
+		return TRUE
+	var/reason = fuel_swap_block_reason()
+	if(reason)
+		to_chat(user, SPAN_WARNING(reason))
+		return TRUE
+	var/obj/item/submarine_fuel_element/pick
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		if(!pick || E.burnup > pick.burnup)
+			pick = E
+	user.visible_message(SPAN_NOTICE("\The [user] starts prying \a [pick] out of \the [src]."))
+	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || !(pick in fuel_elements))
+		return TRUE
+	fuel_elements -= pick
+	pick.forceMove(get_turf(user))
+	user.put_in_hands(pick)
+	update_fuel_stats()
+	playsound(src, NS_SND_WRENCH, 40, TRUE)
+	user.visible_message(SPAN_NOTICE("\The [user] pries \a [pick] out of \the [src]."))
 	return TRUE
 
 /obj/machinery/submarine_reactor_core/proc/is_dead()
@@ -854,7 +973,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Ксенон отнимает часть хода стержней: равновесие на полной мощности запас стержней покрывает, а избыток (яма после остановки или сброса
 	// мощности) съедает ход, и те же стержни дают меньше мощности.
 	xenon_penalty = max(0, xenon - 1) * NSR_XENON_WORTH
-	var/rods_frac = max(0, rods_pos - xenon_penalty) / 100
+	// Топливо: отдача и реакция ТВЭЛов. Поток догоняет стержни с отставанием (медленное топливо отстаёт сильнее), а мощность умножается на отдачу ТВЭЛов.
+	update_fuel_stats()
+	var/rods_eff = max(0, rods_pos - xenon_penalty) / 100
+	react_rods += (rods_eff - react_rods) * min(1, dt * fuel_response / NSR_FLUX_TAU)
+	var/rods_frac = react_rods * fuel_power
 	var/coolant_frac = coolant_level / 100
 
 	// Форсаж: множитель мощности идёт к цели плавно (30 секунд), чтобы не было скачка. Без двух контуров форсажа нет.
@@ -871,6 +994,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(flux <= 0 && iodine < 0.0005 && xenon < 0.0005)
 		iodine = 0
 		xenon = 0
+	burn_fuel(dt)
 
 	// Остаточное тепло: стремится к доле от мощности стержней, копится быстро, спадает медленно. SCRAM останавливает деление,
 	// но не его осколки: после остановки зона ещё долго греется и кипит воду, поэтому охлаждение нужно и после SCRAM.
@@ -1097,6 +1221,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		tiles["xenon"] = 2
 	else if(xenon_penalty >= NSR_XENON_WARN)
 		tiles["xenon"] = 1
+	// Топливо на исходе: информационная плитка (сирены нет), горит, пока какой-то ТВЭЛ почти выгорел или слот пуст.
+	var/worst = fuel_worst_burnup()
+	if(worst >= NSR_FUEL_CRIT)
+		tiles["fuel"] = 2
+	else if(worst >= NSR_FUEL_WARN)
+		tiles["fuel"] = 1
 	return tiles
 
 /// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
@@ -1116,7 +1246,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Уровень сирены: худшая плитка, кроме информационных (закрытый клапан; повреждение топлива, пока оно не растёт).
 	var/new_level = 0
 	for(var/id in tiles)
-		if(id == "valve" || id == "rps" || id == "xenon" || (id == "damage" && !damage_rising))
+		if(id == "valve" || id == "rps" || id == "xenon" || id == "fuel" || (id == "damage" && !damage_rising))
 			continue
 		new_level = max(new_level, tiles[id])
 	// Табло: подтверждение, «первопричина» и мигание ведёт общий класс.
@@ -1171,6 +1301,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/rads = flux * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
 	// Повреждённое топливо фонит и без работы: продукты деления в теплоносителе. Течь первичного контура фонит, пока в нём есть давление.
 	rads += (core_damage / 100) * NSR_RADS_DAMAGE_MAX
+	// Выгоревшие ТВЭЛы в ядре фонят и на остановленном реакторе: вместе четыре ТВЭЛа дают NSR_RADS_SPENT_MAX при полном выгорании.
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		rads += E.burnup / 100 * NSR_RADS_SPENT_MAX / NSR_FUEL_SLOTS
 	if(leaking)
 		rads += NSR_RADS_LEAK * clamp((primary_pressure - 1) / NSR_PRIMARY_PRESSURE, 0, 1)
 	if(rads <= 0.01)
@@ -1947,6 +2080,22 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["iodine"] = round(R.iodine * 100)
 	data["xenonPenalty"] = round(R.xenon_penalty, 0.1)
 	data["xenonClass"] = level_class(R.xenon_penalty, NSR_XENON_WARN, NSR_XENON_CRIT)
+	var/list/fuel_rows = list()
+	for(var/i in 1 to NSR_FUEL_SLOTS)
+		if(i > length(R.fuel_elements))
+			fuel_rows += list(list("slot" = i, "name" = "empty", "burn" = 100, "burnClass" = "bad", "output" = 0, "empty" = TRUE))
+			continue
+		var/obj/item/submarine_fuel_element/E = R.fuel_elements[i]
+		fuel_rows += list(list("slot" = i, "name" = E.fuel_name(), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.output() * 100), "empty" = FALSE))
+	data["fuel"] = fuel_rows
+	data["fuelPower"] = round(R.fuel_power * 100)
+	data["fuelResponse"] = round(R.fuel_response * 100)
+	var/now_left = R.fuel_minutes_left(R.react_rods)
+	var/full_left = R.fuel_minutes_left(1)
+	data["fuelNow"] = isnull(now_left) ? null : round(now_left, 0.1)
+	data["fuelFull"] = isnull(full_left) ? null : round(full_left, 0.1)
+	var/swap_block = R.fuel_swap_block_reason()
+	data["fuelSwap"] = R.casing_open ? (swap_block ? swap_block : "Ready: pry the spent element out with a crowbar, lower a fresh one in.") : "The channels are behind the core armour plate (unbolt it with a wrench)."
 	data["tempMax"] = NSR_MELTDOWN_TEMP
 	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
 	data["pressure"] = round(R.steam_pressure, 0.1)

@@ -359,6 +359,10 @@
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Cu" = (
+/obj/structure/closet/crate/submarine_fuel,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Fa" = (
 /obj/machinery/fabricator,
 /turf/simulated/floor/tiled,
@@ -2224,7 +2228,7 @@ Ze
 Ze
 Ze
 Ze
-Ze
+Cu
 Ze
 Zq
 OC
