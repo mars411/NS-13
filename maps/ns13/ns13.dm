@@ -2,6 +2,7 @@
 	#include "ns13_define.dm"
 	#include "ns13_areas.dm"
 	#include "ns13_guides.dm"
+	#include "ns13_items.dm"
 
 	#include "ns13-1.dmm"
 

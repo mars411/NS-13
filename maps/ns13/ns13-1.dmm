@@ -578,7 +578,7 @@
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
 "bh" = (
-/obj/structure/closet/crate/radiation_gear,
+/obj/structure/closet/crate/radiation_gear/ns13,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
 "bi" = (
