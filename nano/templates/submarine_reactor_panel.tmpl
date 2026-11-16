@@ -89,6 +89,20 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
+		Xenon:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.xenon, 0, 250, data.xenonClass)}}
+		<div class="statusValue">
+			{{:data.xenon}} % of the full-power equilibrium
+		</div>
+		<div style="color: #a0a0a0;">
+			Iodine {{:data.iodine}} %, rod travel lost to xenon: {{:data.xenonPenalty}} %. Xenon builds up after a shutdown or a power cut and burns out under power: a hot restart in the pit needs more rods.
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
 		Fuel damage:
 	</div>
 	<div class="itemContent">

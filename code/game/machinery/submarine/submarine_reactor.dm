@@ -100,7 +100,8 @@ var/global/list/nsr_alarm_labels = list(
 	"sg" = "STEAM GENERATOR",
 	"valve" = "STEAM VALVE CLOSED",
 	"pump" = "MAIN PUMP",
-	"rps" = "AUTO SCRAM"
+	"rps" = "AUTO SCRAM",
+	"xenon" = "XENON PIT"
 )
 
 /// Уровень тревоги по верхнему порогу: 2, если значение не ниже критического, 1, если не ниже предупредительного, иначе 0.
@@ -241,6 +242,13 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Среднее фактическое положение стержней, 0-100%. Считается из rod_pos, руками не менять. От него зависит тепловая мощность.
 	/// Остаточное тепло, доля от NSR_MAX_HEAT_RATE (0 .. NSR_DECAY_FRACTION). Растёт, пока реактор работает, после остановки медленно спадает (Е1).
 	var/decay_heat = 0
+	/// Ксенон (ревизия 22): йод и ксенон в долях от равновесия при полной мощности (1 = равновесие при стержнях 100%). Копятся после остановки, горят в потоке.
+	var/iodine = 0
+	var/xenon = 0
+	/// Потеря хода стержней из-за ксенона, процентов. Считается каждый шаг, руками не менять.
+	var/xenon_penalty = 0
+	/// Плотность потока нейтронов (доля мощности вместе с форсажем). Считается каждый шаг, руками не менять.
+	var/flux = 0
 	var/rods_pos = 0
 	/// Средняя цель стержней, 0-100%. Считается из rod_target, руками не менять.
 	var/rods_target = 0
@@ -843,7 +851,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/datum/gas_mixture/steam_air = get_steam_air()
 	var/pressure_bar = steam_air.return_pressure() / NSR_KPA_PER_BAR
 
-	var/rods_frac = rods_pos / 100
+	// Ксенон отнимает часть хода стержней: равновесие на полной мощности запас стержней покрывает, а избыток (яма после остановки или сброса
+	// мощности) съедает ход, и те же стержни дают меньше мощности.
+	xenon_penalty = max(0, xenon - 1) * NSR_XENON_WORTH
+	var/rods_frac = max(0, rods_pos - xenon_penalty) / 100
 	var/coolant_frac = coolant_level / 100
 
 	// Форсаж: множитель мощности идёт к цели плавно (30 секунд), чтобы не было скачка. Без двух контуров форсажа нет.
@@ -851,6 +862,15 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		boost = FALSE
 	var/boost_goal = boost ? NSR_BOOST_MULT : 1
 	boost_mult += clamp(boost_goal - boost_mult, -NSR_BOOST_RATE * dt, NSR_BOOST_RATE * dt)
+
+	// Йод копится от потока и распадается в ксенон, ксенон распадается сам и выгорает в потоке. После остановки поток падает до нуля, йод ещё
+	// какое-то время дорабатывает в ксенон, и ксенон растёт до пика, потом спадает (яма). На мощности выгорание держит его на равновесии.
+	flux = rods_frac * boost_mult
+	iodine += NSR_XENON_LAMBDA_I * (flux - iodine) * dt
+	xenon = max(0, xenon + ((NSR_XENON_LAMBDA_X + NSR_XENON_BURNOUT) * iodine - (NSR_XENON_LAMBDA_X + NSR_XENON_BURNOUT * flux) * xenon) * dt)
+	if(flux <= 0 && iodine < 0.0005 && xenon < 0.0005)
+		iodine = 0
+		xenon = 0
 
 	// Остаточное тепло: стремится к доле от мощности стержней, копится быстро, спадает медленно. SCRAM останавливает деление,
 	// но не его осколки: после остановки зона ещё долго греется и кипит воду, поэтому охлаждение нужно и после SCRAM.
@@ -1072,6 +1092,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Защита сработала: плитка горит до сброса SCRAM. Сирену она не включает: причина уже на табло.
 	if(rps_tripped)
 		tiles["rps"] = 2
+	// Ксеноновая яма: информационная плитка, горит и на остановленном реакторе (яма как раз после остановки), сирену не включает.
+	if(xenon_penalty >= NSR_XENON_CRIT)
+		tiles["xenon"] = 2
+	else if(xenon_penalty >= NSR_XENON_WARN)
+		tiles["xenon"] = 1
 	return tiles
 
 /// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
@@ -1091,7 +1116,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Уровень сирены: худшая плитка, кроме информационных (закрытый клапан; повреждение топлива, пока оно не растёт).
 	var/new_level = 0
 	for(var/id in tiles)
-		if(id == "valve" || id == "rps" || (id == "damage" && !damage_rising))
+		if(id == "valve" || id == "rps" || id == "xenon" || (id == "damage" && !damage_rising))
 			continue
 		new_level = max(new_level, tiles[id])
 	// Табло: подтверждение, «первопричина» и мигание ведёт общий класс.
@@ -1143,7 +1168,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(two_circuit && steam_gens)
 		for(var/obj/machinery/submarine_steam_generator/G in steam_gens)
 			G.emit_contamination()
-	var/rads = (rods_pos / 100) * boost_mult * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
+	var/rads = flux * NSR_RADS_RUNNING_MAX + (decay_heat / NSR_DECAY_FRACTION) * NSR_RADS_DECAY_MAX
 	// Повреждённое топливо фонит и без работы: продукты деления в теплоносителе. Течь первичного контура фонит, пока в нём есть давление.
 	rads += (core_damage / 100) * NSR_RADS_DAMAGE_MAX
 	if(leaking)
@@ -1918,6 +1943,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["temp"] = round(R.core_temperature)
 	data["decay"] = round(R.decay_heat * 100, 0.1)
 	data["decayMax"] = NSR_DECAY_FRACTION * 100
+	data["xenon"] = round(R.xenon * 100)
+	data["iodine"] = round(R.iodine * 100)
+	data["xenonPenalty"] = round(R.xenon_penalty, 0.1)
+	data["xenonClass"] = level_class(R.xenon_penalty, NSR_XENON_WARN, NSR_XENON_CRIT)
 	data["tempMax"] = NSR_MELTDOWN_TEMP
 	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
 	data["pressure"] = round(R.steam_pressure, 0.1)
