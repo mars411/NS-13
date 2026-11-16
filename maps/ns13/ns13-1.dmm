@@ -1,0 +1,5404 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"OC" = (
+/turf/space,
+/area/space)
+"aA" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aB" = (
+/obj/machinery/power/port_gen/pacman{
+	anchored = 1;
+	sheets = 50
+	},
+/obj/floor_decal/industrial/hatch/yellow,
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aC" = (
+/obj/machinery/portable_atmospherics/hydroponics,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"aD" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"aE" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"aF" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aG" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"aH" = (
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"aI" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"aJ" = (
+/obj/machinery/door/airlock,
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"aK" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aL" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aM" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aN" = (
+/obj/machinery/power/port_gen/pacman{
+	anchored = 1
+	},
+/obj/floor_decal/industrial/hatch/yellow,
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aO" = (
+/obj/machinery/power/apc/high{
+	dir = 1;
+	locked = 0;
+	pixel_y = 24
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aP" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"aQ" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"aR" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 8;
+	icon_state = "2-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aS" = (
+/obj/machinery/power/apc/high{
+	dir = 2;
+	locked = 0;
+	pixel_y = -24
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"aT" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/emergency_power,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"aU" = (
+/turf/simulated/wall,
+/area/ns13/deck3/emergency_power)
+"aV" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"aW" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/workshop)
+"aX" = (
+/obj/structure/table/standard,
+/obj/item/wrench,
+/obj/item/crowbar,
+/obj/item/screwdriver,
+/obj/item/wirecutters,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"aY" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"aZ" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"aa" = (
+/obj/landmark/test/space_turf,
+/turf/space,
+/area/space)
+"ab" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/battery_bay)
+"ac" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"ad" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"ae" = (
+/obj/structure/closet/crate,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"af" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"ag" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/battery,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"ah" = (
+/obj/machinery/power/apc/high{
+	dir = 4;
+	locked = 0;
+	pixel_x = 24
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"ai" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 4;
+	icon_state = "1-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/battery_bay)
+"aj" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/corridor)
+"ak" = (
+/turf/simulated/wall,
+/area/ns13/deck3/corridor)
+"al" = (
+/obj/machinery/door/airlock,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"am" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"an" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"ao" = (
+/obj/landmark/test/safe_turf,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"ap" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/algae_bay)
+"aq" = (
+/obj/landmark/start,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"ar" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/emergency_power)
+"as" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"at" = (
+/obj/landmark{
+	name = "JoinLate"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"au" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"av" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/algae,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"aw" = (
+/obj/structure/table/standard,
+/obj/item/stack/material/phoron/fifty,
+/obj/item/stack/material/phoron/fifty,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"ax" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"ay" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"az" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"bA" = (
+/obj/machinery/computer/submarine_reactor_console,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bB" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/blackout,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bC" = (
+/obj/machinery/computer/submarine_turbine_console,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bD" = (
+/obj/machinery/door/submarine_hatch,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bE" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bF" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/reactor_hall)
+"bG" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bH" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bI" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bJ" = (
+/obj/machinery/power/apc/high{
+	dir = 8;
+	locked = 0;
+	pixel_x = -24
+	},
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bK" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bL" = (
+/obj/structure/table/standard,
+/obj/item/device/scanner/gas,
+/obj/item/device/geiger,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bM" = (
+/obj/machinery/submarine_makeup_pump,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bN" = (
+/obj/item/wrench,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bO" = (
+/obj/machinery/light/spot{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bP" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bQ" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 6
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bR" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bS" = (
+/obj/machinery/submarine_primary_pump,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bT" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bU" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bV" = (
+/obj/machinery/submarine_pressurizer,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bW" = (
+/obj/machinery/submarine_reactor_section/left_end,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bX" = (
+/obj/machinery/submarine_reactor_section/middle,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bY" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"bZ" = (
+/obj/structure/submarine_primary_pipe/manifold{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"ba" = (
+/obj/machinery/power/apc/high{
+	dir = 1;
+	locked = 0;
+	pixel_y = 24
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"bb" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 4;
+	icon_state = "1-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"bc" = (
+/turf/simulated/wall,
+/area/ns13/deck3/algae_bay)
+"bd" = (
+/obj/machinery/power/apc/high{
+	dir = 1;
+	locked = 0;
+	pixel_y = 24
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"be" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/radiation_lockers)
+"bf" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"bg" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"bh" = (
+/obj/structure/closet/crate/radiation_gear,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"bi" = (
+/obj/structure/closet/firecloset,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"bj" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"bk" = (
+/obj/machinery/power/apc/high{
+	dir = 2;
+	locked = 0;
+	pixel_y = -24
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"bl" = (
+/obj/structure/closet/firecloset,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"bm" = (
+/turf/simulated/wall,
+/area/ns13/deck3/radiation_lockers)
+"bn" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/control_room)
+"bo" = (
+/turf/simulated/wall,
+/area/ns13/deck3/control_room)
+"bp" = (
+/obj/machinery/door/airlock,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bq" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"br" = (
+/obj/machinery/power/apc/high{
+	dir = 8;
+	locked = 0;
+	pixel_x = -24
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bs" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bt" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bu" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bv" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bw" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/control_room,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bx" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"by" = (
+/obj/structure/table/standard,
+/obj/item/device/scanner/gas,
+/obj/item/device/geiger,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bz" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/hatches,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"cA" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cB" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cC" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cD" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cE" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 6
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cF" = (
+/obj/machinery/atmospherics/binary/submarine_relief_valve{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cG" = (
+/obj/machinery/atmospherics/pipe/manifold/visible{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cH" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cI" = (
+/obj/machinery/atmospherics/binary/submarine_turbine_section/hp{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cJ" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cK" = (
+/obj/machinery/atmospherics/binary/submarine_turbine_section/lp1{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cL" = (
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/obj/machinery/power/submarine_turbine_generator,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cM" = (
+/obj/machinery/light/spot{
+	dir = 1
+	},
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cN" = (
+/obj/machinery/light/spot{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cO" = (
+/obj/machinery/atmospherics/binary/submarine_turbine_section/lp2{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cP" = (
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/obj/machinery/power/submarine_load_bank,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cQ" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 10
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cR" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cS" = (
+/obj/machinery/atmospherics/pipe/manifold/visible{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cT" = (
+/obj/machinery/atmospherics/binary/submarine_condenser{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cU" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 9
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cV" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/turbine,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cW" = (
+/obj/machinery/computer/submarine_turbine_console,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cX" = (
+/obj/structure/table/standard,
+/obj/item/stack/material/steel/fifty,
+/obj/item/stack/material/steel/fifty,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cY" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/turbine_warning,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cZ" = (
+/obj/machinery/fabricator,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"ca" = (
+/obj/machinery/submarine_reactor_core,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cb" = (
+/obj/machinery/submarine_reactor_section/right_end,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cc" = (
+/obj/machinery/atmospherics/unary/tank/submarine_feed_inlet{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cd" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 5
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"ce" = (
+/obj/machinery/light/spot{
+	dir = 1
+	},
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cf" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 10
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cg" = (
+/obj/machinery/submarine_steam_generator,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"ch" = (
+/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"ci" = (
+/obj/structure/submarine_primary_pipe{
+	dir = 5
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cj" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"ck" = (
+/obj/machinery/atmospherics/pipe/simple/visible{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cl" = (
+/obj/machinery/atmospherics/binary/submarine_feed_pump{
+	dir = 8
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cm" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/hall,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cn" = (
+/obj/machinery/atmospherics/pipe/manifold/visible{
+	dir = 1
+	},
+/obj/machinery/meter,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"co" = (
+/obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cp" = (
+/obj/machinery/atmospherics/valve/open{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cq" = (
+/obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
+	dir = 4
+	},
+/obj/machinery/meter,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cr" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/warning,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cs" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 8;
+	icon_state = "2-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"ct" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 4;
+	icon_state = "1-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cu" = (
+/turf/simulated/wall,
+/area/ns13/deck3/reactor_hall)
+"cv" = (
+/obj/machinery/door/submarine_hatch,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/reactor_hall)
+"cw" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/turbine_hall)
+"cx" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cy" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"cz" = (
+/obj/machinery/power/apc/high{
+	dir = 8;
+	locked = 0;
+	pixel_x = -24
+	},
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"da" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 8;
+	icon_state = "2-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"db" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 2;
+	icon_state = "1-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"dc" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 4;
+	icon_state = "1-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"dd" = (
+/obj/structure/table/standard,
+/obj/item/submarine_turbine_blade/small,
+/obj/item/submarine_turbine_blade/small,
+/obj/item/submarine_turbine_blade/large,
+/obj/item/submarine_turbine_blade/large,
+/obj/item/submarine_turbine_blade/large,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"de" = (
+/turf/simulated/wall,
+/area/ns13/deck3/turbine_hall)
+"df" = (
+/obj/machinery/door/submarine_hatch,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"dg" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/shaft_room)
+"dh" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/shaft_room)
+"di" = (
+/obj/machinery/power/apc/high{
+	dir = 8;
+	locked = 0;
+	pixel_x = -24
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/shaft_room)
+"dj" = (
+/obj/structure/cable{
+	d1 = 1;
+	d2 = 8;
+	icon_state = "1-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/shaft_room)
+"dk" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/shaft_room)
+"dl" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/shaft_room)
+"dm" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/shaft,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/shaft_room)
+
+(1,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(2,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+aa
+OC
+"}
+(3,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(4,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(5,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(6,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(7,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(8,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(9,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(10,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ad
+ac
+ae
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ae
+ac
+af
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(11,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ae
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ae
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(12,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(13,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ag
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(14,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(15,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(16,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ae
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ae
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(17,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ad
+ac
+ae
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ae
+ac
+af
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(18,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(19,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ac
+ac
+ac
+ac
+ac
+ah
+ai
+ac
+ac
+ac
+ac
+ac
+ac
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(20,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+ab
+ab
+ab
+ab
+ab
+aj
+ak
+al
+ak
+aj
+ab
+ab
+ab
+ab
+ab
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(21,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+aj
+am
+an
+ao
+aj
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(22,1,1) = {"
+OC
+OC
+OC
+ap
+ap
+ap
+ap
+ap
+ap
+ap
+ap
+ap
+aj
+aq
+an
+aq
+aj
+ar
+ar
+ar
+ar
+ar
+ar
+ar
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(23,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+as
+ak
+at
+an
+at
+ak
+au
+au
+au
+au
+au
+au
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(24,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+av
+as
+ak
+am
+an
+am
+ak
+au
+aw
+au
+au
+au
+au
+ax
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(25,1,1) = {"
+OC
+OC
+OC
+ap
+ay
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+az
+au
+au
+au
+aA
+aB
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(26,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+as
+ak
+aD
+an
+aE
+ak
+au
+au
+au
+au
+aF
+au
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(27,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+aG
+ak
+am
+an
+am
+ak
+au
+au
+au
+au
+aF
+au
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(28,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+as
+ak
+am
+aH
+aI
+aJ
+aK
+aL
+aL
+aL
+aM
+aN
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(29,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+aO
+au
+au
+au
+aF
+au
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(30,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+au
+au
+au
+au
+aF
+au
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(31,1,1) = {"
+OC
+OC
+OC
+ap
+ay
+as
+as
+as
+as
+as
+as
+aP
+aJ
+aI
+aQ
+am
+ak
+az
+au
+au
+au
+aR
+aN
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(32,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+aS
+ak
+am
+an
+am
+ak
+au
+aT
+au
+au
+au
+au
+ax
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(33,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+au
+au
+au
+au
+au
+au
+au
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(34,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+as
+ak
+aD
+an
+am
+ak
+aU
+aU
+aU
+aU
+aU
+aU
+aU
+ar
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(35,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+aV
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(36,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+aG
+ak
+am
+an
+aE
+ak
+aV
+aX
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(37,1,1) = {"
+OC
+OC
+OC
+ap
+ay
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+aY
+aX
+aV
+aV
+aV
+aV
+aZ
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(38,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+aC
+as
+as
+as
+as
+ak
+ba
+aQ
+am
+ak
+aV
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(39,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+an
+am
+ak
+aV
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(40,1,1) = {"
+OC
+OC
+OC
+ap
+as
+as
+as
+as
+as
+as
+as
+as
+ak
+am
+aH
+aI
+aJ
+bb
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(41,1,1) = {"
+OC
+OC
+OC
+ap
+ap
+ap
+bc
+bc
+bc
+bc
+bc
+bc
+ak
+am
+an
+am
+ak
+bd
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(42,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bf
+bf
+bf
+bf
+bf
+ak
+am
+an
+am
+ak
+aV
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(43,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bg
+bh
+bf
+bf
+bf
+bf
+ak
+aD
+an
+am
+ak
+aY
+aV
+aV
+aV
+aV
+aV
+aZ
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(44,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bf
+bf
+bf
+bf
+bf
+ak
+am
+an
+aE
+ak
+aV
+aV
+aV
+aV
+aV
+bi
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(45,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bh
+bf
+bf
+bf
+bf
+ak
+am
+an
+am
+ak
+aV
+aV
+aV
+aV
+aV
+aV
+aV
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(46,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bf
+bf
+bf
+bf
+bj
+aJ
+aI
+aQ
+am
+aj
+aW
+aW
+aW
+aW
+aW
+aW
+aW
+aW
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(47,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bf
+bf
+bf
+bf
+bk
+ak
+am
+an
+am
+aj
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(48,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bg
+bf
+bf
+bf
+bf
+bf
+ak
+am
+an
+am
+aj
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(49,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bl
+bf
+bf
+bf
+bf
+ak
+aD
+an
+am
+aj
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(50,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+bf
+bf
+bf
+bf
+bf
+bf
+ak
+am
+an
+aE
+aj
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(51,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+be
+be
+be
+be
+be
+be
+bm
+ak
+am
+an
+am
+aj
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(52,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bo
+bo
+bo
+bp
+bo
+bn
+bn
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(53,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bq
+br
+bs
+bt
+bu
+bu
+bv
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(54,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bw
+bu
+bu
+bx
+bu
+bu
+by
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(55,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bq
+bu
+bu
+bx
+bu
+bu
+bu
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(56,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bz
+bu
+bu
+bx
+bu
+bu
+bv
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(57,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bA
+bu
+bu
+bx
+bu
+bu
+bu
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(58,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bB
+bu
+bu
+bx
+bu
+bu
+bu
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(59,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bq
+bu
+bu
+bx
+bu
+bu
+bv
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(60,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bC
+bu
+bu
+bx
+bu
+bu
+bv
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(61,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bn
+bn
+bn
+bD
+bn
+bn
+bn
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(62,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bE
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(63,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bn
+bx
+bn
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(64,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bF
+bF
+bF
+bn
+bD
+bn
+bF
+bF
+bF
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(65,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bG
+bH
+bH
+bH
+bI
+bJ
+bK
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(66,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bL
+bK
+bM
+bK
+bK
+bK
+bN
+bK
+bO
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(67,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bP
+bQ
+bR
+bS
+bK
+bK
+bK
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(68,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bT
+bU
+bV
+bW
+bX
+bK
+bK
+bK
+bY
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(69,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bP
+bU
+bZ
+ca
+cb
+cc
+cd
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(70,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+ce
+cf
+cg
+ch
+cf
+ci
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(71,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bP
+bK
+bK
+ck
+bK
+bU
+cl
+bK
+bO
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(72,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+cm
+bK
+bK
+cn
+co
+cg
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(73,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bP
+bK
+bK
+cp
+bK
+bK
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(74,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bT
+bK
+bK
+ck
+bK
+bK
+cq
+bK
+bY
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(75,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bP
+bK
+bK
+ck
+bK
+bK
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(76,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+cr
+bK
+bK
+ck
+bK
+bK
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(77,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bP
+bK
+bK
+ck
+bK
+bK
+cj
+bK
+bO
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(78,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+ce
+bK
+bK
+ck
+bK
+bK
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(79,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+bT
+bK
+bK
+ck
+bK
+bK
+cj
+bK
+bY
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(80,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+cs
+ct
+bK
+ck
+bK
+bK
+cj
+bK
+bK
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(81,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+bF
+cu
+cv
+cu
+ck
+cu
+cu
+cj
+cu
+cu
+bF
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(82,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cx
+cy
+cz
+cA
+cB
+cB
+cC
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(83,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cE
+cF
+cG
+cB
+cB
+cC
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(84,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cH
+cA
+cB
+cI
+cB
+cB
+cC
+cB
+cJ
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(85,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cA
+cB
+cA
+cB
+cB
+cC
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(86,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cA
+cB
+cK
+cL
+cB
+cC
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(87,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cM
+cA
+cB
+cA
+cD
+cB
+cC
+cB
+cN
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(88,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cA
+cB
+cO
+cD
+cB
+cC
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(89,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cA
+cB
+cA
+cP
+cB
+cC
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(90,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cH
+cQ
+cR
+cS
+cR
+cT
+cU
+cB
+cJ
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(91,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(92,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cV
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(93,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cD
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cN
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(94,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cM
+cW
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(95,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cH
+cB
+cB
+cB
+cB
+cB
+cB
+cX
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(96,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cY
+cB
+cB
+cB
+cB
+cB
+cB
+cZ
+cJ
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(97,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+da
+db
+db
+db
+dc
+cB
+cB
+dd
+cB
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(98,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+cw
+cw
+de
+de
+de
+df
+de
+de
+de
+cw
+cw
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(99,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+di
+dj
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(100,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+dh
+dh
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(101,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dk
+dh
+dh
+dh
+dh
+dh
+dl
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(102,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+dh
+dh
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(103,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+dh
+dh
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(104,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+dh
+dm
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(105,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+dh
+dh
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(106,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dk
+dh
+dh
+dh
+dh
+dh
+dl
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(107,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dh
+dh
+dh
+dh
+dh
+dh
+dh
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(108,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+dg
+dg
+dg
+dg
+dg
+dg
+dg
+dg
+dg
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(109,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(110,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(111,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
+(112,1,1) = {"
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+OC
+"}
