@@ -85,24 +85,24 @@ GLOBAL_LIST_EMPTY(submarine_makeup_pumps)
 			return pressures[i] + (pressures[i + 1] - pressures[i]) * (temp - temps[i]) / (temps[i + 1] - temps[i])
 	return 221 + (temp - 375) * 8
 
-/// Плитки табло тревог (ревизия 17): порядок и подписи. Плитка жёлтая при предупреждении, красная при критической тревоге, мигает, пока её не подтвердили.
+/// Плитки табло тревог (ревизия 17): порядок и подписи (русские с ревизии 24, до двух строк по 15 знаков, плитка в пульте узкая). Плитка жёлтая при предупреждении, красная при критической тревоге, мигает, пока её не подтвердили.
 var/global/list/nsr_alarm_labels = list(
-	"temp" = "CORE TEMP",
-	"steam" = "STEAM PRESSURE",
-	"water" = "SG WATER LOW",
-	"cooling" = "COOLING LOST",
-	"ppress_hi" = "PRIMARY PRESS HIGH",
-	"ppress_lo" = "PRIMARY PRESS LOW",
-	"plevel_hi" = "PZR LEVEL HIGH",
-	"plevel_lo" = "PZR LEVEL LOW",
-	"damage" = "FUEL DAMAGE",
-	"leak" = "PRIMARY LEAK",
-	"sg" = "STEAM GENERATOR",
-	"valve" = "STEAM VALVE CLOSED",
-	"pump" = "MAIN PUMP",
-	"rps" = "AUTO SCRAM",
-	"xenon" = "XENON PIT",
-	"fuel" = "FUEL LOW"
+	"temp" = "ТЕМПЕРАТУРА ЗОНЫ",
+	"steam" = "ДАВЛЕНИЕ ПАРА",
+	"water" = "НИЗКИЙ УРОВЕНЬ ПГ",
+	"cooling" = "ПОТЕРЯ ОХЛАЖДЕНИЯ",
+	"ppress_hi" = "ДАВЛ. 1 КОНТ. ВЫСОКОЕ",
+	"ppress_lo" = "ДАВЛ. 1 КОНТ. НИЗКОЕ",
+	"plevel_hi" = "УРОВЕНЬ КД ВЫСОКИЙ",
+	"plevel_lo" = "УРОВЕНЬ КД НИЗКИЙ",
+	"damage" = "ПОВРЕЖДЕНИЕ ТВЭЛ",
+	"leak" = "ТЕЧЬ 1 КОНТУРА",
+	"sg" = "ПАРОГЕНЕРАТОР",
+	"valve" = "ПАРОВОЙ КЛАПАН ЗАКРЫТ",
+	"pump" = "ГЛАВНЫЙ НАСОС",
+	"rps" = "АВТО-SCRAM",
+	"xenon" = "КСЕНОНОВАЯ ЯМА",
+	"fuel" = "ТОПЛИВО: МАЛО"
 )
 
 /// Уровень тревоги по верхнему порогу: 2, если значение не ниже критического, 1, если не ниже предупредительного, иначе 0.
@@ -253,7 +253,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// ТВЭЛы в ядре (ревизия 23): сами предметы лежат внутри ядра. Пустой слот ничего не даёт.
 	var/list/fuel_elements
 	/// Стартовая загрузка из четырёх свежих ТВЭЛов обогащённого урана. Карта без загрузки ставит FALSE и кладёт ТВЭЛы руками.
-	var/preload_fuel = TRUE
+	var/preload_fuel = FALSE
 	/// Средняя отдача ТВЭЛов относительно четырёх свежих обогащённых (1 = штатная мощность). Считается каждый шаг.
 	var/fuel_power = 0
 	/// Средняя реакция ТВЭЛов (1 = штатная, меньше = поток догоняет стержни медленнее).
@@ -595,8 +595,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return weld_leak(tool, user)
 	if(istype(tool, /obj/item/submarine_fuel_element))
 		return load_fuel(tool, user)
-	if(isCrowbar(tool) && casing_open)
-		return unload_fuel(user)
+	if(isCrowbar(tool))
+		if(casing_open)
+			return unload_fuel(user)
+		to_chat(user, SPAN_NOTICE("The fuel channels are behind the armour plate. Unbolt the plate with a wrench first."))
 	if(!isWrench(tool))
 		return ..()
 	if(nsr_wrench_casing(src, user, casing_open))
@@ -649,11 +651,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /// Почему сейчас нельзя менять ТВЭЛы, пустая строка если можно. Плита ядра проверяется отдельно.
 /obj/machinery/submarine_reactor_core/proc/fuel_swap_block_reason()
 	if(rods_pos > 0.5 || rods_target > 0)
-		return "Insert all the control rods first."
+		return "Сначала опустите все стержни СУЗ."
 	if(core_temperature > NSR_FUEL_SWAP_TEMP)
-		return "The core is still too hot ([round(core_temperature)] C, it has to cool below [NSR_FUEL_SWAP_TEMP] C)."
+		return "Ядро ещё слишком горячее ([round(core_temperature)] C, нужно остудить ниже [NSR_FUEL_SWAP_TEMP] C)."
 	if(two_circuit ? (primary_pressure > NSR_FUEL_SWAP_PRESSURE) : (steam_pressure > NSR_FUEL_SWAP_PRESSURE))
-		return "The vessel is still under pressure."
+		return "Сосуд ещё под давлением."
 	return ""
 
 /// Вставить ТВЭЛ в свободный слот (плита ядра снята, реактор холодный и остановлен).
@@ -677,7 +679,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	user.visible_message(SPAN_NOTICE("\The [user] lowers \a [E] into a fuel channel of \the [src]."))
 	return TRUE
 
-/// Вынуть самый выгоревший ТВЭЛ ломом.
+/// Вынуть ТВЭЛ ломом. Если в ядре их несколько, спрашивает, какой: можно достать любой, в том числе свежий.
 /obj/machinery/submarine_reactor_core/proc/unload_fuel(mob/living/user)
 	if(!casing_open)
 		return FALSE
@@ -689,9 +691,20 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		to_chat(user, SPAN_WARNING(reason))
 		return TRUE
 	var/obj/item/submarine_fuel_element/pick
-	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
-		if(!pick || E.burnup > pick.burnup)
-			pick = E
+	if(length(fuel_elements) == 1)
+		pick = fuel_elements[1]
+	else
+		var/list/options = list()
+		var/slot = 0
+		for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+			slot++
+			options["[slot]. [nsr_ru(E.fuel_name())], выгорание [round(E.burnup)] %"] = E
+		var/choice = input(user, "Какой ТВЭЛ достать?", "Каналы ядра") as null|anything in options
+		if(!choice || QDELETED(user) || user.incapacitated() || !user.Adjacent(src))
+			return TRUE
+		pick = options[choice]
+	if(!(pick in fuel_elements))
+		return TRUE
 	user.visible_message(SPAN_NOTICE("\The [user] starts prying \a [pick] out of \the [src]."))
 	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || !(pick in fuel_elements))
 		return TRUE
@@ -779,11 +792,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /// Что мешает сбросить SCRAM (пустая строка, если ничего). Включённая защита не даёт сброса, пока условие срабатывания остаётся.
 /obj/machinery/submarine_reactor_core/proc/reset_block_reason()
 	if(core_temperature > NSR_SCRAM_RESET_TEMP)
-		return "the core must cool below [NSR_SCRAM_RESET_TEMP] C first"
+		return "сначала ядро должно остыть ниже [NSR_SCRAM_RESET_TEMP] C"
 	if(rps_enabled && automation_available())
 		var/why = rps_condition()
 		if(why)
-			return "the protection condition persists ([lowertext(why)])"
+			return "условие защиты ещё держится ([nsr_ru(why)])"
 	return ""
 
 /// Сбрасывает SCRAM, если активная зона достаточно остыла и защита не держит. Возвращает TRUE при успехе.
@@ -858,11 +871,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		var/why = boost_block_reason()
 		if(why)
 			if(user)
-				to_chat(user, SPAN_WARNING("Overdrive cannot be switched on: [lowertext(why)]."))
+				to_chat(user, SPAN_WARNING("Форсаж нельзя включить: [nsr_ru(why)]."))
 			return
 	boost = !boost
 	if(user)
-		to_chat(user, SPAN_NOTICE("Overdrive [boost ? "on: more heat from the same rods, a smaller margin" : "off"]."))
+		to_chat(user, SPAN_NOTICE("Форсаж [boost ? "включён: больше тепла от тех же стержней, меньше запас" : "выключен"]."))
 
 /// Реактор работает или горячий: низкие пороги защиты действуют только тогда (иначе холодный реактор «нарушал» бы их всегда).
 /obj/machinery/submarine_reactor_core/proc/rps_active()
@@ -1222,8 +1235,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	else if(xenon_penalty >= NSR_XENON_WARN)
 		tiles["xenon"] = 1
 	// Топливо на исходе: информационная плитка (сирены нет), горит, пока какой-то ТВЭЛ почти выгорел или слот пуст.
+	// Пустое ядро (старт раунда до загрузки ТВЭЛов) горит жёлтым, красной плитка становится, только когда топливо реально кончается.
 	var/worst = fuel_worst_burnup()
-	if(worst >= NSR_FUEL_CRIT)
+	if(!length(fuel_elements))
+		tiles["fuel"] = 1
+	else if(worst >= NSR_FUEL_CRIT)
 		tiles["fuel"] = 2
 	else if(worst >= NSR_FUEL_WARN)
 		tiles["fuel"] = 1
@@ -2051,7 +2067,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(!R)
 		return data
 	data["dead"] = R.is_dead()
-	data["status"] = R.get_status_text()
+	data["status"] = nsr_ru(R.get_status_text())
 	data["statusClass"] = R.get_status_class()
 	data["alarmLevel"] = R.alarm_level
 	data["alarmMuted"] = R.alarm_mute_level > 0
@@ -2083,10 +2099,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/list/fuel_rows = list()
 	for(var/i in 1 to NSR_FUEL_SLOTS)
 		if(i > length(R.fuel_elements))
-			fuel_rows += list(list("slot" = i, "name" = "empty", "burn" = 100, "burnClass" = "bad", "output" = 0, "empty" = TRUE))
+			fuel_rows += list(list("slot" = i, "name" = "пусто", "burn" = 100, "burnClass" = "bad", "output" = 0, "empty" = TRUE))
 			continue
 		var/obj/item/submarine_fuel_element/E = R.fuel_elements[i]
-		fuel_rows += list(list("slot" = i, "name" = E.fuel_name(), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.fuel_output() * 100), "empty" = FALSE))
+		fuel_rows += list(list("slot" = i, "name" = nsr_ru(E.fuel_name()), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.fuel_output() * 100), "empty" = FALSE))
 	data["fuel"] = fuel_rows
 	data["fuelPower"] = round(R.fuel_power * 100)
 	data["fuelResponse"] = round(R.fuel_response * 100)
@@ -2095,7 +2111,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["fuelNow"] = isnull(now_left) ? null : round(now_left, 0.1)
 	data["fuelFull"] = isnull(full_left) ? null : round(full_left, 0.1)
 	var/swap_block = R.fuel_swap_block_reason()
-	data["fuelSwap"] = R.casing_open ? (swap_block ? swap_block : "Ready: pry the spent element out with a crowbar, lower a fresh one in.") : "The channels are behind the core armour plate (unbolt it with a wrench)."
+	data["fuelSwap"] = R.casing_open ? (swap_block ? swap_block : "Можно: достаньте ТВЭЛ ломом (любой, на выбор) и опустите на его место другой.") : "Каналы за бронеплитой ядра (отверните её гаечным ключом)."
 	data["tempMax"] = NSR_MELTDOWN_TEMP
 	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
 	data["pressure"] = round(R.steam_pressure, 0.1)
@@ -2127,13 +2143,13 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		data["pumpSpeed"] = round(pump.speed, 0.1)
 		data["pumpAuto"] = pump.auto
 		data["pumpAutoSet"] = pump.auto_set
-		data["pumpAutoText"] = pump.auto_text
+		data["pumpAutoText"] = nsr_ru(pump.auto_text)
 		data["pumpHeat"] = round(pump.heat)
 		data["pumpHeatClass"] = (pump.heat >= NSR_PUMP_HEAT_WARN) ? "bad" : ((pump.heat >= NSR_PUMP_HEAT_WARN / 2) ? "average" : "good")
 		data["pumpBurnt"] = pump.burnt_out
 		data["pumpRpm"] = pump.get_rpm()
 		data["pumpRpmMax"] = NSR_FEED_PUMP_RPM_MAX
-		data["pumpSpin"] = pump.get_spin_text()
+		data["pumpSpin"] = nsr_ru(pump.get_spin_text())
 		data["pumpAngle"] = nsr_gauge_angle(pump.spin / 100)
 		data["pumpAnglePrev"] = isnull(last_pump_angle) ? data["pumpAngle"] : last_pump_angle
 		last_pump_angle = data["pumpAngle"]
@@ -2141,7 +2157,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		data["pumpFillLen"] = nsr_gauge_len(pump.spin / 100)
 		data["pumpFillPrev"] = isnull(last_pump_fill) ? data["pumpFillLen"] : last_pump_fill
 		last_pump_fill = data["pumpFillLen"]
-		data["pumpState"] = pump.pump_state
+		data["pumpState"] = nsr_ru(pump.pump_state)
 		data["pumpClass"] = (pump.pump_state == "RUNNING") ? "good" : ((pump.pump_state == "STOPPED") ? "average" : "bad")
 		data["pumpFlow"] = round(pump.last_flow, 0.1)
 		data["feedPressure"] = round(pump.air2.return_pressure() / NSR_KPA_PER_BAR, 0.1)
@@ -2174,12 +2190,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			data["pzrSolid"] = R.pzr_level_raw() >= NSR_PZR_SOLID_LEVEL
 			data["pzrHeater"] = round(pz.heater)
 			data["pzrHeating"] = round(pz.heating * 100)
-			data["pzrHeaterText"] = pz.get_heater_text()
+			data["pzrHeaterText"] = nsr_ru(pz.get_heater_text())
 			data["pzrHeaterClass"] = (pz.get_heater_text() in list("NO POWER", "UNCOVERED")) ? "bad" : "good"
 			data["pzrSpray"] = round(pz.spray)
 			data["pzrAuto"] = pz.auto
 			data["pzrSet"] = pz.setpoint
-			data["pzrRelief"] = pz.get_relief_text()
+			data["pzrRelief"] = nsr_ru(pz.get_relief_text())
 			data["pzrReliefClass"] = pz.relief_open ? "bad" : (pz.block_closed ? "average" : "good")
 			data["pzrReliefManual"] = pz.relief_manual
 			data["pzrBlock"] = pz.block_closed
@@ -2189,11 +2205,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if(R.makeup_pump)
 			var/obj/machinery/submarine_makeup_pump/mk = R.makeup_pump
 			data["mkSetting"] = round(mk.setting)
-			data["mkState"] = mk.get_state_text()
+			data["mkState"] = nsr_ru(mk.get_state_text())
 			data["mkClass"] = (mk.get_state_text() == "NO POWER") ? "bad" : "good"
 			data["mkAuto"] = mk.auto
 			data["mkAutoSet"] = mk.auto_set
-			data["mkAutoText"] = mk.auto_text
+			data["mkAutoText"] = nsr_ru(mk.auto_text)
 		data["hasPrimaryPump"] = !!R.primary_pump
 		if(R.primary_pump)
 			var/obj/machinery/submarine_primary_pump/pp = R.primary_pump
@@ -2201,7 +2217,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			data["ppSpin"] = round(pp.spin)
 			data["ppRpm"] = pp.get_rpm()
 			data["ppRpmMax"] = NSR_PRIMARY_PUMP_RPM_MAX
-			data["ppState"] = pp.get_state_text()
+			data["ppState"] = nsr_ru(pp.get_state_text())
 			data["ppClass"] = (pp.get_state_text() in list("AT SPEED", "SPINNING UP", "SPINNING DOWN")) ? "good" : "bad"
 			data["ppWear"] = round(pp.wear)
 			data["ppWearClass"] = pp.seized ? "bad" : ((pp.wear >= NSR_PPUMP_WEAR_WARN) ? "average" : "good")
@@ -2216,16 +2232,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			else if(G.coolant_level < NSR_COOLANT_WARN)
 				level_class = "average"
 			var/state_text = G.get_state_text()
-			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = state_text, "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER" || state_text == "VALVE CLOSED") ? "average" : "good"), "valveClosed" = G.steam_valve_closed, "ruptured" = G.ruptured, "tube" = G.get_tube_text(), "tubeClass" = G.tube_leak ? "bad" : ((G.tube_damage >= NSR_TUBE_WARN) ? "average" : "good"), "tubeDamage" = round(G.tube_damage), "leakRate" = round(G.leak_rate, 0.01), "plugged" = round(G.tubes_plugged), "contam" = round(G.contamination)))
+			sg_list += list(list("n" = sg_index, "level" = round(G.coolant_level, 0.1), "levelClass" = level_class, "flow" = round(G.steam_flow, 0.1), "heat" = round(G.heat_transfer, 0.1), "pressure" = round(G.steam_pressure, 0.1), "state" = nsr_ru(state_text), "stateClass" = (state_text == "RUPTURED" || state_text == "DRY" || state_text == "NO STEAM PORT") ? "bad" : ((state_text == "LOW WATER" || state_text == "VALVE CLOSED") ? "average" : "good"), "valveClosed" = G.steam_valve_closed, "ruptured" = G.ruptured, "tube" = nsr_ru(G.get_tube_text()), "tubeLeaking" = G.tube_leak, "tubeClass" = G.tube_leak ? "bad" : ((G.tube_damage >= NSR_TUBE_WARN) ? "average" : "good"), "tubeDamage" = round(G.tube_damage), "leakRate" = round(G.leak_rate, 0.01), "plugged" = round(G.tubes_plugged), "contam" = round(G.contamination)))
 		data["sgList"] = sg_list
 	data["scrammed"] = R.scrammed
-	data["scramReason"] = R.scram_reason
+	data["scramReason"] = nsr_ru(R.scram_reason)
 	data["boost"] = R.boost
 	data["boostMult"] = round(R.boost_mult, 0.01)
-	data["boostBlock"] = R.boost_block_reason()
+	data["boostBlock"] = nsr_ru(R.boost_block_reason())
 	data["rodsAuto"] = R.auto_rods
 	data["rodsAutoSet"] = R.auto_rods_set
-	data["rodsAutoText"] = R.auto_rods_text
+	data["rodsAutoText"] = nsr_ru(R.auto_rods_text)
 	data["rodsAutoMin"] = NSR_AUTO_RODS_SET_MIN
 	data["rodsAutoMax"] = NSR_AUTO_RODS_SET_MAX
 	data["makeupAutoMin"] = NSR_AUTO_MAKEUP_SET_MIN
@@ -2236,7 +2252,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/rps_now = ""
 	if(R.rps_enabled && R.automation_available())
 		rps_now = R.rps_condition()
-	data["rpsCondition"] = rps_now
+	data["rpsCondition"] = nsr_ru(rps_now)
 	data["casingsOpen"] = R.count_open_casings()
 	data["casingsTotal"] = R.count_casings()
 	return data
@@ -2246,7 +2262,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Обновляет окно, если оно уже открыто. Если окна нет, возвращает null.
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Reactor control panel", 540, 960)
+		ui = new(user, src, ui_key, "submarine_reactor_panel.tmpl", "Пульт реактора", 540, 960)
 		ui.set_initial_data(data)
 		ui.open()
 		// Окно само обновляется каждый тик подсистемы NanoUI, пока открыто.
@@ -2261,24 +2277,24 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if(found)
 			var/section_count = found.find_sections()
 			var/gen_count = found.find_steam_gens()
-			var/port_text = gen_count ? "[gen_count] steam generator(s), two-circuit mode" : (found.find_steam_port() ? "steam port connected" : "no steam port (sealed test vessel)")
-			var/pump_text = found.find_feed_pump() ? "feedwater pump connected" : "no feedwater pump (free water valve)"
-			var/inlet_text = found.find_feed_inlet() ? "feedwater inlet connected" : "no feedwater inlet"
-			var/primary_text = found.find_primary_pump() ? ", main coolant pump connected" : (gen_count ? ", no main coolant pump (natural circulation only)" : "")
+			var/port_text = gen_count ? "парогенераторов: [gen_count], режим двух контуров" : (found.find_steam_port() ? "паровой порт подключён" : "нет парового порта (герметичный испытательный сосуд)")
+			var/pump_text = found.find_feed_pump() ? "питательный насос подключён" : "нет питательного насоса (свободный клапан воды)"
+			var/inlet_text = found.find_feed_inlet() ? "вход питательной воды подключён" : "нет входа питательной воды"
+			var/primary_text = found.find_primary_pump() ? ", главный циркуляционный насос подключён" : (gen_count ? ", нет главного насоса (только естественная циркуляция)" : "")
 			if(gen_count)
-				primary_text += found.find_pressurizer() ? ", pressurizer connected" : ", no pressurizer (primary pressure fixed)"
-				primary_text += found.find_makeup_pump() ? ", makeup pump connected" : ", no makeup pump"
-			to_chat(user, SPAN_NOTICE("Linked to reactor unit '[found.reactor_id]', [section_count] hull section(s) detected, plus the core, [port_text], [pump_text], [inlet_text][primary_text]."))
+				primary_text += found.find_pressurizer() ? ", компенсатор давления подключён" : ", нет компенсатора (давление первого контура фиксировано)"
+				primary_text += found.find_makeup_pump() ? ", насос подпитки подключён" : ", нет насоса подпитки"
+			to_chat(user, SPAN_NOTICE("Связь с реактором '[found.reactor_id]': корпусных секций найдено [section_count], плюс ядро, [port_text], [pump_text], [inlet_text][primary_text]."))
 		else
-			to_chat(user, SPAN_WARNING("No reactor unit '[reactor_id]' found."))
+			to_chat(user, SPAN_WARNING("Реактор '[reactor_id]' не найден."))
 		return TOPIC_REFRESH
 
 	var/obj/machinery/submarine_reactor_core/R = get_reactor()
 	if(!R)
-		to_chat(user, SPAN_WARNING("No link to a reactor unit."))
+		to_chat(user, SPAN_WARNING("Нет связи с реактором."))
 		return TOPIC_HANDLED
 	if(R.is_dead())
-		to_chat(user, SPAN_DANGER("The reactor is beyond control."))
+		to_chat(user, SPAN_DANGER("Реактор вышел из-под контроля."))
 		return TOPIC_REFRESH
 
 	switch(action)
@@ -2287,9 +2303,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			if(!(rods_amount in list(-10, -1, 1, 10)))
 				return TOPIC_HANDLED
 			if(R.scrammed)
-				to_chat(user, SPAN_WARNING("The control rods are locked by SCRAM. Reset it first."))
+				to_chat(user, SPAN_WARNING("Стержни СУЗ заперты SCRAM. Сначала сбросьте его."))
 			else if(R.auto_rods)
-				to_chat(user, SPAN_WARNING("The rod automation is on. Switch it off to move the rods by hand."))
+				to_chat(user, SPAN_WARNING("Включена автоматика стержней. Выключите её, чтобы двигать стержни вручную."))
 			else
 				R.adjust_rods(rods_amount)
 		if("rod_move")
@@ -2298,33 +2314,33 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			if(isnull(rod) || !(rod_amount in list(-10, -1, 1, 10)))
 				return TOPIC_HANDLED
 			if(R.scrammed)
-				to_chat(user, SPAN_WARNING("The control rods are locked by SCRAM. Reset it first."))
+				to_chat(user, SPAN_WARNING("Стержни СУЗ заперты SCRAM. Сначала сбросьте его."))
 			else if(R.auto_rods)
-				to_chat(user, SPAN_WARNING("The rod automation is on. Switch it off to move the rods by hand."))
+				to_chat(user, SPAN_WARNING("Включена автоматика стержней. Выключите её, чтобы двигать стержни вручную."))
 			else
 				R.adjust_rod(rod, rod_amount)
 		if("pump_move")
 			var/pump_amount = text2num(href_list["amount"])
 			if(!R.feed_pump)
-				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
+				to_chat(user, SPAN_WARNING("Питательный насос не подключён."))
 			else if(R.feed_pump.auto)
-				to_chat(user, SPAN_WARNING("The pump is in automatic mode. Switch the automation off to set its speed by hand."))
+				to_chat(user, SPAN_WARNING("Насос в автоматическом режиме. Выключите автоматику, чтобы задать скорость вручную."))
 			else if(pump_amount in list(-10, -1, 1, 10))
 				R.feed_pump.speed = clamp(R.feed_pump.speed + pump_amount, 0, 100)
 		if("ppump_move")
 			var/pp_amount = text2num(href_list["amount"])
 			if(!R.primary_pump)
-				to_chat(user, SPAN_WARNING("No main coolant pump is connected."))
+				to_chat(user, SPAN_WARNING("Главный циркуляционный насос не подключён."))
 			else if(R.primary_pump.seized)
-				to_chat(user, SPAN_WARNING("The main coolant pump rotor is jammed. The bearings have to be replaced on site."))
+				to_chat(user, SPAN_WARNING("Ротор главного насоса заклинило. Подшипники нужно заменить на месте."))
 			else if(pp_amount in list(-10, -1, 1, 10))
 				R.primary_pump.speed = clamp(R.primary_pump.speed + pp_amount, 0, 100)
 		if("pzr_heater", "pzr_spray")
 			var/pz_amount = text2num(href_list["amount"])
 			if(!R.pressurizer)
-				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+				to_chat(user, SPAN_WARNING("Компенсатор давления не подключён."))
 			else if(R.pressurizer.auto)
-				to_chat(user, SPAN_WARNING("The pressure automation is on. Switch it off to set the heaters and the spray by hand."))
+				to_chat(user, SPAN_WARNING("Включена автоматика давления. Выключите её, чтобы задать нагреватели и впрыск вручную."))
 			else if(pz_amount in list(-10, -1, 1, 10))
 				if(action == "pzr_heater")
 					R.pressurizer.heater = clamp(R.pressurizer.heater + pz_amount, 0, 100)
@@ -2332,7 +2348,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 					R.pressurizer.spray = clamp(R.pressurizer.spray + pz_amount, 0, 100)
 		if("pzr_auto")
 			if(!R.pressurizer)
-				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+				to_chat(user, SPAN_WARNING("Компенсатор давления не подключён."))
 			else
 				R.pressurizer.toggle_auto(user)
 		if("pzr_set")
@@ -2341,14 +2357,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				R.pressurizer.setpoint = clamp(R.pressurizer.setpoint + set_amount, NSR_PZR_SET_MIN, NSR_PZR_SET_MAX)
 		if("pzr_relief")
 			if(!R.pressurizer)
-				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+				to_chat(user, SPAN_WARNING("Компенсатор давления не подключён."))
 			else if(R.pressurizer.block_closed)
-				to_chat(user, SPAN_WARNING("The relief valve is isolated by its block valve."))
+				to_chat(user, SPAN_WARNING("Предохранительный клапан отсечён своим отсечным клапаном."))
 			else
 				R.pressurizer.relief_manual = !R.pressurizer.relief_manual
 		if("pzr_block")
 			if(!R.pressurizer)
-				to_chat(user, SPAN_WARNING("No pressurizer is connected."))
+				to_chat(user, SPAN_WARNING("Компенсатор давления не подключён."))
 			else
 				R.pressurizer.block_closed = !R.pressurizer.block_closed
 				if(R.pressurizer.block_closed)
@@ -2356,19 +2372,19 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if("makeup_move")
 			var/mk_amount = text2num(href_list["amount"])
 			if(!R.makeup_pump)
-				to_chat(user, SPAN_WARNING("No makeup pump is connected."))
+				to_chat(user, SPAN_WARNING("Насос подпитки не подключён."))
 			else if(R.makeup_pump.auto)
-				to_chat(user, SPAN_WARNING("The makeup automation is on. Switch it off to set the pump by hand."))
+				to_chat(user, SPAN_WARNING("Включена автоматика подпитки. Выключите её, чтобы задать насос вручную."))
 			else if(mk_amount in list(-10, -1, 1, 10))
 				R.makeup_pump.setting = clamp(R.makeup_pump.setting + mk_amount, -100, 100)
 		if("makeup_stop")
 			if(R.makeup_pump && R.makeup_pump.auto)
-				to_chat(user, SPAN_WARNING("The makeup automation is on. Switch it off to set the pump by hand."))
+				to_chat(user, SPAN_WARNING("Включена автоматика подпитки. Выключите её, чтобы задать насос вручную."))
 			else if(R.makeup_pump)
 				R.makeup_pump.setting = 0
 		if("makeup_auto")
 			if(!R.makeup_pump)
-				to_chat(user, SPAN_WARNING("No makeup pump is connected."))
+				to_chat(user, SPAN_WARNING("Насос подпитки не подключён."))
 			else
 				R.makeup_pump.toggle_auto(user)
 		if("makeup_auto_set")
@@ -2385,10 +2401,10 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				R.auto_rods_set = clamp(R.auto_rods_set + rods_set_amount, NSR_AUTO_RODS_SET_MIN, NSR_AUTO_RODS_SET_MAX)
 		if("rps_toggle")
 			R.rps_enabled = !R.rps_enabled
-			to_chat(user, SPAN_NOTICE("Reactor protection [R.rps_enabled ? "armed" : "disarmed"]."))
+			to_chat(user, SPAN_NOTICE("Защита реактора [R.rps_enabled ? "включена" : "отключена"]."))
 		if("pump_auto")
 			if(!R.feed_pump)
-				to_chat(user, SPAN_WARNING("No feedwater pump is connected."))
+				to_chat(user, SPAN_WARNING("Питательный насос не подключён."))
 			else
 				R.feed_pump.toggle_auto(user)
 		if("pump_auto_set")
@@ -2397,14 +2413,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 				R.feed_pump.auto_set = clamp(R.feed_pump.auto_set + level_amount, 10, 95)
 		if("feed_up", "feed_down")
 			if(R.two_circuit)
-				to_chat(user, SPAN_WARNING("The steam generators are fed by the pump, not by a valve."))
+				to_chat(user, SPAN_WARNING("Парогенераторы питает насос, а не клапан."))
 			else if(R.feed_pump)
-				to_chat(user, SPAN_WARNING("The vessel is fed by the pump, not by the valve."))
+				to_chat(user, SPAN_WARNING("Сосуд питает насос, а не клапан."))
 			else
 				R.adjust_feedwater(action == "feed_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
 		if("steam_up", "steam_down")
 			if(R.steam_port || R.two_circuit)
-				to_chat(user, SPAN_WARNING("The steam line is controlled by the valves on the pipes, not from this panel."))
+				to_chat(user, SPAN_WARNING("Паровой линией управляют клапаны на трубах, а не эта панель."))
 			else
 				R.adjust_steam_valve(action == "steam_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
 		if("alarm_mute")
@@ -2413,7 +2429,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			else if(R.alarm_level > 0 || R.has_unacked_alarm())
 				R.acknowledge_alarms()
 			else
-				to_chat(user, SPAN_NOTICE("No alarm is lit."))
+				to_chat(user, SPAN_NOTICE("Ни одна тревога не горит."))
 		if("sg_valve")
 			var/sg_n = text2num(href_list["n"])
 			var/obj/machinery/submarine_steam_generator/target_sg
@@ -2426,18 +2442,18 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			if(!target_sg)
 				return TOPIC_HANDLED
 			if(target_sg.ruptured)
-				to_chat(user, SPAN_WARNING("The steam generator is ruptured."))
+				to_chat(user, SPAN_WARNING("Парогенератор разорван."))
 			else
 				target_sg.set_steam_valve(!target_sg.steam_valve_closed)
 		if("scram")
 			R.scram()
 		if("reset")
 			if(!R.scrammed)
-				to_chat(user, SPAN_NOTICE("SCRAM is not engaged."))
+				to_chat(user, SPAN_NOTICE("SCRAM не сработал."))
 			else
 				var/block_text = R.reset_block_reason()
 				if(block_text)
-					to_chat(user, SPAN_WARNING("Cannot reset SCRAM: [block_text]."))
+					to_chat(user, SPAN_WARNING("Нельзя сбросить SCRAM: [block_text]."))
 				else
 					R.reset_scram()
 	return TOPIC_REFRESH

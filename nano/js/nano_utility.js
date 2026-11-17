@@ -141,5 +141,6 @@ $(document).ready(function () {
 })
 
 $.ajaxSetup({
-  cache: false
+  cache: false,
+  mimeType: 'text/html; charset=UTF-8'
 })

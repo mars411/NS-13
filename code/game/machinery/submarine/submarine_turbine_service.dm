@@ -378,13 +378,13 @@
 	visible_message(SPAN_DANGER("The generator windings flash over and \the [src] goes dead with a smell of burnt insulation!"))
 	playsound(src, NS_SND_SPARKS, 70, TRUE)
 
-/// Текст для пульта и осмотра: что нужно для ремонта.
-/obj/machinery/power/submarine_turbine_generator/proc/repair_missing()
+/// Текст для пульта и осмотра: что нужно для ремонта. ru: по-русски (для пульта).
+/obj/machinery/power/submarine_turbine_generator/proc/repair_missing(ru = FALSE)
 	var/list/missing = list()
 	if(repair_caps < NST_GEN_REPAIR_CAPS)
-		missing += "[NST_GEN_REPAIR_CAPS - repair_caps] more capacitor(s)"
-	missing += "[NST_GEN_REPAIR_WIRE] pieces of cable"
-	return english_list(missing, "", " and ", ", ")
+		missing += ru ? "ещё конденсаторов: [NST_GEN_REPAIR_CAPS - repair_caps]" : "[NST_GEN_REPAIR_CAPS - repair_caps] more capacitor(s)"
+	missing += ru ? "кабеля: [NST_GEN_REPAIR_WIRE] шт." : "[NST_GEN_REPAIR_WIRE] pieces of cable"
+	return ru ? english_list(missing, "", " и ", ", ", ", ") : english_list(missing, "", " and ", ", ")
 
 /obj/machinery/power/submarine_turbine_generator/use_tool(obj/item/tool, mob/living/user, list/click_params)
 	if(overloaded)

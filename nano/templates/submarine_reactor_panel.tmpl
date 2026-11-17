@@ -1,21 +1,21 @@
 <div class="item">
-	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled, but the fission products keep heating the core for a long time (residual heat), so the core still needs water after a SCRAM. Three automations are available and off by default (the pressure one aside): the rod automation holds the core temperature, the makeup automation holds the pressurizer water level, and the protection drops the rods by itself when something dangerous happens. Automation helps but does not think: a leak or a failed pump still needs an operator.</i>
+	<i>Эта панель управляет реактором. Стержни СУЗ задают нагрев: поднимите их, чтобы получить пар, опустите, чтобы охладить ядро. Питательный насос держит в сосуде воду: ему нужно питание, и он раскручивается или тормозит около десяти секунд. Его автоматика может сама держать уровень воды. SCRAM роняет все стержни разом и запирает их, пока ядро не остынет, но продукты деления ещё долго греют ядро (остаточное тепловыделение), поэтому после SCRAM ядру по-прежнему нужна вода. Доступны три автоматики, по умолчанию они выключены (кроме автоматики давления): автоматика стержней держит температуру ядра, автоматика подпитки держит уровень воды в компенсаторе давления, а защита сама роняет стержни при опасности. Автоматика помогает, но не думает: течь или отказавший насос всё равно требуют оператора.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
-	<b>NO LINK TO REACTOR UNIT '{{:data.reactorId}}'</b><br>
-	Check that the reactor core is built and has the same unit id.<br><br>
-	{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
+	<b>НЕТ СВЯЗИ С РЕАКТОРОМ '{{:data.reactorId}}'</b><br>
+	Проверьте, что ядро реактора построено и у него тот же идентификатор.<br><br>
+	{{:helper.link('Пересканировать связи', 'refresh', {'action' : 'rescan'})}}
 </div>
 {{else}}
 {{if data.twoCircuit}}
 <div class="item">
-	<i>Two-circuit plant. The core heats the primary water and never boils it. The main coolant pump drives that water through the steam generators, which boil the clean secondary water into steam for the turbine. If the pump stops, only natural circulation is left: enough for residual heat and low power, not for full power. Keep the steam generators supplied with feedwater.</i>
+	<i>Двухконтурная установка. Ядро греет воду первого контура и никогда её не кипятит. Главный циркуляционный насос гонит эту воду через парогенераторы, а те кипятят чистую воду второго контура в пар для турбины. Если насос встанет, останется только естественная циркуляция: её хватает на остаточное тепло и малую мощность, но не на полную. Следите, чтобы парогенераторы получали питательную воду.</i>
 </div>
 {{/if}}
 <div class="item">
 	<div class="itemLabel">
-		Unit:
+		Блок:
 	</div>
 	<div class="itemContent">
 		<b>{{:data.reactorId}}</b>
@@ -23,17 +23,17 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Status:
+		Статус:
 	</div>
 	<div class="itemContent">
 		<div style="float: left; padding: 4px 12px 0 0;">
 			<span class='{{:data.statusClass}}'><b>{{:data.status}}</b></span>
 		</div>
-		{{:helper.link(data.alarmMuted ? 'Alarm muted: unmute' : 'Acknowledge / mute', data.alarmMuted ? 'volume-off' : 'volume-on', {'action' : 'alarm_mute'}, (data.alarmMuted || data.alarmLevel > 0 || data.alarmUnacked) ? null : 'disabled', data.alarmMuted ? 'selected' : null)}}
+		{{:helper.link(data.alarmMuted ? 'Тревога заглушена: включить звук' : 'Подтвердить / заглушить', data.alarmMuted ? 'volume-off' : 'volume-on', {'action' : 'alarm_mute'}, (data.alarmMuted || data.alarmLevel > 0 || data.alarmUnacked) ? null : 'disabled', data.alarmMuted ? 'selected' : null)}}
 	</div>
 </div>
 <style>
-	.nsrTile { float: left; width: 23%; margin: 0 1% 5px 0; padding: 6px 2px; text-align: center; font-size: 11px; font-weight: bold; border: 1px solid #444444; }
+	.nsrTile { float: left; width: 23%; margin: 0 1% 5px 0; padding: 6px 2px; text-align: center; font-size: 11px; font-weight: bold; border: 1px solid #444444; height: 46px; box-sizing: border-box; overflow: hidden; }
 	.nsrT0 { background: #1b1b1b; color: #5c5c5c; }
 	.nsrT1 { background: #c9a227; color: #000000; border-color: #f0d060; }
 	.nsrT2 { background: #b22222; color: #ffffff; border-color: #ff6060; }
@@ -46,87 +46,87 @@
 	{{for data.alarmTiles}}
 		<div class="nsrTile nsrT{{:value.level}} {{if value.blink}}nsrBlink{{/if}}">
 			{{:value.label}}
-			{{if value.first}}<span class="nsrFirst">FIRST</span>{{/if}}
+			{{if value.first}}<span class="nsrFirst">ПЕРВАЯ</span>{{/if}}
 		</div>
 	{{/for}}
 	<div style="clear: both;"></div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Armour plates:
+		Бронеплиты:
 	</div>
 	<div class="itemContent">
 		{{if data.casingsOpen}}
-			<span class='average'>{{:data.casingsOpen}} of {{:data.casingsTotal}} REMOVED</span>
+			<span class='average'>СНЯТО {{:data.casingsOpen}} из {{:data.casingsTotal}}</span>
 		{{else}}
-			<span class='good'>all {{:data.casingsTotal}} sealed</span>
+			<span class='good'>все {{:data.casingsTotal}} на месте</span>
 		{{/if}}
 	</div>
 </div>
 
-<h3>Monitoring</h3>
+<h3>Контроль</h3>
 <div class="item">
 	<div class="itemLabel">
-		Core temperature:
+		Температура ядра:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.temp, 0, data.tempMax, data.tempClass)}}
 		<div class="statusValue">
-			{{:data.temp}} C
+			{{:data.temp}} &deg;C
 		</div>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Residual heat:
+		Остаточное тепловыделение:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.decay, 0, data.decayMax, 'average')}}
 		<div class="statusValue">
-			{{:data.decay}} % of rated power
+			{{:data.decay}} % номинальной мощности
 		</div>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Xenon:
+		Ксенон:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.xenon, 0, 250, data.xenonClass)}}
 		<div class="statusValue">
-			{{:data.xenon}} % of the full-power equilibrium
+			{{:data.xenon}} % от равновесия на полной мощности
 		</div>
 		<div style="color: #a0a0a0;">
-			Iodine {{:data.iodine}} %, rod travel lost to xenon: {{:data.xenonPenalty}} %. Xenon builds up after a shutdown or a power cut and burns out under power: a hot restart in the pit needs more rods.
+			Йод {{:data.iodine}} %, ход стержней, потерянный на ксенон: {{:data.xenonPenalty}} %. Ксенон копится после остановки или потери мощности и выгорает под нагрузкой: горячий перезапуск в ксеноновой яме требует больше стержней.
 		</div>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Fuel:
+		Топливо:
 	</div>
 	<div class="itemContent">
 		{{for data.fuel}}
 			<div>
-				{{:value.slot}}. {{:value.name}} TVEL
+				{{:value.slot}}. ТВЭЛ, {{:value.name}}
 				{{:helper.displayBar(value.burn, 0, 100, value.burnClass)}}
 				<div class="statusValue">
-					{{if value.empty}}empty{{else}}burnup {{:value.burn}} %, output {{:value.output}} %{{/if}}
+					{{if value.empty}}пусто{{else}}выгорание {{:value.burn}} %, отдача {{:value.output}} %{{/if}}
 				</div>
 			</div>
 		{{/for}}
 		<div style="color: #a0a0a0;">
-			Rated power {{:data.fuelPower}} % of four fresh enriched elements, response {{:data.fuelResponse}} %.
-			{{if data.fuelNow}}The most burnt element lasts about {{:data.fuelNow}} min at the present power, {{:data.fuelFull}} min at full rods.{{else}}{{if data.fuelFull}}The most burnt element lasts about {{:data.fuelFull}} min at full rods.{{/if}}{{/if}}
+			Номинальная мощность {{:data.fuelPower}} % от четырёх свежих обогащённых ТВЭЛов, реакция {{:data.fuelResponse}} %.
+			{{if data.fuelNow}}Самого выгоревшего ТВЭЛа хватит примерно на {{:data.fuelNow}} мин при нынешней мощности и на {{:data.fuelFull}} мин при полностью поднятых стержнях.{{else}}{{if data.fuelFull}}Самого выгоревшего ТВЭЛа хватит примерно на {{:data.fuelFull}} мин при полностью поднятых стержнях.{{/if}}{{/if}}
 		</div>
 		<div style="color: #a0a0a0;">
-			Refuelling: {{:data.fuelSwap}}
+			Перегрузка: {{:data.fuelSwap}}
 		</div>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Fuel damage:
+		Повреждение топлива:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.damage, 0, 100, data.damageClass)}}
@@ -137,18 +137,18 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		{{if data.twoCircuit}}Secondary steam pressure:{{else}}Steam pressure:{{/if}}
+		{{if data.twoCircuit}}Давление пара второго контура:{{else}}Давление пара:{{/if}}
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.pressure, 0, data.pressureMax, data.pressureClass)}}
 		<div class="statusValue">
-			{{:data.pressure}} bar
+			{{:data.pressure}} бар
 		</div>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		{{if data.twoCircuit}}Steam generator water (lowest):{{else}}Coolant (water) level:{{/if}}
+		{{if data.twoCircuit}}Вода в парогенераторе (самый низкий):{{else}}Уровень воды (теплоносителя):{{/if}}
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.coolant, 0, 100, data.coolantClass)}}
@@ -159,107 +159,107 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Steam production:
+		Выработка пара:
 	</div>
 	<div class="itemContent">
-		{{:data.steamFlow}} mol/s
+		{{:data.steamFlow}} моль/с
 	</div>
 </div>
 {{if !data.twoCircuit}}
 <div class="item">
 	<div class="itemLabel">
-		Steam port:
+		Паровой порт:
 	</div>
 	<div class="itemContent">
 		{{if data.hasPort}}
-			<span class='good'>connected to the pipes</span>
+			<span class='good'>подключён к трубам</span>
 		{{else}}
-			<span class='average'>none, sealed test vessel</span>
+			<span class='average'>нет, герметичный испытательный сосуд</span>
 		{{/if}}
 	</div>
 </div>
 {{/if}}
 <div class="item">
 	<div class="itemLabel">
-		Feedwater pump:
+		Питательный насос:
 	</div>
 	<div class="itemContent">
 		{{if data.hasPump}}
 			<span class='{{:data.pumpClass}}'><b>{{:data.pumpState}}</b></span>
-			, rotor {{:data.pumpSpin}}, {{:data.pumpFlow}} mol/s, feed line {{:data.feedPressure}} bar
+			, ротор: {{:data.pumpSpin}}, {{:data.pumpFlow}} моль/с, давление в линии подачи {{:data.feedPressure}} бар
 		{{else}}
-			<span class='average'>none, free water valve</span>
+			<span class='average'>нет, свободный клапан воды</span>
 		{{/if}}
 	</div>
 </div>
 {{if data.twoCircuit}}
-<h3>Primary circuit</h3>
+<h3>Первый контур</h3>
 {{if data.leaking}}
 <div class='notice'>
-	<b>PRIMARY LEAK.</b> The vessel is cracked and loses water while it has pressure. Cool it below 60 C, let the pressure drop below 5 bar and weld the crack.
+	<b>ТЕЧЬ ПЕРВОГО КОНТУРА.</b> Сосуд треснул и теряет воду, пока в нём есть давление. Остудите его ниже 60 &deg;C, дайте давлению упасть ниже 5 бар и заварите трещину.
 </div>
 {{/if}}
 {{if data.pipeBroken > 0}}
 <div class='notice'>
-	<b>LOSS OF COOLANT.</b> A primary pipe has burst: the circuit loses its water and pressure, and the core loses its cooling. SCRAM now and raise the makeup pump. Once the core is below 60 C and the pressure below 5 bar, weld the pipe. Keep away from the puddles: they are radioactive.
+	<b>ПОТЕРЯ ТЕПЛОНОСИТЕЛЯ.</b> Лопнула труба первого контура: контур теряет воду и давление, ядро теряет охлаждение. Немедленно SCRAM и поднимите насос подпитки. Когда ядро остынет ниже 60 &deg;C, а давление упадёт ниже 5 бар, заварите трубу. Держитесь подальше от луж: они радиоактивны.
 </div>
 {{/if}}
 {{if data.pipeTotal > 0}}
 <div class="item">
 	<div class="itemLabel">
-		Primary pipes:
+		Трубы первого контура:
 	</div>
 	<div class="itemContent">
 		<div class="statusValue">
-			{{:data.pipeTotal - data.pipeCracked - data.pipeBroken}} sound{{if data.pipeCracked > 0}}, <span class='average'>{{:data.pipeCracked}} cracked</span>{{/if}}{{if data.pipeBroken > 0}}, <span class='bad'>{{:data.pipeBroken}} BURST</span>{{/if}}
+			исправных: {{:data.pipeTotal - data.pipeCracked - data.pipeBroken}}{{if data.pipeCracked > 0}}, <span class='average'>треснули: {{:data.pipeCracked}}</span>{{/if}}{{if data.pipeBroken > 0}}, <span class='bad'>ЛОПНУЛИ: {{:data.pipeBroken}}</span>{{/if}}
 		</div>
 	</div>
 </div>
 {{/if}}
 <div class="item">
 	<div class="itemLabel">
-		Primary pressure:
+		Давление первого контура:
 	</div>
 	<div class="itemContent">
 		{{if data.hasPzr}}
 			{{:helper.displayBar(data.primaryPressure, 0, data.primaryBurst, data.primaryPressureClass)}}
 			<div class="statusValue">
-				{{:data.primaryPressure}} bar
+				{{:data.primaryPressure}} бар
 			</div>
 			{{if data.primaryBurstNow < data.primaryBurst}}
-				<div class='bad' style="clear: both;">Hot metal: the vessel bursts at {{:data.primaryBurstNow}} bar now.</div>
+				<div class='bad' style="clear: both;">Горячий металл: сосуд лопнет при {{:data.primaryBurstNow}} бар.</div>
 			{{/if}}
 		{{else}}
-			{{:data.primaryPressure}} bar <i>(fixed: no pressurizer)</i>
+			{{:data.primaryPressure}} бар <i>(фиксировано: нет компенсатора давления)</i>
 		{{/if}}
 	</div>
 </div>
 {{if data.hasPzr}}
 <div class="item">
 	<div class="itemLabel">
-		Pressurizer level:
+		Уровень в компенсаторе давления:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.pzrLevel, 0, 100, data.pzrLevelClass)}}
 		<div class="statusValue">
 			{{:data.pzrLevel}} %
 			{{if data.pzrSolid}}
-				<span class='bad'><b>SOLID WATER</b></span>
+				<span class='bad'><b>КОМПЕНСАТОР ЗАПОЛНЕН ВОДОЙ</b></span>
 			{{/if}}
 		</div>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Heaters / spray:
+		Нагреватели / впрыск:
 	</div>
 	<div class="itemContent">
-		<span class='{{:data.pzrHeaterClass}}'><b>{{:data.pzrHeaterText}}</b></span>, heating {{:data.pzrHeating}} %, spray {{:data.pzrSpray}} %
+		<span class='{{:data.pzrHeaterClass}}'><b>{{:data.pzrHeaterText}}</b></span>, нагрев {{:data.pzrHeating}} %, впрыск {{:data.pzrSpray}} %
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Relief valve:
+		Предохранительный клапан:
 	</div>
 	<div class="itemContent">
 		<span class='{{:data.pzrReliefClass}}'><b>{{:data.pzrRelief}}</b></span>
@@ -267,19 +267,19 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Primary water:
+		Вода первого контура:
 	</div>
 	<div class="itemContent">
-		{{:data.inventory}} % of the full amount
+		{{:data.inventory}} % от полного количества
 		{{if data.voiding}}
-			<br><span class='bad'><b>COOLING LOST: {{:data.coolEff}} % (steam in the core or too little water)</b></span>
+			<br><span class='bad'><b>ПОТЕРЯ ОХЛАЖДЕНИЯ: {{:data.coolEff}} % (пар в ядре или мало воды)</b></span>
 		{{/if}}
 	</div>
 </div>
 {{/if}}
 <div class="item">
 	<div class="itemLabel">
-		Primary flow:
+		Расход первого контура:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.primaryFlow, 0, 100, 'good')}}
@@ -290,43 +290,43 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Main coolant pump:
+		Главный циркуляционный насос:
 	</div>
 	<div class="itemContent">
 		{{if data.hasPrimaryPump}}
-			<span class='{{:data.ppClass}}'><b>{{:data.ppState}}</b></span>, rotor {{:data.ppSpin}} %, {{:data.ppRpm}} rpm
-			<div style="clear: both;">Bearing wear: <span class='{{:data.ppWearClass}}'>{{:data.ppWear}} %</span>{{if data.ppSeized}} <span class='bad'>(rotor jammed: stop the reactor, replace the bearings on site)</span>{{/if}}</div>
+			<span class='{{:data.ppClass}}'><b>{{:data.ppState}}</b></span>, ротор {{:data.ppSpin}} %, {{:data.ppRpm}} об/мин
+			<div style="clear: both;">Износ подшипников: <span class='{{:data.ppWearClass}}'>{{:data.ppWear}} %</span>{{if data.ppSeized}} <span class='bad'>(ротор заклинило: остановите реактор, замените подшипники на месте)</span>{{/if}}</div>
 		{{else}}
-			<span class='bad'>none: natural circulation only</span>
+			<span class='bad'>нет: только естественная циркуляция</span>
 		{{/if}}
 	</div>
 </div>
-<h3>Steam generators</h3>
+<h3>Парогенераторы</h3>
 {{for data.sgList}}
 <div class="item">
 	<div class="itemLabel">
-		Generator {{:value.n}}:
+		Парогенератор {{:value.n}}:
 	</div>
 	<div class="itemContent">
 		<span class='{{:value.stateClass}}'><b>{{:value.state}}</b></span>
 		{{:helper.displayBar(value.level, 0, 100, value.levelClass)}}
 		<div class="statusValue">
-			water {{:value.level}} %
+			вода {{:value.level}} %
 		</div>
 		<div style="clear: both; padding-top: 2px;">
-			{{:value.heat}} heat/s taken from the primary, {{:value.flow}} mol/s of steam, {{:value.pressure}} bar
+			{{:value.heat}} ед. тепла/с берёт из первого контура, пара {{:value.flow}} моль/с, {{:value.pressure}} бар
 		</div>
 		{{if !value.ruptured}}
 		<div style="clear: both; padding-top: 2px;">
-			Tubes: <span class='{{:value.tubeClass}}'><b>{{:value.tube}}</b></span>, damage {{:value.tubeDamage}} %{{if value.tube == 'LEAKING'}}, leak {{:value.leakRate}} % of the primary water per second{{/if}}{{if value.plugged > 0}}, {{:value.plugged}} % plugged{{/if}}{{if value.contam > 0}}, <span class='average'>contamination {{:value.contam}}</span>{{/if}}
+			Трубки: <span class='{{:value.tubeClass}}'><b>{{:value.tube}}</b></span>, повреждение {{:value.tubeDamage}} %{{if value.tubeLeaking}}, утечка {{:value.leakRate}} % воды первого контура в секунду{{/if}}{{if value.plugged > 0}}, заглушено {{:value.plugged}} %{{/if}}{{if value.contam > 0}}, <span class='average'>загрязнение {{:value.contam}}</span>{{/if}}
 		</div>
 		{{if value.valveClosed}}
 		<div class='average' style="clear: both; padding-top: 2px;">
-			Valve closed: the water keeps boiling into steam that stays inside, so the water level falls and the pressure rises until the valve is opened.
+			Клапан закрыт: вода продолжает кипеть, а пар остаётся внутри, поэтому уровень воды падает, а давление растёт, пока клапан не откроют.
 		</div>
 		{{/if}}
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(value.valveClosed ? 'Steam valve: CLOSED' : 'Steam valve: open', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
+			{{:helper.link(value.valveClosed ? 'Паровой клапан: ЗАКРЫТ' : 'Паровой клапан: открыт', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
 		</div>
 		{{/if}}
 	</div>
@@ -334,22 +334,22 @@
 {{/for}}
 {{/if}}
 
-<h3>Controls</h3>
+<h3>Управление</h3>
 {{if data.dead}}
 <div class='notice'>
-	<b>REACTOR LOST. NO CONTROL POSSIBLE.</b>
+	<b>РЕАКТОР ПОТЕРЯН. УПРАВЛЕНИЕ НЕВОЗМОЖНО.</b>
 </div>
 {{else}}
 <div class="item">
 	<div class="itemLabel">
-		All rods:
+		Все стержни:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.rods, 0, 100, 'good')}}
 		<div class="statusValue">
 			{{:data.rods}} %
 			{{if data.rodsMoving}}
-				<span class='average'>average target {{:data.rodsTarget}} %</span>
+				<span class='average'>средняя цель {{:data.rodsTarget}} %</span>
 			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
@@ -363,14 +363,14 @@
 {{for data.rodList}}
 <div class="item">
 	<div class="itemLabel">
-		Rod {{:value.n}}:
+		Стержень {{:value.n}}:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(value.pos, 0, 100, 'good')}}
 		<div class="statusValue">
 			{{:value.pos}} %
 			{{if value.moving}}
-				<span class='average'>moving to {{:value.target}} %</span>
+				<span class='average'>идёт к {{:value.target}} %</span>
 			{{/if}}
 		</div>
 		<div style="clear: both; padding-top: 4px;">
@@ -385,20 +385,20 @@
 {{if data.twoCircuit}}
 <div class="item">
 	<div class="itemLabel">
-		Rod automation:
+		Автоматика стержней:
 	</div>
 	<div class="itemContent">
 		{{if data.rodsAuto}}
-			<span class='good'><b>ON</b></span>, holds the core at <b>{{:data.rodsAutoSet}} C</b>
+			<span class='good'><b>ВКЛ</b></span>, держит ядро на <b>{{:data.rodsAutoSet}} &deg;C</b>
 		{{else}}
-			<span class='average'><b>OFF</b></span> (rods by hand)
+			<span class='average'><b>ВЫКЛ</b></span> (стержни вручную)
 		{{/if}}
 		{{if data.rodsAutoText}}
 			<div class='average'>{{:data.rodsAutoText}}</div>
 		{{/if}}
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.rodsAuto ? 'Switch off' : 'Switch on', null, {'action' : 'rods_auto'}, (data.rodsAuto || data.automationAvailable) ? null : 'disabled', data.rodsAuto ? 'selected' : null)}}
-			<div style="float: left; padding: 4px 8px 0 8px;">temperature:</div>
+			{{:helper.link(data.rodsAuto ? 'Выключить' : 'Включить', null, {'action' : 'rods_auto'}, (data.rodsAuto || data.automationAvailable) ? null : 'disabled', data.rodsAuto ? 'selected' : null)}}
+			<div style="float: left; padding: 4px 8px 0 8px;">температура:</div>
 			{{:helper.link('-10', null, {'action' : 'rods_auto_set', 'amount' : -10}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
 			{{:helper.link('-1', null, {'action' : 'rods_auto_set', 'amount' : -1}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
 			{{:helper.link('+1', null, {'action' : 'rods_auto_set', 'amount' : 1}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
@@ -408,24 +408,24 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Overdrive:
+		Форсаж:
 	</div>
 	<div class="itemContent">
 		{{if data.boost}}
-			<span class='average'><b>ON</b></span>, power x{{:data.boostMult}}
+			<span class='average'><b>ВКЛ</b></span>, мощность x{{:data.boostMult}}
 		{{else}}
 			{{if data.boostMult > 1.01}}
-				<span class='average'><b>OFF</b></span>, power x{{:data.boostMult}} (settling)
+				<span class='average'><b>ВЫКЛ</b></span>, мощность x{{:data.boostMult}} (спад)
 			{{else}}
-				<span class='good'><b>OFF</b></span>
+				<span class='good'><b>ВЫКЛ</b></span>
 			{{/if}}
 		{{/if}}
-		<div style="color: #a0a0a0;">+30 % heat from the same rods: more steam and electricity, but the margin to the limits shrinks, the radiation and the decay heat grow. Switches off by itself on SCRAM.</div>
+		<div style="color: #a0a0a0;">+30 % тепла от тех же стержней: больше пара и электричества, но запас до пределов сокращается, растут излучение и остаточное тепло. Сам выключается при SCRAM.</div>
 		{{if data.boostBlock && !data.boost}}
 			<div class='average'>{{:data.boostBlock}}</div>
 		{{/if}}
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.boost ? 'Switch off' : 'Switch on', null, {'action' : 'boost_toggle'}, (data.boost || !data.boostBlock) ? null : 'disabled', data.boost ? 'selected' : null)}}
+			{{:helper.link(data.boost ? 'Выключить' : 'Включить', null, {'action' : 'boost_toggle'}, (data.boost || !data.boostBlock) ? null : 'disabled', data.boost ? 'selected' : null)}}
 		</div>
 	</div>
 </div>
@@ -433,7 +433,7 @@
 {{if data.hasPump}}
 <div class="item">
 	<div class="itemLabel">
-		Feedwater pump:
+		Питательный насос:
 	</div>
 	<div class="itemContent">
 		<svg width="150" height="125" viewBox="0 0 120 100">
@@ -447,13 +447,13 @@
 			</line>
 			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
 			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.pumpRpm}}</text>
-			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>
+			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">об/мин</text>
 		</svg>
 		<div>
-			Rotor: <b>{{:data.pumpSpin}}</b>
+			Ротор: <b>{{:data.pumpSpin}}</b>
 		</div>
 		<div>
-			Motor heat:
+			Нагрев двигателя:
 			{{:helper.displayBar(data.pumpHeat, 0, 100, data.pumpHeatClass)}}
 			<div class="statusValue">
 				{{:data.pumpHeat}}
@@ -461,18 +461,18 @@
 		</div>
 		{{if data.pumpBurnt}}
 			<div class='bad' style="clear: both;">
-				<b>MOTOR BURNT OUT.</b> Let it cool, then rewind it with cable.
+				<b>ДВИГАТЕЛЬ СГОРЕЛ.</b> Дайте ему остыть, потом перемотайте кабелем.
 			</div>
 		{{else}}
 			{{if data.pumpHeat >= 60}}
 				<div class='bad' style="clear: both;">
-					Motor overheating. Check that the pump has water to pump.
+					Двигатель перегревается. Проверьте, есть ли у насоса вода для перекачки.
 				</div>
 			{{/if}}
 		{{/if}}
 		{{:helper.displayBar(data.pumpSpeed, 0, 100, 'good')}}
 		<div class="statusValue">
-			set {{:data.pumpSpeed}} %
+			задано {{:data.pumpSpeed}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
@@ -481,18 +481,18 @@
 			{{:helper.link('+10', null, {'action' : 'pump_move', 'amount' : 10}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
 		</div>
 		<div style="clear: both; padding-top: 6px;">
-			Automation:
+			Автоматика:
 			{{if data.pumpAuto}}
-				<span class='good'><b>ON</b></span>, holds the water level at <b>{{:data.pumpAutoSet}} %</b>
+				<span class='good'><b>ВКЛ</b></span>, держит уровень воды <b>{{:data.pumpAutoSet}} %</b>
 			{{else}}
-				<span class='average'><b>OFF</b></span> (manual speed)
+				<span class='average'><b>ВЫКЛ</b></span> (скорость вручную)
 			{{/if}}
 			{{if data.pumpAutoText}}
 				<div class='average'>{{:data.pumpAutoText}}</div>
 			{{/if}}
 			<div style="padding-top: 4px;">
-				{{:helper.link(data.pumpAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pump_auto'}, data.pumpBurnt ? 'disabled' : null, data.pumpAuto ? 'selected' : null)}}
-				<div style="float: left; padding: 4px 8px 0 8px;">level:</div>
+				{{:helper.link(data.pumpAuto ? 'Выключить' : 'Включить', null, {'action' : 'pump_auto'}, data.pumpBurnt ? 'disabled' : null, data.pumpAuto ? 'selected' : null)}}
+				<div style="float: left; padding: 4px 8px 0 8px;">уровень:</div>
 				{{:helper.link('-5', null, {'action' : 'pump_auto_set', 'amount' : -5}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
 				{{:helper.link('-1', null, {'action' : 'pump_auto_set', 'amount' : -1}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
 				{{:helper.link('+1', null, {'action' : 'pump_auto_set', 'amount' : 1}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
@@ -505,16 +505,16 @@
 {{if data.twoCircuit}}
 <div class="item">
 	<div class="itemLabel">
-		Feedwater pump:
+		Питательный насос:
 	</div>
 	<div class="itemContent">
-		<span class='bad'>none: the steam generators get no water</span>
+		<span class='bad'>нет: парогенераторы не получают воды</span>
 	</div>
 </div>
 {{else}}
 <div class="item">
 	<div class="itemLabel">
-		Feedwater valve:
+		Клапан питательной воды:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.feedwater, 0, 100, 'good')}}
@@ -522,8 +522,8 @@
 			{{:data.feedwater}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('Close -10', 'triangle-1-s', {'action' : 'feed_down'}, (data.feedwater > 0) ? null : 'disabled')}}
-			{{:helper.link('Open +10', 'triangle-1-n', {'action' : 'feed_up'}, (data.feedwater < 100) ? null : 'disabled')}}
+			{{:helper.link('Закрыть -10', 'triangle-1-s', {'action' : 'feed_down'}, (data.feedwater > 0) ? null : 'disabled')}}
+			{{:helper.link('Открыть +10', 'triangle-1-n', {'action' : 'feed_up'}, (data.feedwater < 100) ? null : 'disabled')}}
 		</div>
 	</div>
 </div>
@@ -532,12 +532,12 @@
 {{if data.twoCircuit && data.hasPrimaryPump}}
 <div class="item">
 	<div class="itemLabel">
-		Main coolant pump:
+		Главный циркуляционный насос:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.ppSpeed, 0, 100, 'good')}}
 		<div class="statusValue">
-			set {{:data.ppSpeed}} %
+			задано {{:data.ppSpeed}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'ppump_move', 'amount' : -10}, (data.ppSpeed > 0) ? null : 'disabled')}}
@@ -551,17 +551,17 @@
 {{if data.twoCircuit && data.hasPzr}}
 <div class="item">
 	<div class="itemLabel">
-		Pressure automation:
+		Автоматика давления:
 	</div>
 	<div class="itemContent">
 		{{if data.pzrAuto}}
-			<span class='good'><b>ON</b></span>, holds <b>{{:data.pzrSet}} bar</b>
+			<span class='good'><b>ВКЛ</b></span>, держит <b>{{:data.pzrSet}} бар</b>
 		{{else}}
-			<span class='average'><b>OFF</b></span> (heaters and spray by hand)
+			<span class='average'><b>ВЫКЛ</b></span> (нагреватели и впрыск вручную)
 		{{/if}}
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.pzrAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pzr_auto'}, null, data.pzrAuto ? 'selected' : null)}}
-			<div style="float: left; padding: 4px 8px 0 8px;">setpoint:</div>
+			{{:helper.link(data.pzrAuto ? 'Выключить' : 'Включить', null, {'action' : 'pzr_auto'}, null, data.pzrAuto ? 'selected' : null)}}
+			<div style="float: left; padding: 4px 8px 0 8px;">уставка:</div>
 			{{:helper.link('-5', null, {'action' : 'pzr_set', 'amount' : -5})}}
 			{{:helper.link('-1', null, {'action' : 'pzr_set', 'amount' : -1})}}
 			{{:helper.link('+1', null, {'action' : 'pzr_set', 'amount' : 1})}}
@@ -571,12 +571,12 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Heaters:
+		Нагреватели:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.pzrHeater, 0, 100, 'good')}}
 		<div class="statusValue">
-			set {{:data.pzrHeater}} %
+			задано {{:data.pzrHeater}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'pzr_heater', 'amount' : -10}, data.pzrAuto ? 'disabled' : null)}}
@@ -588,12 +588,12 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Spray:
+		Впрыск:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.pzrSpray, 0, 100, 'good')}}
 		<div class="statusValue">
-			set {{:data.pzrSpray}} %
+			задано {{:data.pzrSpray}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'pzr_spray', 'amount' : -10}, data.pzrAuto ? 'disabled' : null)}}
@@ -605,41 +605,41 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Relief valve:
+		Предохранительный клапан:
 	</div>
 	<div class="itemContent">
-		{{:helper.link(data.pzrReliefManual ? 'Close' : 'Open by hand', null, {'action' : 'pzr_relief'}, data.pzrBlock ? 'disabled' : null, data.pzrReliefManual ? 'selected' : null)}}
-		{{:helper.link(data.pzrBlock ? 'Block valve: CLOSED' : 'Block valve: open', null, {'action' : 'pzr_block'}, null, data.pzrBlock ? 'selected' : null)}}
+		{{:helper.link(data.pzrReliefManual ? 'Закрыть' : 'Открыть вручную', null, {'action' : 'pzr_relief'}, data.pzrBlock ? 'disabled' : null, data.pzrReliefManual ? 'selected' : null)}}
+		{{:helper.link(data.pzrBlock ? 'Отсечной клапан: ЗАКРЫТ' : 'Отсечной клапан: открыт', null, {'action' : 'pzr_block'}, null, data.pzrBlock ? 'selected' : null)}}
 	</div>
 </div>
 {{/if}}
 {{if data.twoCircuit && data.hasMakeup}}
 <div class="item">
 	<div class="itemLabel">
-		Makeup pump:
+		Насос подпитки:
 	</div>
 	<div class="itemContent">
-		<span class='{{:data.mkClass}}'><b>{{:data.mkState}}</b></span>, set {{:data.mkSetting}} % (minus drains)
+		<span class='{{:data.mkClass}}'><b>{{:data.mkState}}</b></span>, задано {{:data.mkSetting}} % (минус значит слив)
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'makeup_move', 'amount' : -10}, (!data.mkAuto && data.mkSetting > -100) ? null : 'disabled')}}
 			{{:helper.link('-1', null, {'action' : 'makeup_move', 'amount' : -1}, (!data.mkAuto && data.mkSetting > -100) ? null : 'disabled')}}
-			{{:helper.link('Stop', null, {'action' : 'makeup_stop'}, (!data.mkAuto && data.mkSetting != 0) ? null : 'disabled')}}
+			{{:helper.link('Стоп', null, {'action' : 'makeup_stop'}, (!data.mkAuto && data.mkSetting != 0) ? null : 'disabled')}}
 			{{:helper.link('+1', null, {'action' : 'makeup_move', 'amount' : 1}, (!data.mkAuto && data.mkSetting < 100) ? null : 'disabled')}}
 			{{:helper.link('+10', null, {'action' : 'makeup_move', 'amount' : 10}, (!data.mkAuto && data.mkSetting < 100) ? null : 'disabled')}}
 		</div>
 		<div style="clear: both; padding-top: 6px;">
-			Automation:
+			Автоматика:
 			{{if data.mkAuto}}
-				<span class='good'><b>ON</b></span>, holds the pressurizer water at <b>{{:data.mkAutoSet}} %</b>
+				<span class='good'><b>ВКЛ</b></span>, держит воду в компенсаторе на <b>{{:data.mkAutoSet}} %</b>
 			{{else}}
-				<span class='average'><b>OFF</b></span> (manual setting)
+				<span class='average'><b>ВЫКЛ</b></span> (вручную)
 			{{/if}}
 			{{if data.mkAutoText}}
 				<div class='average'>{{:data.mkAutoText}}</div>
 			{{/if}}
 			<div style="padding-top: 4px;">
-				{{:helper.link(data.mkAuto ? 'Switch off' : 'Switch on', null, {'action' : 'makeup_auto'}, (data.mkAuto || data.automationAvailable) ? null : 'disabled', data.mkAuto ? 'selected' : null)}}
-				<div style="float: left; padding: 4px 8px 0 8px;">level:</div>
+				{{:helper.link(data.mkAuto ? 'Выключить' : 'Включить', null, {'action' : 'makeup_auto'}, (data.mkAuto || data.automationAvailable) ? null : 'disabled', data.mkAuto ? 'selected' : null)}}
+				<div style="float: left; padding: 4px 8px 0 8px;">уровень:</div>
 				{{:helper.link('-5', null, {'action' : 'makeup_auto_set', 'amount' : -5}, (data.mkAutoSet > data.makeupAutoMin) ? null : 'disabled')}}
 				{{:helper.link('-1', null, {'action' : 'makeup_auto_set', 'amount' : -1}, (data.mkAutoSet > data.makeupAutoMin) ? null : 'disabled')}}
 				{{:helper.link('+1', null, {'action' : 'makeup_auto_set', 'amount' : 1}, (data.mkAutoSet < data.makeupAutoMax) ? null : 'disabled')}}
@@ -652,7 +652,7 @@
 {{if !data.hasPort}}
 <div class="item">
 	<div class="itemLabel">
-		Steam valve:
+		Паровой клапан:
 	</div>
 	<div class="itemContent">
 		{{:helper.displayBar(data.steamValve, 0, 100, 'good')}}
@@ -660,39 +660,39 @@
 			{{:data.steamValve}} %
 		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('Close -10', 'triangle-1-s', {'action' : 'steam_down'}, (data.steamValve > 0) ? null : 'disabled')}}
-			{{:helper.link('Open +10', 'triangle-1-n', {'action' : 'steam_up'}, (data.steamValve < 100) ? null : 'disabled')}}
+			{{:helper.link('Закрыть -10', 'triangle-1-s', {'action' : 'steam_down'}, (data.steamValve > 0) ? null : 'disabled')}}
+			{{:helper.link('Открыть +10', 'triangle-1-n', {'action' : 'steam_up'}, (data.steamValve < 100) ? null : 'disabled')}}
 		</div>
 	</div>
 </div>
 {{/if}}
 <div class="item">
 	<div class="itemLabel">
-		Emergency:
+		Аварийное:
 	</div>
 	<div class="itemContent">
 		{{:helper.link('SCRAM', 'alert', {'action' : 'scram'}, data.scrammed ? 'disabled' : null, 'redButton')}}
-		{{:helper.link('Reset SCRAM', 'unlocked', {'action' : 'reset'}, data.scrammed ? null : 'disabled')}}
+		{{:helper.link('Сбросить SCRAM', 'unlocked', {'action' : 'reset'}, data.scrammed ? null : 'disabled')}}
 		{{if data.scrammed}}
-			<span class='bad'>&nbsp;SCRAM ENGAGED{{if data.scramReason}} ({{:data.scramReason}}){{/if}}, rods locked</span>
+			<span class='bad'>&nbsp;SCRAM СРАБОТАЛ{{if data.scramReason}} ({{:data.scramReason}}){{/if}}, стержни заперты</span>
 		{{/if}}
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Protection:
+		Защита:
 	</div>
 	<div class="itemContent">
 		{{if data.rpsEnabled}}
-			<span class='good'><b>ARMED</b></span>: drops the rods by itself on high core temperature, high or low primary pressure, high or low pressurizer level, high steam pressure, low steam generator water, a seized main pump or lost cooling.
+			<span class='good'><b>ВКЛЮЧЕНА</b></span>: сама роняет стержни при высокой температуре ядра, высоком или низком давлении первого контура, высоком или низком уровне в компенсаторе, высоком давлении пара, малой воде в парогенераторе, заклинившем главном насосе или потере охлаждения.
 		{{else}}
-			<span class='average'><b>DISARMED</b></span>: nothing drops the rods but you.
+			<span class='average'><b>ОТКЛЮЧЕНА</b></span>: стержни роняете только вы.
 		{{/if}}
 		{{if data.rpsCondition}}
-			<div class='bad'>Trip condition: {{:data.rpsCondition}}</div>
+			<div class='bad'>Условие срабатывания: {{:data.rpsCondition}}</div>
 		{{/if}}
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.rpsEnabled ? 'Disarm' : 'Arm', null, {'action' : 'rps_toggle'}, (data.rpsEnabled || data.automationAvailable) ? null : 'disabled', data.rpsEnabled ? 'selected' : null)}}
+			{{:helper.link(data.rpsEnabled ? 'Отключить' : 'Включить', null, {'action' : 'rps_toggle'}, (data.rpsEnabled || data.automationAvailable) ? null : 'disabled', data.rpsEnabled ? 'selected' : null)}}
 		</div>
 	</div>
 </div>
@@ -700,10 +700,10 @@
 
 <div class="item">
 	<div class="itemLabel">
-		Link:
+		Связь:
 	</div>
 	<div class="itemContent">
-		{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
+		{{:helper.link('Пересканировать связи', 'refresh', {'action' : 'rescan'})}}
 	</div>
 </div>
 {{/if}}

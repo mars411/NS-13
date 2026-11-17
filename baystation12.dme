@@ -895,6 +895,7 @@
 #include "code\game\machinery\submarine\submarine_fuel.dm"
 #include "code\game\machinery\submarine\submarine_hatch.dm"
 #include "code\game\machinery\submarine\submarine_reactor.dm"
+#include "code\game\machinery\submarine\submarine_ru.dm"
 #include "code\game\machinery\submarine\submarine_steam_generator.dm"
 #include "code\game\machinery\submarine\submarine_pressurizer.dm"
 #include "code\game\machinery\submarine\submarine_primary_pipe.dm"
