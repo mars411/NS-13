@@ -612,7 +612,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/response_sum = 0
 	var/count = 0
 	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
-		power_sum += E.output()
+		power_sum += E.fuel_output()
 		response_sum += E.response()
 		count++
 	fuel_power = power_sum / NSR_FUEL_SLOTS
@@ -2086,7 +2086,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			fuel_rows += list(list("slot" = i, "name" = "empty", "burn" = 100, "burnClass" = "bad", "output" = 0, "empty" = TRUE))
 			continue
 		var/obj/item/submarine_fuel_element/E = R.fuel_elements[i]
-		fuel_rows += list(list("slot" = i, "name" = E.fuel_name(), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.output() * 100), "empty" = FALSE))
+		fuel_rows += list(list("slot" = i, "name" = E.fuel_name(), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.fuel_output() * 100), "empty" = FALSE))
 	data["fuel"] = fuel_rows
 	data["fuelPower"] = round(R.fuel_power * 100)
 	data["fuelResponse"] = round(R.fuel_response * 100)

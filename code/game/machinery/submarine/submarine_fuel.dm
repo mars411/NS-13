@@ -63,7 +63,7 @@ var/global/list/nsr_fuel_types = list(
 	return type_info ? type_info["response"] : 1
 
 /// Текущая отдача: мощность изотопа, падающая до нуля на последних NSR_FUEL_TAIL процентах выгорания.
-/obj/item/submarine_fuel_element/proc/output()
+/obj/item/submarine_fuel_element/proc/fuel_output()
 	return power_mult() * clamp((100 - burnup) / NSR_FUEL_TAIL, 0, 1)
 
 /// Задаёт выгорание и обновляет название, описание и цвет; фонит, пока выгорание не мало.
