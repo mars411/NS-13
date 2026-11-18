@@ -10,6 +10,8 @@
 /datum/ns_annunciator
 	/// id плитки -> подпись. Порядок списка это порядок плиток на пульте.
 	var/list/labels
+	/// То же по-русски (id плитки -> подпись). Нет списка: всегда labels.
+	var/list/ru_labels
 	/// id плитки -> текущий уровень, 0-2.
 	var/list/levels = list()
 	/// id плитки -> подтверждённый уровень.
@@ -17,9 +19,10 @@
 	/// id плитки, загоревшейся первой при последнем событии (null, когда всё погасло).
 	var/first_out
 
-/datum/ns_annunciator/New(list/label_list)
+/datum/ns_annunciator/New(list/label_list, list/ru_label_list)
 	..()
 	labels = label_list
+	ru_labels = ru_label_list
 	for(var/id in labels)
 		levels[id] = 0
 
@@ -74,5 +77,5 @@
 	var/list/tile_list = list()
 	for(var/id in labels)
 		var/lvl = levels[id] || 0
-		tile_list += list(list("label" = labels[id], "level" = lvl, "blink" = (lvl > 0 && lvl > (ack[id] || 0)), "first" = (first_out == id)))
+		tile_list += list(list("label" = (ru_labels && nsr_is_ru()) ? ru_labels[id] : labels[id], "level" = lvl, "blink" = (lvl > 0 && lvl > (ack[id] || 0)), "first" = (first_out == id)))
 	return tile_list

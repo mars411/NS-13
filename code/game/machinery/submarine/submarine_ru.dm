@@ -3,9 +3,21 @@
 
 	Логика реактора и турбины по-прежнему работает на английских идентификаторах состояний ("RUNNING", "SPINNING UP", "HIGH CORE TEMP"):
 	на них держатся сравнения, цвета и журналы. На экран пульта текст идёт через nsr_ru(), которая берёт перевод из таблицы ниже.
-	Нет в таблице: текст остаётся как есть (так сразу видно забытую строку). Подписи плиток табло и длинные фразы заданы по-русски прямо в коде.
+	Нет в таблице: текст остаётся как есть (так сразу видно забытую строку). Длинные фразы заданы парой nsr_tr("English", "Русский").
 	Кодировка окон NanoUI переключена на UTF-8 (code/modules/nano/nanoui.dm), шаблоны пультов лежат в UTF-8.
+
+	ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА (ревизия 24.1). Кнопка в шапке пульта переключает язык этого игрока (по ckey) до конца раунда, по умолчанию русский.
+	На каждом входе (открытие и обновление окна, OnTopic, действия инструментами с ядром) вызывается nsr_lang_for(user): она кладёт язык игрока
+	в nsr_lang_cur, и дальше nsr_ru() и nsr_tr() отвечают на нём. DM не прерывает код между входами, поэтому общей переменной хватает.
+	Шаблонов два: submarine_*_panel.tmpl (русский) и submarine_*_panel_en.tmpl (английский). Правка вида пульта делается в обоих.
 */
+
+#define NSR_LANG_DEFAULT "ru"
+
+/// Язык пультов по ckey игрока: "en" или "ru". Нет записи: NSR_LANG_DEFAULT.
+var/global/list/nsr_lang_pref = list()
+/// Язык, на котором сейчас собирается окно или сообщение. Ставится nsr_lang_for().
+var/global/nsr_lang_cur = NSR_LANG_DEFAULT
 
 var/global/list/nsr_ru_table = list(
 	// Статус реактора
@@ -95,9 +107,29 @@ var/global/list/nsr_ru_table = list(
 	"unknown fuel" = "неизвестное топливо"
 )
 
-/// Русский текст для пульта. Пустое и неизвестное возвращает как есть.
+/// Выбрать язык по игроку и сделать его текущим. Вызывать в начале каждой точки входа.
+/proc/nsr_lang_for(mob/user)
+	var/pref = (user && user.ckey) ? nsr_lang_pref[user.ckey] : null
+	nsr_lang_cur = pref ? pref : NSR_LANG_DEFAULT
+	return nsr_lang_cur
+
+/// Переключить язык игрока (русский и английский по очереди).
+/proc/nsr_lang_toggle(mob/user)
+	if(!user || !user.ckey)
+		return
+	nsr_lang_pref[user.ckey] = (nsr_lang_for(user) == "en") ? "ru" : "en"
+	nsr_lang_for(user)
+
+/proc/nsr_is_ru()
+	return nsr_lang_cur != "en"
+
+/// Фраза на текущем языке: nsr_tr("English", "Русский").
+/proc/nsr_tr(en, ru)
+	return nsr_is_ru() ? ru : en
+
+/// Русский текст для пульта по таблице. Пустое и неизвестное возвращает как есть, на английском всегда как есть.
 /proc/nsr_ru(text)
-	if(!istext(text) || !length(text))
+	if(!nsr_is_ru() || !istext(text) || !length(text))
 		return text
 	var/ru = nsr_ru_table[text]
 	return ru ? ru : text

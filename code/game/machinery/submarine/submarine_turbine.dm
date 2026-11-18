@@ -149,6 +149,20 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 /// Сколько моль газа gas_id во всех смесях сети труб.
 /// Плитки табло турбины (ревизия 18): порядок и подписи.
 var/global/list/nst_alarm_labels = list(
+	"overspeed" = "OVERSPEED",
+	"vibration" = "VIBRATION",
+	"stop" = "STOP VALVE SHUT",
+	"breaker" = "BREAKER TRIPPED",
+	"overload" = "GEN OVERLOAD",
+	"governor" = "GOVERNOR FAILED",
+	"cond" = "CONDENSER PRESS",
+	"inlet" = "STEAM INLET HIGH",
+	"blades" = "BLADE DAMAGE",
+	"relief" = "RELIEF VALVE"
+)
+
+/// Русские подписи плиток (ревизия 24, переключатель языка 24.1): до двух строк по 15 знаков, плитка узкая.
+var/global/list/nst_alarm_labels_ru = list(
 	"overspeed" = "РАЗГОН",
 	"vibration" = "ВИБРАЦИЯ",
 	"stop" = "СТОП-КЛАПАН ЗАКРЫТ",
@@ -648,7 +662,7 @@ var/global/list/nst_alarm_labels = list(
 /obj/machinery/power/submarine_turbine_generator/Initialize()
 	. = ..()
 	GLOB.submarine_turbines += src
-	annunciator = new /datum/ns_annunciator(nst_alarm_labels)
+	annunciator = new /datum/ns_annunciator(nst_alarm_labels, nst_alarm_labels_ru)
 	find_parts()
 
 /obj/machinery/power/submarine_turbine_generator/Destroy()
@@ -733,11 +747,11 @@ var/global/list/nst_alarm_labels = list(
 	if(breaker_closed)
 		return TRUE
 	if(overloaded)
-		to_chat(user, SPAN_WARNING("Нельзя подключить: генератор сгорел. Нужно: [repair_missing(TRUE)]."))
+		to_chat(user, SPAN_WARNING(nsr_tr("Cannot connect: the generator is burnt out. Needed: [repair_missing()].", "Нельзя подключить: генератор сгорел. Нужно: [repair_missing(TRUE)].")))
 		return FALSE
 	var/rpm_now = shaft_rpm()
 	if(rpm_now < NST_RPM_SYNC_LO || rpm_now > NST_RPM_SYNC_HI)
-		to_chat(user, SPAN_WARNING("Нельзя подключить: вал должен быть в пределах [NST_RPM_SYNC_LO]-[NST_RPM_SYNC_HI] об/мин (сейчас [round(rpm_now)])."))
+		to_chat(user, SPAN_WARNING(nsr_tr("Cannot connect: the shaft must be within [NST_RPM_SYNC_LO]-[NST_RPM_SYNC_HI] rpm (now [round(rpm_now)]).", "Нельзя подключить: вал должен быть в пределах [NST_RPM_SYNC_LO]-[NST_RPM_SYNC_HI] об/мин (сейчас [round(rpm_now)]).")))
 		return FALSE
 	if(!powernet)
 		to_chat(user, SPAN_WARNING("Cannot connect: there is no grid cable under the generator."))
@@ -1211,7 +1225,7 @@ var/global/list/nst_alarm_labels = list(
 	data["hasGrid"] = !!G.powernet
 	data["stopTripped"] = G.stop_tripped
 	data["overloaded"] = G.overloaded
-	data["genMissing"] = G.overloaded ? G.repair_missing(TRUE) : ""
+	data["genMissing"] = G.overloaded ? G.repair_missing(nsr_is_ru()) : ""
 	data["steamKw"] = round(G.steam_power / 1000, 0.1)
 	data["outputKw"] = round(G.last_output / 1000, 0.1)
 	data["demandKw"] = round(G.last_demand / 1000, 0.1)
@@ -1231,7 +1245,7 @@ var/global/list/nst_alarm_labels = list(
 			for(var/row in S.rows)
 				var/row_pct = round(row * 100)
 				row_list += list(list("p" = row_pct, "c" = (row_pct < 50) ? "bad" : ((row_pct < 90) ? "average" : "good")))
-		section_list += list(list("name" = (S.stage == NST_STAGE_HP) ? "высокого давления" : "низкого давления [S.stage - 1]", "health" = round(S.health_frac * 100), "broken" = S.broken, "flow" = round(S.last_flow, 0.1), "kw" = round(S.last_work / 1000, 0.1), "class" = state_class, "sensor" = S.has_sensor, "rows" = row_list, "lost" = S.lost_rows(), "grade" = nsr_ru(S.grade_text())))
+		section_list += list(list("name" = (S.stage == NST_STAGE_HP) ? nsr_tr("High-pressure", "высокого давления") : nsr_tr("Low-pressure [S.stage - 1]", "низкого давления [S.stage - 1]"), "health" = round(S.health_frac * 100), "broken" = S.broken, "flow" = round(S.last_flow, 0.1), "kw" = round(S.last_work / 1000, 0.1), "class" = state_class, "sensor" = S.has_sensor, "rows" = row_list, "lost" = S.lost_rows(), "grade" = nsr_ru(S.grade_text())))
 	data["sections"] = section_list
 	data["missing"] = 3 - length(section_list)
 	// Давления по ходу пара: перед турбиной, после высокого, после первой низкого, у конденсатора.
@@ -1261,30 +1275,38 @@ var/global/list/nst_alarm_labels = list(
 	return data
 
 /obj/machinery/computer/submarine_turbine_console/ui_interact(mob/user, ui_key = "main", datum/nanoui/ui = null, force_open = 1)
+	nsr_lang_for(user)
 	var/list/data = build_ui_data()
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
-		ui = new(user, src, ui_key, "submarine_turbine_panel.tmpl", "Пульт турбины", 540, 960)
+		ui = new(user, src, ui_key, nsr_tr("submarine_turbine_panel_en.tmpl", "submarine_turbine_panel.tmpl"), nsr_tr("Turbine control panel", "Пульт турбины"), 540, 960)
 		ui.set_initial_data(data)
 		ui.open()
 		ui.set_auto_update(1)
 
 /obj/machinery/computer/submarine_turbine_console/OnTopic(mob/user, href_list, datum/topic_state/state)
 	var/action = href_list["action"]
+	nsr_lang_for(user)
+
+	if(action == "lang")
+		nsr_lang_toggle(user)
+		SSnano.close_user_uis(user, src, "main")
+		ui_interact(user)
+		return TOPIC_HANDLED
 
 	if(action == "rescan")
 		unit = null
 		var/obj/machinery/power/submarine_turbine_generator/found = get_unit()
 		if(found)
 			var/part_count = found.find_parts()
-			to_chat(user, SPAN_NOTICE("Связь с турбиной '[found.turbine_id]': найдено секций турбины [part_count] из 3, [get_condenser() ? "конденсатор подключён" : "нет конденсатора"], [get_relief() ? "предохранительный клапан подключён" : "нет предохранительного клапана"]."))
+			to_chat(user, SPAN_NOTICE(nsr_tr("Linked to turbine '[found.turbine_id]', [part_count] of 3 turbine sections detected, [get_condenser() ? "condenser" : "no condenser"], [get_relief() ? "relief valve" : "no relief valve"].", "Связь с турбиной '[found.turbine_id]': найдено секций турбины [part_count] из 3, [get_condenser() ? "конденсатор подключён" : "нет конденсатора"], [get_relief() ? "предохранительный клапан подключён" : "нет предохранительного клапана"].")))
 		else
-			to_chat(user, SPAN_WARNING("Турбина '[turbine_id]' не найдена."))
+			to_chat(user, SPAN_WARNING(nsr_tr("No turbine '[turbine_id]' found.", "Турбина '[turbine_id]' не найдена.")))
 		return TOPIC_REFRESH
 
 	var/obj/machinery/power/submarine_turbine_generator/G = get_unit()
 	if(!G)
-		to_chat(user, SPAN_WARNING("Нет связи с турбиной."))
+		to_chat(user, SPAN_WARNING(nsr_tr("No link to a turbine.", "Нет связи с турбиной.")))
 		return TOPIC_HANDLED
 
 	switch(action)
@@ -1292,20 +1314,20 @@ var/global/list/nst_alarm_labels = list(
 			if(G.annunciator.has_unacked())
 				G.annunciator.acknowledge()
 			else
-				to_chat(user, SPAN_NOTICE("Неподтверждённых тревог нет."))
+				to_chat(user, SPAN_NOTICE(nsr_tr("No unacknowledged alarm.", "Неподтверждённых тревог нет.")))
 		if("adm_move")
 			var/adm_amount = text2num(href_list["amount"])
 			if(!(adm_amount in list(-10, -1, 1, 10)))
 				return TOPIC_HANDLED
 			if(G.governor_on && G.governor_ok)
-				to_chat(user, SPAN_WARNING("Регулятор держит впускной клапан. Выключите его для ручного управления."))
+				to_chat(user, SPAN_WARNING(nsr_tr("The governor holds the admission valve. Switch it off for manual control.", "Регулятор держит впускной клапан. Выключите его для ручного управления.")))
 			else if(G.stop_tripped)
-				to_chat(user, SPAN_WARNING("Стопорный клапан закрыт: сначала сбросьте его."))
+				to_chat(user, SPAN_WARNING(nsr_tr("The stop valve is shut: reset it first.", "Стопорный клапан закрыт: сначала сбросьте его.")))
 			else
 				G.admission = clamp(G.admission + adm_amount, 0, 100)
 		if("gov_toggle")
 			if(!G.governor_ok)
-				to_chat(user, SPAN_WARNING("Регулятор отказал."))
+				to_chat(user, SPAN_WARNING(nsr_tr("The governor has failed.", "Регулятор отказал.")))
 			else
 				G.governor_on = !G.governor_on
 		if("gov_set")
@@ -1326,15 +1348,15 @@ var/global/list/nst_alarm_labels = list(
 			var/cool_amount = text2num(href_list["amount"])
 			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
 			if(!cond)
-				to_chat(user, SPAN_WARNING("К этой турбине не подключён конденсатор."))
+				to_chat(user, SPAN_WARNING(nsr_tr("No condenser is connected to this turbine.", "К этой турбине не подключён конденсатор.")))
 			else if(cond.auto)
-				to_chat(user, SPAN_WARNING("Конденсатор в автоматическом режиме. Выключите автоматику, чтобы задать охлаждение вручную."))
+				to_chat(user, SPAN_WARNING(nsr_tr("The condenser is in automatic mode. Switch the automation off to set its cooling by hand.", "Конденсатор в автоматическом режиме. Выключите автоматику, чтобы задать охлаждение вручную.")))
 			else if(cool_amount in list(-10, -1, 1, 10))
 				cond.cooling = clamp(cond.cooling + cool_amount, 0, 100)
 		if("cond_auto")
 			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
 			if(!cond)
-				to_chat(user, SPAN_WARNING("К этой турбине не подключён конденсатор."))
+				to_chat(user, SPAN_WARNING(nsr_tr("No condenser is connected to this turbine.", "К этой турбине не подключён конденсатор.")))
 			else
 				cond.toggle_auto()
 		if("cond_auto_set")
