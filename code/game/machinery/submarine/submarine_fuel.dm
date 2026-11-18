@@ -6,7 +6,8 @@
 	- Выгорание идёт от потока нейтронов, а не от времени (см. burn_fuel в submarine_reactor.dm): 10 минут на полностью поднятых стержнях,
 	  около 20 на 60-80%, около 30 на средних. Последние NSR_FUEL_TAIL процентов выгорания отдача падает до нуля.
 	- Выгоревший ТВЭЛ фонит и снаружи ядра. Менять ТВЭЛы можно только на холодном остановленном реакторе со снятой плитой ядра, в радиационном костюме.
-	- /obj/structure/closet/crate/submarine_fuel: ящик запасных ТВЭЛов (по одному на каждый изотоп и четыре обогащённых).
+	- /obj/structure/closet/crate/submarine_fuel: ящик запасных ТВЭЛов (по одному на каждый изотоп и четыре обогащённых) и двух стержней СУЗ.
+	- /obj/item/submarine_control_rod (ревизия 26): сменный стержень СУЗ с износом. Стержни в ядре изнашиваются, меняются на холодном реакторе со снятой плитой.
 */
 
 /// Изотопы топлива: ключ - значение поля isotope. power: относительная мощность, response: реакция (поток догоняет стержни быстрее при большем числе).
@@ -90,7 +91,7 @@ var/global/list/nsr_fuel_types = list(
 
 /obj/structure/closet/crate/submarine_fuel
 	name = "fuel element crate"
-	desc = "A lead-lined crate of spare TVEL fuel elements for the reactor."
+	desc = "A lead-lined crate of spare TVEL fuel elements and control rods for the reactor."
 	closet_appearance = /singleton/closet_appearance/crate/radiation
 
 /obj/structure/closet/crate/submarine_fuel/WillContain()
@@ -98,5 +99,31 @@ var/global/list/nsr_fuel_types = list(
 		/obj/item/submarine_fuel_element = 4,
 		/obj/item/submarine_fuel_element/natural = 2,
 		/obj/item/submarine_fuel_element/thorium = 2,
-		/obj/item/submarine_fuel_element/cesium = 1
+		/obj/item/submarine_fuel_element/cesium = 1,
+		/obj/item/submarine_control_rod = 2
 	)
+
+// ----------------------------------------------------------------------------
+// СТЕРЖЕНЬ СУЗ (ревизия 26)
+// ----------------------------------------------------------------------------
+
+/// Сменный стержень системы управления и защиты. Новый имеет износ 0. Снятый с реактора сохраняет износ, его можно поставить обратно.
+/obj/item/submarine_control_rod
+	name = "control rod"
+	desc = "A boron-steel control rod for the submarine reactor."
+	// Временно: сборка из стока, окрашенная в тёмную сталь. Заменить своим.
+	icon = 'icons/obj/fusion_fuel_assembly.dmi'
+	icon_state = "fuel_assembly"
+	color = "#59636e"
+	w_class = ITEM_SIZE_LARGE
+	/// Износ, 0-100%.
+	var/wear = 0
+
+/obj/item/submarine_control_rod/Initialize(mapload)
+	. = ..()
+	set_wear(wear)
+
+/obj/item/submarine_control_rod/proc/set_wear(value)
+	wear = clamp(value, 0, 100)
+	SetName(wear > 0 ? "control rod ([round(wear)] % worn)" : "control rod")
+	desc = initial(desc) + (wear >= NSR_ROD_JAM_WEAR ? " It is worn to the limit and will seize in the drive." : (wear >= NSR_ROD_WEAR_WARN ? " It is badly worn: time to replace it." : (wear > 0 ? " It has some wear." : " It is new.")))

@@ -1,0 +1,34 @@
+<div class="item">
+	<div style="float: right;">{{:helper.link(data.langLabel, 'globe', {'action' : 'lang'})}}</div>
+	<h3>{{:data.title}}</h3>
+</div>
+<div class="item">
+	<i>{{:data.note}}</i>
+</div>
+{{for data.rows}}
+	<div class="item">
+		<div class="itemLabel">
+			{{:value.label}}
+		</div>
+		<div class="itemContent">
+			<span class='{{:value.cls}}'>{{:value.text}}</span>
+		</div>
+	</div>
+{{/for}}
+{{if data.hasProgress}}
+	<div class="item">
+		<div class="itemLabel">
+			{{:data.progressLabel}}
+		</div>
+		<div class="itemContent">
+			{{:helper.displayBar(data.progress, 0, 100, 'good')}}
+		</div>
+	</div>
+{{/if}}
+<div class="item" style="clear: both;">
+	{{for data.buttons}}
+		<div style="clear: both; padding: 2px 0;">
+			{{:helper.link(value.label, null, {'action' : value.action, 'arg' : value.arg}, value.disabled ? 'disabled' : null, value.selected ? 'selected' : null)}}
+		</div>
+	{{/for}}
+</div>

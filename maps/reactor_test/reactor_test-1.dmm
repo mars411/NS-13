@@ -367,6 +367,20 @@
 /obj/machinery/fabricator,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Mc" = (
+/obj/machinery/submarine_centrifuge{
+	dir = 8
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Md" = (
+/obj/machinery/submarine_dredge,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Os" = (
+/obj/item/submarine_ore_sack/test,
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Pa" = (
 /obj/structure/submarine_primary_pipe{
 	dir = 1
@@ -2664,8 +2678,8 @@ OC
 OC
 Zq
 Qx
-Ze
-Ze
+Md
+Mc
 Zf
 Ze
 Ze
@@ -2699,7 +2713,7 @@ OC
 Zq
 Zj
 Ze
-Ze
+Os
 Zf
 Ze
 Ze

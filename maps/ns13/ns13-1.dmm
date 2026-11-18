@@ -359,19 +359,38 @@
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
 "bA" = (
-/obj/machinery/computer/submarine_reactor_console,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bB" = (
 /obj/structure/table/standard,
-/obj/item/paper/ns13/blackout,
+/obj/item/device/scanner/gas,
+/obj/item/device/geiger,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bC" = (
-/obj/machinery/computer/submarine_turbine_console,
+/obj/structure/table/standard,
+/obj/item/paper/ns13/hatches,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bD" = (
+/obj/machinery/computer/submarine_reactor_console,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bE" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/blackout,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bF" = (
+/obj/machinery/computer/submarine_turbine_console,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"bG" = (
 /obj/machinery/door/submarine_hatch,
 /obj/structure/cable{
 	d1 = 4;
@@ -380,7 +399,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bE" = (
+"bH" = (
 /obj/machinery/light{
 	dir = 1
 	},
@@ -391,10 +410,10 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bF" = (
+"bI" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/reactor_hall)
-"bG" = (
+"bJ" = (
 /obj/structure/cable{
 	d1 = 2;
 	d2 = 4;
@@ -402,7 +421,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bH" = (
+"bK" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 2;
@@ -410,7 +429,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bI" = (
+"bL" = (
 /obj/structure/cable{
 	d2 = 1;
 	icon_state = "0-1"
@@ -425,7 +444,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bJ" = (
+"bM" = (
 /obj/machinery/power/apc/high{
 	dir = 8;
 	locked = 0;
@@ -437,14 +456,14 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bK" = (
+"bN" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bL" = (
+"bO" = (
 /obj/structure/closet/crate/submarine_fuel,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bM" = (
+"bP" = (
 /obj/structure/table/standard,
 /obj/item/device/scanner/gas,
 /obj/item/device/geiger,
@@ -455,21 +474,21 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bN" = (
+"bQ" = (
 /obj/machinery/submarine_makeup_pump,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bO" = (
+"bR" = (
 /obj/item/wrench,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bP" = (
+"bS" = (
 /obj/machinery/light/spot{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bQ" = (
+"bT" = (
 /obj/structure/cable{
 	d1 = 4;
 	d2 = 8;
@@ -477,23 +496,23 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bR" = (
+"bU" = (
 /obj/structure/submarine_primary_pipe{
 	dir = 6
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bS" = (
+"bV" = (
 /obj/structure/submarine_primary_pipe{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bT" = (
+"bW" = (
 /obj/machinery/submarine_primary_pump,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bU" = (
+"bX" = (
 /obj/machinery/light{
 	dir = 1
 	},
@@ -504,28 +523,14 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bV" = (
+"bY" = (
 /obj/structure/submarine_primary_pipe{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"bW" = (
-/obj/machinery/submarine_pressurizer,
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/reactor_hall)
-"bX" = (
-/obj/machinery/submarine_reactor_section/left_end,
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/reactor_hall)
-"bY" = (
-/obj/machinery/submarine_reactor_section/middle,
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/reactor_hall)
 "bZ" = (
-/obj/machinery/light{
-	dir = 2
-	},
+/obj/machinery/submarine_pressurizer,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
 "ba" = (
@@ -541,6 +546,10 @@
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
 "bb" = (
+/obj/machinery/submarine_dredge,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"bc" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 4;
@@ -548,10 +557,10 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"bc" = (
+"bd" = (
 /turf/simulated/wall,
 /area/ns13/deck3/algae_bay)
-"bd" = (
+"be" = (
 /obj/machinery/power/apc/high{
 	dir = 1;
 	locked = 0;
@@ -563,27 +572,37 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"be" = (
+"bf" = (
+/obj/item/submarine_ore_sack/test,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"bg" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/radiation_lockers)
-"bf" = (
+"bh" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"bg" = (
+"bi" = (
+/obj/machinery/submarine_centrifuge{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"bj" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"bh" = (
+"bk" = (
 /obj/structure/closet/crate/radiation_gear/ns13,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"bi" = (
+"bl" = (
 /obj/structure/closet/firecloset,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"bj" = (
+"bm" = (
 /obj/structure/cable{
 	d1 = 2;
 	d2 = 4;
@@ -591,7 +610,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"bk" = (
+"bn" = (
 /obj/machinery/power/apc/high{
 	dir = 2;
 	locked = 0;
@@ -603,20 +622,20 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"bl" = (
+"bo" = (
 /obj/structure/closet/firecloset,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"bm" = (
+"bp" = (
 /turf/simulated/wall,
 /area/ns13/deck3/radiation_lockers)
-"bn" = (
+"bq" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/control_room)
-"bo" = (
+"br" = (
 /turf/simulated/wall,
 /area/ns13/deck3/control_room)
-"bp" = (
+"bs" = (
 /obj/machinery/door/airlock,
 /obj/structure/cable{
 	d1 = 4;
@@ -625,13 +644,13 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bq" = (
+"bt" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"br" = (
+"bu" = (
 /obj/machinery/power/apc/high{
 	dir = 8;
 	locked = 0;
@@ -643,7 +662,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bs" = (
+"bv" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 2;
@@ -651,7 +670,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bt" = (
+"bw" = (
 /obj/structure/cable{
 	d2 = 1;
 	icon_state = "0-1"
@@ -666,40 +685,47 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bu" = (
+"bx" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bv" = (
+"by" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bw" = (
+"bz" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/control_room,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"bx" = (
+"cA" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/turbine_hall)
+"cB" = (
 /obj/structure/cable{
-	d1 = 4;
-	d2 = 8;
-	icon_state = "4-8"
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
 	},
 /turf/simulated/floor/tiled,
-/area/ns13/deck3/control_room)
-"by" = (
-/obj/structure/table/standard,
-/obj/item/device/scanner/gas,
-/obj/item/device/geiger,
+/area/ns13/deck3/turbine_hall)
+"cC" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
 /turf/simulated/floor/tiled,
-/area/ns13/deck3/control_room)
-"bz" = (
-/obj/structure/table/standard,
-/obj/item/paper/ns13/hatches,
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/control_room)
-"cA" = (
+/area/ns13/deck3/turbine_hall)
+"cD" = (
 /obj/machinery/power/apc/high{
 	dir = 8;
 	locked = 0;
@@ -711,22 +737,22 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cB" = (
+"cE" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cC" = (
+"cF" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cD" = (
+"cG" = (
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cE" = (
+"cH" = (
 /obj/structure/cable{
 	d1 = 4;
 	d2 = 8;
@@ -734,25 +760,25 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cF" = (
+"cI" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 6
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cG" = (
+"cJ" = (
 /obj/machinery/atmospherics/binary/submarine_relief_valve{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cH" = (
+"cK" = (
 /obj/machinery/atmospherics/pipe/manifold/visible{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cI" = (
+"cL" = (
 /obj/machinery/light{
 	dir = 1
 	},
@@ -763,25 +789,25 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cJ" = (
+"cM" = (
 /obj/machinery/atmospherics/binary/submarine_turbine_section/hp{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cK" = (
+"cN" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cL" = (
+"cO" = (
 /obj/machinery/atmospherics/binary/submarine_turbine_section/lp1{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cM" = (
+"cP" = (
 /obj/structure/cable{
 	d2 = 4;
 	icon_state = "0-4"
@@ -789,7 +815,7 @@
 /obj/machinery/power/submarine_turbine_generator,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cN" = (
+"cQ" = (
 /obj/machinery/light/spot{
 	dir = 1
 	},
@@ -800,19 +826,19 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cO" = (
+"cR" = (
 /obj/machinery/light/spot{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cP" = (
+"cS" = (
 /obj/machinery/atmospherics/binary/submarine_turbine_section/lp2{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cQ" = (
+"cT" = (
 /obj/structure/cable{
 	d2 = 8;
 	icon_state = "0-8"
@@ -820,37 +846,37 @@
 /obj/machinery/power/submarine_load_bank,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cR" = (
+"cU" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 10
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cS" = (
+"cV" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cT" = (
+"cW" = (
 /obj/machinery/atmospherics/pipe/manifold/visible{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cU" = (
+"cX" = (
 /obj/machinery/atmospherics/binary/submarine_condenser{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cV" = (
+"cY" = (
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 9
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cW" = (
+"cZ" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/turbine,
 /obj/structure/cable{
@@ -860,53 +886,47 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"cX" = (
-/obj/machinery/computer/submarine_turbine_console,
+"ca" = (
+/obj/machinery/submarine_reactor_section/left_end,
 /turf/simulated/floor/tiled,
-/area/ns13/deck3/turbine_hall)
-"cY" = (
-/obj/structure/table/standard,
-/obj/item/stack/material/steel/fifty,
-/obj/item/stack/material/steel/fifty,
+/area/ns13/deck3/reactor_hall)
+"cb" = (
+/obj/machinery/submarine_reactor_section/middle,
 /turf/simulated/floor/tiled,
-/area/ns13/deck3/turbine_hall)
-"cZ" = (
-/obj/structure/table/standard,
-/obj/item/paper/ns13/turbine_warning,
-/obj/structure/cable{
-	d1 = 4;
-	d2 = 8;
-	icon_state = "4-8"
+/area/ns13/deck3/reactor_hall)
+"cc" = (
+/obj/machinery/light{
+	dir = 2
 	},
 /turf/simulated/floor/tiled,
-/area/ns13/deck3/turbine_hall)
-"ca" = (
+/area/ns13/deck3/reactor_hall)
+"cd" = (
 /obj/structure/submarine_primary_pipe/manifold{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cb" = (
+"ce" = (
 /obj/machinery/submarine_reactor_core,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cc" = (
+"cf" = (
 /obj/machinery/submarine_reactor_section/right_end,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cd" = (
+"cg" = (
 /obj/machinery/atmospherics/unary/tank/submarine_feed_inlet{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"ce" = (
+"ch" = (
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 5
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cf" = (
+"ci" = (
 /obj/machinery/light/spot{
 	dir = 1
 	},
@@ -917,47 +937,47 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cg" = (
+"cj" = (
 /obj/structure/submarine_primary_pipe{
 	dir = 10
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"ch" = (
+"ck" = (
 /obj/machinery/submarine_steam_generator,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"ci" = (
+"cl" = (
 /obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cj" = (
+"cm" = (
 /obj/structure/submarine_primary_pipe{
 	dir = 5
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"ck" = (
+"cn" = (
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cl" = (
+"co" = (
 /obj/machinery/atmospherics/pipe/simple/visible{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cm" = (
+"cp" = (
 /obj/machinery/atmospherics/binary/submarine_feed_pump{
 	dir = 8
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cn" = (
+"cq" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/hall,
 /obj/structure/cable{
@@ -967,33 +987,33 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"co" = (
+"cr" = (
 /obj/machinery/atmospherics/pipe/manifold/visible{
 	dir = 1
 	},
 /obj/machinery/meter,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cp" = (
+"cs" = (
 /obj/machinery/atmospherics/unary/tank/submarine_reactor_steam_port{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cq" = (
+"ct" = (
 /obj/machinery/atmospherics/valve/open{
 	dir = 4
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cr" = (
+"cu" = (
 /obj/machinery/atmospherics/pipe/simple/visible/submarine_water{
 	dir = 4
 	},
 /obj/machinery/meter,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cs" = (
+"cv" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/warning,
 /obj/structure/cable{
@@ -1003,7 +1023,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"ct" = (
+"cw" = (
 /obj/structure/cable{
 	d1 = 2;
 	d2 = 8;
@@ -1011,7 +1031,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cu" = (
+"cx" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 4;
@@ -1019,10 +1039,10 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cv" = (
+"cy" = (
 /turf/simulated/wall,
 /area/ns13/deck3/reactor_hall)
-"cw" = (
+"cz" = (
 /obj/machinery/door/submarine_hatch,
 /obj/structure/cable{
 	d1 = 4;
@@ -1031,37 +1051,31 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
-"cx" = (
-/turf/simulated/wall/r_wall,
-/area/ns13/deck3/turbine_hall)
-"cy" = (
-/obj/structure/cable{
-	d1 = 2;
-	d2 = 4;
-	icon_state = "2-4"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/turbine_hall)
-"cz" = (
-/obj/structure/cable{
-	d2 = 1;
-	icon_state = "0-1"
-	},
-/obj/structure/cable{
-	d2 = 2;
-	icon_state = "0-2"
-	},
-/obj/structure/cable{
-	d2 = 8;
-	icon_state = "0-8"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/turbine_hall)
 "da" = (
-/obj/machinery/fabricator,
+/obj/machinery/computer/submarine_turbine_console,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
 "db" = (
+/obj/structure/table/standard,
+/obj/item/stack/material/steel/fifty,
+/obj/item/stack/material/steel/fifty,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"dc" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/turbine_warning,
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"dd" = (
+/obj/machinery/fabricator,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/turbine_hall)
+"de" = (
 /obj/structure/cable{
 	d1 = 2;
 	d2 = 8;
@@ -1069,7 +1083,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"dc" = (
+"df" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 2;
@@ -1077,7 +1091,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"dd" = (
+"dg" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 4;
@@ -1085,7 +1099,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"de" = (
+"dh" = (
 /obj/structure/table/standard,
 /obj/item/submarine_turbine_blade/small,
 /obj/item/submarine_turbine_blade/small,
@@ -1094,10 +1108,10 @@
 /obj/item/submarine_turbine_blade/large,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"df" = (
+"di" = (
 /turf/simulated/wall,
 /area/ns13/deck3/turbine_hall)
-"dg" = (
+"dj" = (
 /obj/machinery/door/submarine_hatch,
 /obj/structure/cable{
 	d1 = 4;
@@ -1106,13 +1120,13 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/turbine_hall)
-"dh" = (
+"dk" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/shaft_room)
-"di" = (
+"dl" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/shaft_room)
-"dj" = (
+"dm" = (
 /obj/machinery/power/apc/high{
 	dir = 8;
 	locked = 0;
@@ -1124,7 +1138,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/shaft_room)
-"dk" = (
+"dn" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 8;
@@ -1132,19 +1146,19 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/shaft_room)
-"dl" = (
+"do" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/shaft_room)
-"dm" = (
+"dp" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/shaft_room)
-"dn" = (
+"dq" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/shaft,
 /turf/simulated/floor/tiled,
@@ -2578,7 +2592,7 @@ aV
 aV
 aV
 aV
-aV
+bb
 aV
 aV
 aW
@@ -2650,7 +2664,7 @@ am
 aH
 aI
 aJ
-bb
+bc
 aV
 aV
 aV
@@ -2677,22 +2691,22 @@ OC
 ap
 ap
 ap
-bc
-bc
-bc
-bc
-bc
-bc
+bd
+bd
+bd
+bd
+bd
+bd
 ak
 am
 an
 am
 ak
-bd
+be
 aV
 aV
 aV
-aV
+bf
 aV
 aV
 aW
@@ -2714,13 +2728,13 @@ OC
 OC
 OC
 OC
-be
-bf
-bf
-bf
-bf
-bf
-bf
+bg
+bh
+bh
+bh
+bh
+bh
+bh
 ak
 am
 an
@@ -2730,7 +2744,7 @@ aV
 aV
 aV
 aV
-aV
+bi
 aV
 aV
 aW
@@ -2752,13 +2766,13 @@ OC
 OC
 OC
 OC
-be
 bg
+bj
+bk
 bh
-bf
-bf
-bf
-bf
+bh
+bh
+bh
 ak
 aD
 an
@@ -2790,13 +2804,13 @@ OC
 OC
 OC
 OC
-be
-bf
-bf
-bf
-bf
-bf
-bf
+bg
+bh
+bh
+bh
+bh
+bh
+bh
 ak
 am
 an
@@ -2807,7 +2821,7 @@ aV
 aV
 aV
 aV
-bi
+bl
 aV
 aW
 OC
@@ -2828,13 +2842,13 @@ OC
 OC
 OC
 OC
-be
-bf
+bg
 bh
-bf
-bf
-bf
-bf
+bk
+bh
+bh
+bh
+bh
 ak
 am
 an
@@ -2866,13 +2880,13 @@ OC
 OC
 OC
 OC
-be
-bf
-bf
-bf
-bf
-bf
-bj
+bg
+bh
+bh
+bh
+bh
+bh
+bm
 aJ
 aI
 aQ
@@ -2904,13 +2918,13 @@ OC
 OC
 OC
 OC
-be
-bf
-bf
-bf
-bf
-bf
-bk
+bg
+bh
+bh
+bh
+bh
+bh
+bn
 ak
 am
 an
@@ -2942,13 +2956,13 @@ OC
 OC
 OC
 OC
-be
 bg
-bf
-bf
-bf
-bf
-bf
+bj
+bh
+bh
+bh
+bh
+bh
 ak
 am
 an
@@ -2980,13 +2994,13 @@ OC
 OC
 OC
 OC
-be
-bf
-bl
-bf
-bf
-bf
-bf
+bg
+bh
+bo
+bh
+bh
+bh
+bh
 ak
 aD
 an
@@ -3018,13 +3032,13 @@ OC
 OC
 OC
 OC
-be
-bf
-bf
-bf
-bf
-bf
-bf
+bg
+bh
+bh
+bh
+bh
+bh
+bh
 ak
 am
 an
@@ -3056,13 +3070,13 @@ OC
 OC
 OC
 OC
-be
-be
-be
-be
-be
-be
-bm
+bg
+bg
+bg
+bg
+bg
+bg
+bp
 ak
 am
 an
@@ -3099,15 +3113,15 @@ OC
 OC
 OC
 OC
-bn
-bo
-bo
-bo
-bp
-bo
-bn
-bn
-bn
+bq
+br
+br
+br
+bs
+br
+bq
+bq
+bq
 OC
 OC
 OC
@@ -3137,15 +3151,15 @@ OC
 OC
 OC
 OC
-bn
 bq
-br
-bs
 bt
 bu
-bu
 bv
-bn
+bw
+bx
+bx
+by
+bq
 OC
 OC
 OC
@@ -3175,15 +3189,15 @@ OC
 OC
 OC
 OC
-bn
-bw
-bu
-bu
+bq
+bz
 bx
-bu
-bu
-by
-bn
+bx
+bA
+bx
+bx
+bB
+bq
 OC
 OC
 OC
@@ -3213,15 +3227,15 @@ OC
 OC
 OC
 OC
-bn
 bq
-bu
-bu
+bt
 bx
-bu
-bu
-bu
-bn
+bx
+bA
+bx
+bx
+bx
+bq
 OC
 OC
 OC
@@ -3251,15 +3265,15 @@ OC
 OC
 OC
 OC
-bn
-bz
-bu
-bu
+bq
+bC
 bx
-bu
-bu
-bv
-bn
+bx
+bA
+bx
+bx
+by
+bq
 OC
 OC
 OC
@@ -3289,15 +3303,15 @@ OC
 OC
 OC
 OC
-bn
-bA
-bu
-bu
+bq
+bD
 bx
-bu
-bu
-bu
-bn
+bx
+bA
+bx
+bx
+bx
+bq
 OC
 OC
 OC
@@ -3327,15 +3341,15 @@ OC
 OC
 OC
 OC
-bn
-bB
-bu
-bu
+bq
+bE
 bx
-bu
-bu
-bu
-bn
+bx
+bA
+bx
+bx
+bx
+bq
 OC
 OC
 OC
@@ -3365,15 +3379,15 @@ OC
 OC
 OC
 OC
-bn
 bq
-bu
-bu
+bt
 bx
-bu
-bu
-bv
-bn
+bx
+bA
+bx
+bx
+by
+bq
 OC
 OC
 OC
@@ -3403,15 +3417,15 @@ OC
 OC
 OC
 OC
-bn
-bC
-bu
-bu
+bq
+bF
 bx
-bu
-bu
-bv
-bn
+bx
+bA
+bx
+bx
+by
+bq
 OC
 OC
 OC
@@ -3441,15 +3455,15 @@ OC
 OC
 OC
 OC
-bn
-bn
-bn
-bn
-bD
-bn
-bn
-bn
-bn
+bq
+bq
+bq
+bq
+bG
+bq
+bq
+bq
+bq
 OC
 OC
 OC
@@ -3482,9 +3496,9 @@ OC
 OC
 OC
 OC
-bn
-bE
-bn
+bq
+bH
+bq
 OC
 OC
 OC
@@ -3520,9 +3534,9 @@ OC
 OC
 OC
 OC
-bn
-bx
-bn
+bq
+bA
+bq
 OC
 OC
 OC
@@ -3554,17 +3568,17 @@ OC
 OC
 OC
 OC
-bF
-bF
-bF
-bF
-bn
-bD
-bn
-bF
-bF
-bF
-bF
+bI
+bI
+bI
+bI
+bq
+bG
+bq
+bI
+bI
+bI
+bI
 OC
 OC
 OC
@@ -3592,17 +3606,17 @@ OC
 OC
 OC
 OC
-bF
-bG
-bH
-bH
-bH
 bI
 bJ
 bK
-bL
 bK
-bF
+bK
+bL
+bM
+bN
+bO
+bN
+bI
 OC
 OC
 OC
@@ -3630,17 +3644,17 @@ OC
 OC
 OC
 OC
-bF
-bM
-bK
-bN
-bK
-bK
-bK
-bO
-bK
+bI
 bP
-bF
+bN
+bQ
+bN
+bN
+bN
+bR
+bN
+bS
+bI
 OC
 OC
 OC
@@ -3668,17 +3682,17 @@ OC
 OC
 OC
 OC
-bF
-bQ
-bR
-bS
+bI
 bT
-bK
-bK
-bK
-bK
-bK
-bF
+bU
+bV
+bW
+bN
+bN
+bN
+bN
+bN
+bI
 OC
 OC
 OC
@@ -3706,17 +3720,17 @@ OC
 OC
 OC
 OC
-bF
-bU
-bV
-bW
+bI
 bX
 bY
-bK
-bK
-bK
 bZ
-bF
+ca
+cb
+bN
+bN
+bN
+cc
+bI
 OC
 OC
 OC
@@ -3744,17 +3758,17 @@ OC
 OC
 OC
 OC
-bF
-bQ
-bV
-ca
-cb
-cc
+bI
+bT
+bY
 cd
 ce
-bK
-bK
-bF
+cf
+cg
+ch
+bN
+bN
+bI
 OC
 OC
 OC
@@ -3782,17 +3796,17 @@ OC
 OC
 OC
 OC
-bF
-cf
-cg
-ch
+bI
 ci
-cg
 cj
 ck
-bK
-bK
-bF
+cl
+cj
+cm
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -3820,17 +3834,17 @@ OC
 OC
 OC
 OC
-bF
-bQ
-bK
-bK
-cl
-bK
-bV
-cm
-bK
-bP
-bF
+bI
+bT
+bN
+bN
+co
+bN
+bY
+cp
+bN
+bS
+bI
 OC
 OC
 OC
@@ -3858,17 +3872,17 @@ OC
 OC
 OC
 OC
-bF
-cn
-bK
-bK
-co
-cp
-ch
+bI
+cq
+bN
+bN
+cr
+cs
 ck
-bK
-bK
-bF
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -3896,17 +3910,17 @@ OC
 OC
 OC
 OC
-bF
-bQ
-bK
-bK
-cq
-bK
-bK
-ck
-bK
-bK
-bF
+bI
+bT
+bN
+bN
+ct
+bN
+bN
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -3934,17 +3948,17 @@ OC
 OC
 OC
 OC
-bF
-bU
-bK
-bK
-cl
-bK
-bK
-cr
-bK
-bZ
-bF
+bI
+bX
+bN
+bN
+co
+bN
+bN
+cu
+bN
+cc
+bI
 OC
 OC
 OC
@@ -3972,17 +3986,17 @@ OC
 OC
 OC
 OC
-bF
-bQ
-bK
-bK
-cl
-bK
-bK
-ck
-bK
-bK
-bF
+bI
+bT
+bN
+bN
+co
+bN
+bN
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -4010,17 +4024,17 @@ OC
 OC
 OC
 OC
-bF
-cs
-bK
-bK
-cl
-bK
-bK
-ck
-bK
-bK
-bF
+bI
+cv
+bN
+bN
+co
+bN
+bN
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -4048,17 +4062,17 @@ OC
 OC
 OC
 OC
-bF
-bQ
-bK
-bK
-cl
-bK
-bK
-ck
-bK
-bP
-bF
+bI
+bT
+bN
+bN
+co
+bN
+bN
+cn
+bN
+bS
+bI
 OC
 OC
 OC
@@ -4086,17 +4100,17 @@ OC
 OC
 OC
 OC
-bF
-cf
-bK
-bK
-cl
-bK
-bK
-ck
-bK
-bK
-bF
+bI
+ci
+bN
+bN
+co
+bN
+bN
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -4124,17 +4138,17 @@ OC
 OC
 OC
 OC
-bF
-bU
-bK
-bK
-cl
-bK
-bK
-ck
-bK
-bZ
-bF
+bI
+bX
+bN
+bN
+co
+bN
+bN
+cn
+bN
+cc
+bI
 OC
 OC
 OC
@@ -4162,17 +4176,17 @@ OC
 OC
 OC
 OC
-bF
-ct
-cu
-bK
-cl
-bK
-bK
-ck
-bK
-bK
-bF
+bI
+cw
+cx
+bN
+co
+bN
+bN
+cn
+bN
+bN
+bI
 OC
 OC
 OC
@@ -4200,17 +4214,17 @@ OC
 OC
 OC
 OC
-bF
-cv
-cw
-cv
-cl
-cv
-cv
-ck
-cv
-cv
-bF
+bI
+cy
+cz
+cy
+co
+cy
+cy
+cn
+cy
+cy
+bI
 OC
 OC
 OC
@@ -4238,17 +4252,17 @@ OC
 OC
 OC
 OC
-cx
-cy
-cz
 cA
 cB
 cC
-cC
 cD
-cC
-cC
-cx
+cE
+cF
+cF
+cG
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4276,17 +4290,17 @@ OC
 OC
 OC
 OC
-cx
-cE
+cA
+cH
+cI
+cJ
+cK
+cF
 cF
 cG
-cH
-cC
-cC
-cD
-cC
-cC
-cx
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4314,17 +4328,17 @@ OC
 OC
 OC
 OC
-cx
-cI
-cB
-cC
-cJ
-cC
-cC
-cD
-cC
-cK
-cx
+cA
+cL
+cE
+cF
+cM
+cF
+cF
+cG
+cF
+cN
+cA
 OC
 OC
 OC
@@ -4352,17 +4366,17 @@ OC
 OC
 OC
 OC
-cx
+cA
+cH
 cE
-cB
-cC
-cB
-cC
-cC
-cD
-cC
-cC
-cx
+cF
+cE
+cF
+cF
+cG
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4390,17 +4404,17 @@ OC
 OC
 OC
 OC
-cx
+cA
+cH
 cE
-cB
-cC
-cL
-cM
-cC
-cD
-cC
-cC
-cx
+cF
+cO
+cP
+cF
+cG
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4428,17 +4442,17 @@ OC
 OC
 OC
 OC
-cx
-cN
-cB
-cC
-cB
+cA
+cQ
 cE
-cC
-cD
-cC
-cO
-cx
+cF
+cE
+cH
+cF
+cG
+cF
+cR
+cA
 OC
 OC
 OC
@@ -4466,17 +4480,17 @@ OC
 OC
 OC
 OC
-cx
+cA
+cH
 cE
-cB
-cC
-cP
-cE
-cC
-cD
-cC
-cC
-cx
+cF
+cS
+cH
+cF
+cG
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4504,17 +4518,17 @@ OC
 OC
 OC
 OC
-cx
+cA
+cH
 cE
-cB
-cC
-cB
-cQ
-cC
-cD
-cC
-cC
-cx
+cF
+cE
+cT
+cF
+cG
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4542,17 +4556,17 @@ OC
 OC
 OC
 OC
-cx
-cI
-cR
-cS
-cT
-cS
+cA
+cL
 cU
 cV
-cC
-cK
-cx
+cW
+cV
+cX
+cY
+cF
+cN
+cA
 OC
 OC
 OC
@@ -4580,17 +4594,17 @@ OC
 OC
 OC
 OC
-cx
-cE
-cC
-cC
-cC
-cC
-cC
-cC
-cC
-cC
-cx
+cA
+cH
+cF
+cF
+cF
+cF
+cF
+cF
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4618,17 +4632,17 @@ OC
 OC
 OC
 OC
-cx
-cW
-cC
-cC
-cC
-cC
-cC
-cC
-cC
-cC
-cx
+cA
+cZ
+cF
+cF
+cF
+cF
+cF
+cF
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4656,17 +4670,17 @@ OC
 OC
 OC
 OC
-cx
-cE
-cC
-cC
-cC
-cC
-cC
-cC
-cC
-cO
-cx
+cA
+cH
+cF
+cF
+cF
+cF
+cF
+cF
+cF
+cR
+cA
 OC
 OC
 OC
@@ -4694,17 +4708,17 @@ OC
 OC
 OC
 OC
-cx
-cN
-cX
-cC
-cC
-cC
-cC
-cC
-cC
-cC
-cx
+cA
+cQ
+da
+cF
+cF
+cF
+cF
+cF
+cF
+cF
+cA
 OC
 OC
 OC
@@ -4732,17 +4746,17 @@ OC
 OC
 OC
 OC
-cx
-cI
-cC
-cC
-cC
-cC
-cC
-cC
-cY
-cC
-cx
+cA
+cL
+cF
+cF
+cF
+cF
+cF
+cF
+db
+cF
+cA
 OC
 OC
 OC
@@ -4770,17 +4784,17 @@ OC
 OC
 OC
 OC
-cx
-cZ
-cC
-cC
-cC
-cC
-cC
-cC
-da
-cK
-cx
+cA
+dc
+cF
+cF
+cF
+cF
+cF
+cF
+dd
+cN
+cA
 OC
 OC
 OC
@@ -4808,17 +4822,17 @@ OC
 OC
 OC
 OC
-cx
-db
-dc
-dc
-dc
-dd
-cC
-cC
+cA
 de
-cC
-cx
+df
+df
+df
+dg
+cF
+cF
+dh
+cF
+cA
 OC
 OC
 OC
@@ -4846,17 +4860,17 @@ OC
 OC
 OC
 OC
-cx
-cx
-df
-df
-df
-dg
-df
-df
-df
-cx
-cx
+cA
+cA
+di
+di
+di
+dj
+di
+di
+di
+cA
+cA
 OC
 OC
 OC
@@ -4885,15 +4899,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-dj
 dk
-di
-di
-di
-dh
+dl
+dl
+dm
+dn
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -4923,15 +4937,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-di
-di
-di
-di
-di
-dh
+dk
+dl
+dl
+dl
+dl
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -4961,15 +4975,15 @@ OC
 OC
 OC
 OC
-dh
+dk
+do
 dl
-di
-di
-di
-di
-di
-dm
-dh
+dl
+dl
+dl
+dl
+dp
+dk
 OC
 OC
 OC
@@ -4999,15 +5013,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-di
-di
-di
-di
-di
-dh
+dk
+dl
+dl
+dl
+dl
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -5037,15 +5051,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-di
-di
-di
-di
-di
-dh
+dk
+dl
+dl
+dl
+dl
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -5075,15 +5089,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-di
-dn
-di
-di
-di
-dh
+dk
+dl
+dl
+dl
+dq
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -5113,15 +5127,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-di
-di
-di
-di
-di
-dh
+dk
+dl
+dl
+dl
+dl
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -5151,15 +5165,15 @@ OC
 OC
 OC
 OC
-dh
+dk
+do
 dl
-di
-di
-di
-di
-di
-dm
-dh
+dl
+dl
+dl
+dl
+dp
+dk
 OC
 OC
 OC
@@ -5189,15 +5203,15 @@ OC
 OC
 OC
 OC
-dh
-di
-di
-di
-di
-di
-di
-di
-dh
+dk
+dl
+dl
+dl
+dl
+dl
+dl
+dl
+dk
 OC
 OC
 OC
@@ -5227,15 +5241,15 @@ OC
 OC
 OC
 OC
-dh
-dh
-dh
-dh
-dh
-dh
-dh
-dh
-dh
+dk
+dk
+dk
+dk
+dk
+dk
+dk
+dk
+dk
 OC
 OC
 OC

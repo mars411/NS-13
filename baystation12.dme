@@ -893,6 +893,7 @@
 #include "code\game\machinery\submarine\submarine_announce.dm"
 #include "code\game\machinery\submarine\submarine_annunciator.dm"
 #include "code\game\machinery\submarine\submarine_fuel.dm"
+#include "code\game\machinery\submarine\submarine_enrichment.dm"
 #include "code\game\machinery\submarine\submarine_hatch.dm"
 #include "code\game\machinery\submarine\submarine_reactor.dm"
 #include "code\game\machinery\submarine\submarine_ru.dm"

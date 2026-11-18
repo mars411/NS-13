@@ -102,7 +102,8 @@ var/global/list/nsr_alarm_labels = list(
 	"pump" = "MAIN PUMP",
 	"rps" = "AUTO SCRAM",
 	"xenon" = "XENON PIT",
-	"fuel" = "FUEL LOW"
+	"fuel" = "FUEL LOW",
+	"rodwear" = "ROD WEAR"
 )
 
 /// Русские подписи плиток (ревизия 24, переключатель языка 24.1): до двух строк по 15 знаков, плитка узкая.
@@ -122,7 +123,8 @@ var/global/list/nsr_alarm_labels_ru = list(
 	"pump" = "ГЛАВНЫЙ НАСОС",
 	"rps" = "АВТО-SCRAM",
 	"xenon" = "КСЕНОНОВАЯ ЯМА",
-	"fuel" = "ТОПЛИВО: МАЛО"
+	"fuel" = "ТОПЛИВО: МАЛО",
+	"rodwear" = "ИЗНОС СТЕРЖНЕЙ"
 )
 
 /// Уровень тревоги по верхнему порогу: 2, если значение не ниже критического, 1, если не ниже предупредительного, иначе 0.
@@ -287,6 +289,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	var/list/rod_pos
 	/// Куда оператор послал каждый стержень, 0-100%.
 	var/list/rod_target
+	/// Износ каждого стержня (ревизия 26), 0-100%: от хода, от потока и от SCRAM. Меняется только стержнем-предметом.
+	var/list/rod_wear
 	/// Клапан питательной воды, 0-100%. ЗАГЛУШКА до труб.
 	var/feedwater_valve = 0
 	/// Клапан пара, 0-100%. ЗАГЛУШКА для режима без порта: стравливает пар в никуда. С портом не действует.
@@ -375,9 +379,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	vessel_air = new /datum/gas_mixture(NSR_VESSEL_VOLUME, T0C + NSR_AMBIENT_TEMP)
 	rod_pos = list()
 	rod_target = list()
+	rod_wear = list()
 	for(var/i in 1 to NSR_ROD_COUNT)
 		rod_pos += 0
 		rod_target += 0
+		rod_wear += 0
 	fuel_elements = list()
 	if(preload_fuel)
 		for(var/i in 1 to NSR_FUEL_SLOTS)
@@ -519,6 +525,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	vessel_air = null
 	rod_pos = null
 	rod_target = null
+	rod_wear = null
 	return ..()
 
 /// Ищет питательный насос рядом (с той же меткой реактора) и привязывает его. Возвращает TRUE, если насос найден.
@@ -615,6 +622,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return weld_leak(tool, user)
 	if(istype(tool, /obj/item/submarine_fuel_element))
 		return load_fuel(tool, user)
+	if(istype(tool, /obj/item/submarine_control_rod))
+		return swap_rod(tool, user)
 	if(isCrowbar(tool))
 		nsr_lang_for(user)
 		if(casing_open)
@@ -752,7 +761,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return FALSE
 	for(var/i in 1 to NSR_ROD_COUNT)
 		if(index == 0 || index == i)
-			rod_target[i] = clamp(rod_target[i] + amount, 0, 100)
+			var/new_target = clamp(rod_target[i] + amount, 0, 100)
+			// Заклинивший стержень вверх не идёт: цель не выше его положения.
+			if(amount > 0 && rod_seized(i))
+				new_target = min(new_target, max(rod_pos[i], rod_target[i]))
+			rod_target[i] = new_target
 	update_rod_averages()
 	return TRUE
 
@@ -801,6 +814,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return FALSE
 	if(!scrammed)
 		scram_reason = reason
+		// Сброс бьёт по приводам: износ растёт от высоты, с которой падает стержень.
+		for(var/i in 1 to NSR_ROD_COUNT)
+			wear_rod(i, NSR_ROD_WEAR_SCRAM * rod_pos[i])
 	scrammed = TRUE
 	boost = FALSE
 	auto_rods_i = 0
@@ -982,21 +998,92 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	update_alarm()
 	emit_radiation()
 
-/// Двигает каждый стержень к его цели с конечной скоростью. При SCRAM скорость выше, но не бесконечная.
+/// Двигает каждый стержень к его цели с конечной скоростью. При SCRAM скорость выше, но не бесконечная. Износ тормозит привод, а на пределе стержень
+/// заклинивает: вверх не идёт совсем, вниз идёт медленно. Ход тоже изнашивает привод.
 /obj/machinery/submarine_reactor_core/proc/move_rods(dt)
 	var/was_up = rods_pos > 0
-	var/step = (scrammed ? NSR_ROD_SPEED_SCRAM : NSR_ROD_SPEED) * dt
+	var/base_step = (scrammed ? NSR_ROD_SPEED_SCRAM : NSR_ROD_SPEED) * dt
 	for(var/i in 1 to NSR_ROD_COUNT)
 		var/pos = rod_pos[i]
 		var/target = rod_target[i]
+		var/step = base_step * rod_speed_mult(i)
+		var/new_pos = pos
 		if(pos < target)
-			rod_pos[i] = min(pos + step, target)
+			if(!rod_seized(i))
+				new_pos = min(pos + step, target)
 		else if(pos > target)
-			rod_pos[i] = max(pos - step, target)
+			new_pos = max(pos - step, target)
+		if(new_pos != pos)
+			rod_pos[i] = new_pos
+			wear_rod(i, abs(new_pos - pos) * NSR_ROD_WEAR_MOVE)
 	update_rod_averages()
 	// Значок зависит только от того, стоят ли стержни в нуле, поэтому обновляем его не каждый тик.
 	if(was_up != (rods_pos > 0))
 		queue_icon_update()
+
+/// Заклинил ли стержень (износ на пределе).
+/obj/machinery/submarine_reactor_core/proc/rod_seized(index)
+	return rod_wear[index] >= NSR_ROD_JAM_WEAR
+
+/// Во сколько раз изношенный привод медленнее нового: с NSR_ROD_WEAR_SLOW % линейно до NSR_ROD_SLOW_MIN на пределе износа.
+/obj/machinery/submarine_reactor_core/proc/rod_speed_mult(index)
+	var/slow = clamp((rod_wear[index] - NSR_ROD_WEAR_SLOW) / (100 - NSR_ROD_WEAR_SLOW), 0, 1)
+	return 1 - (1 - NSR_ROD_SLOW_MIN) * slow
+
+/// Цвет износа для пульта: good, average, bad.
+/obj/machinery/submarine_reactor_core/proc/rod_wear_class(index)
+	if(rod_wear[index] >= NSR_ROD_JAM_WEAR)
+		return "bad"
+	return (rod_wear[index] >= NSR_ROD_WEAR_WARN) ? "average" : "good"
+
+/// Добавляет износ стержню. На пределе привод заклинивает, об этом слышно в зале.
+/obj/machinery/submarine_reactor_core/proc/wear_rod(index, amount)
+	if(amount <= 0)
+		return
+	var/old_wear = rod_wear[index]
+	var/new_wear = min(100, old_wear + amount)
+	rod_wear[index] = new_wear
+	if(old_wear < NSR_ROD_JAM_WEAR && new_wear >= NSR_ROD_JAM_WEAR)
+		audible_message(SPAN_DANGER("A control rod drive of \the [src] grinds and seizes."))
+
+/// Износ от потока: стержень, глубже сидящий в зоне, поглощает больше нейтронов и изнашивается быстрее.
+/obj/machinery/submarine_reactor_core/proc/wear_rods_by_flux(dt)
+	if(flux <= 0.001)
+		return
+	for(var/i in 1 to NSR_ROD_COUNT)
+		var/absorb = 0.4 + 0.6 * (1 - rod_pos[i] / 100)
+		wear_rod(i, NSR_ROD_WEAR_FLUX * flux * absorb * dt)
+
+/// Заменить стержень СУЗ (ревизия 26): условия как для смены ТВЭЛов (плита снята, реактор холодный и остановлен). Спрашивает, какой стержень,
+/// старый с его износом оказывается в руках.
+/obj/machinery/submarine_reactor_core/proc/swap_rod(obj/item/submarine_control_rod/new_rod, mob/living/user)
+	nsr_lang_for(user)
+	if(!casing_open)
+		to_chat(user, SPAN_WARNING(nsr_tr("The rod drives are behind the armour plate. Unbolt the plate with a wrench first.", "Приводы стержней за бронеплитой ядра. Сначала отверните плиту гаечным ключом.")))
+		return TRUE
+	var/reason = fuel_swap_block_reason()
+	if(reason)
+		to_chat(user, SPAN_WARNING(reason))
+		return TRUE
+	var/list/options = list()
+	for(var/i in 1 to NSR_ROD_COUNT)
+		options[nsr_tr("Rod [i], wear [round(rod_wear[i])] %[rod_seized(i) ? ", seized" : ""]", "Стержень [i], износ [round(rod_wear[i])] %[rod_seized(i) ? ", заклинил" : ""]")] = i
+	var/choice = input(user, nsr_tr("Which rod to replace?", "Какой стержень заменить?"), nsr_tr("Control rods", "Стержни СУЗ")) as null|anything in options
+	if(!choice || QDELETED(user) || QDELETED(new_rod) || user.incapacitated() || !user.Adjacent(src))
+		return TRUE
+	var/index = options[choice]
+	user.visible_message(SPAN_NOTICE("\The [user] starts swapping a control rod drive of \the [src]."))
+	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || QDELETED(new_rod) || !user.unEquip(new_rod, src))
+		return TRUE
+	var/obj/item/submarine_control_rod/old_rod = new /obj/item/submarine_control_rod(get_turf(user))
+	old_rod.set_wear(rod_wear[index])
+	rod_wear[index] = new_rod.wear
+	qdel(new_rod)
+	user.put_in_hands(old_rod)
+	playsound(src, NS_SND_WRENCH, 40, TRUE)
+	user.visible_message(SPAN_NOTICE("\The [user] swaps a control rod of \the [src]."))
+	queue_icon_update()
+	return TRUE
 
 /// Один шаг физики. dt - длительность шага в секундах.
 /obj/machinery/submarine_reactor_core/proc/simulate(dt)
@@ -1025,6 +1112,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Йод копится от потока и распадается в ксенон, ксенон распадается сам и выгорает в потоке. После остановки поток падает до нуля, йод ещё
 	// какое-то время дорабатывает в ксенон, и ксенон растёт до пика, потом спадает (яма). На мощности выгорание держит его на равновесии.
 	flux = rods_frac * boost_mult
+	wear_rods_by_flux(dt)
 	iodine += NSR_XENON_LAMBDA_I * (flux - iodine) * dt
 	xenon = max(0, xenon + ((NSR_XENON_LAMBDA_X + NSR_XENON_BURNOUT) * iodine - (NSR_XENON_LAMBDA_X + NSR_XENON_BURNOUT * flux) * xenon) * dt)
 	if(flux <= 0 && iodine < 0.0005 && xenon < 0.0005)
@@ -1266,6 +1354,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		tiles["fuel"] = 2
 	else if(worst >= NSR_FUEL_WARN)
 		tiles["fuel"] = 1
+	// Износ стержней: информационная плитка. Красная, если какой-то стержень заклинил.
+	var/worst_wear = 0
+	for(var/i in 1 to NSR_ROD_COUNT)
+		worst_wear = max(worst_wear, rod_wear[i])
+	if(worst_wear >= NSR_ROD_JAM_WEAR)
+		tiles["rodwear"] = 2
+	else if(worst_wear >= NSR_ROD_WEAR_WARN)
+		tiles["rodwear"] = 1
 	return tiles
 
 /// Подтвердить все горящие плитки (мигание прекращается) и заглушить сирену до ухудшения (кнопка на пульте).
@@ -1285,7 +1381,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Уровень сирены: худшая плитка, кроме информационных (закрытый клапан; повреждение топлива, пока оно не растёт).
 	var/new_level = 0
 	for(var/id in tiles)
-		if(id == "valve" || id == "rps" || id == "xenon" || id == "fuel" || (id == "damage" && !damage_rising))
+		if(id == "valve" || id == "rps" || id == "xenon" || id == "fuel" || id == "rodwear" || (id == "damage" && !damage_rising))
 			continue
 		new_level = max(new_level, tiles[id])
 	// Табло: подтверждение, «первопричина» и мигание ведёт общий класс.
@@ -2152,7 +2248,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["rods"] = round(R.rods_pos, 0.1)
 	var/list/rod_list = list()
 	for(var/i in 1 to NSR_ROD_COUNT)
-		rod_list += list(list("n" = i, "pos" = round(R.rod_pos[i], 0.1), "target" = R.rod_target[i], "moving" = abs(R.rod_pos[i] - R.rod_target[i]) >= 0.5, "locked" = R.scrammed))
+		rod_list += list(list("n" = i, "pos" = round(R.rod_pos[i], 0.1), "target" = R.rod_target[i], "moving" = abs(R.rod_pos[i] - R.rod_target[i]) >= 0.5, "locked" = R.scrammed, "wear" = round(R.rod_wear[i]), "wearCls" = R.rod_wear_class(i), "seized" = R.rod_seized(i)))
 	data["rodList"] = rod_list
 	data["rodsTarget"] = R.rods_target
 	data["rodsMoving"] = abs(R.rods_pos - R.rods_target) >= 0.5

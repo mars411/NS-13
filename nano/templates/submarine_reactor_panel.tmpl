@@ -374,11 +374,17 @@
 				<span class='average'>идёт к {{:value.target}} %</span>
 			{{/if}}
 		</div>
+		<div class="statusValue">
+			Износ: <span class='{{:value.wearCls}}'>{{:value.wear}} %</span>
+			{{if value.seized}}
+				<span class='bad'><b>ЗАКЛИНИЛ: вверх не идёт</b></span>
+			{{/if}}
+		</div>
 		<div style="clear: both; padding-top: 4px;">
 			{{:helper.link('-10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -10}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
 			{{:helper.link('-1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -1}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (data.rodsAuto || value.locked || value.target >= 100) ? 'disabled' : null)}}
-			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (data.rodsAuto || value.locked || value.target >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (data.rodsAuto || value.locked || value.seized || value.target >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (data.rodsAuto || value.locked || value.seized || value.target >= 100) ? 'disabled' : null)}}
 		</div>
 	</div>
 </div>
