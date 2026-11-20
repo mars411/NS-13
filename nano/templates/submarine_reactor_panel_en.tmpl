@@ -97,7 +97,7 @@
 		<div class="statusValue">
 			{{:data.xenon}} % of the full-power equilibrium
 		</div>
-		<div style="color: #a0a0a0;">
+		<div style="clear: both; color: #a0a0a0;">
 			Iodine {{:data.iodine}} %, rod travel lost to xenon: {{:data.xenonPenalty}} %. Xenon builds up after a shutdown or a power cut and burns out under power: a hot restart in the pit needs more rods.
 		</div>
 	</div>
@@ -108,7 +108,7 @@
 	</div>
 	<div class="itemContent">
 		{{for data.fuel}}
-			<div>
+			<div style="clear: both; padding-top: 3px;">
 				{{:value.slot}}. {{:value.name}} TVEL
 				{{:helper.displayBar(value.burn, 0, 100, value.burnClass)}}
 				<div class="statusValue">
@@ -116,11 +116,11 @@
 				</div>
 			</div>
 		{{/for}}
-		<div style="color: #a0a0a0;">
+		<div style="clear: both; color: #a0a0a0;">
 			Rated power {{:data.fuelPower}} % of four fresh enriched elements, response {{:data.fuelResponse}} %.
 			{{if data.fuelNow}}The most burnt element lasts about {{:data.fuelNow}} min at the present power, {{:data.fuelFull}} min at full rods.{{else}}{{if data.fuelFull}}The most burnt element lasts about {{:data.fuelFull}} min at full rods.{{/if}}{{/if}}
 		</div>
-		<div style="color: #a0a0a0;">
+		<div style="clear: both; color: #a0a0a0;">
 			Refuelling: {{:data.fuelSwap}}
 		</div>
 	</div>
@@ -427,7 +427,7 @@
 				<span class='good'><b>OFF</b></span>
 			{{/if}}
 		{{/if}}
-		<div style="color: #a0a0a0;">+30 % heat from the same rods: more steam and electricity, but the margin to the limits shrinks, the radiation and the decay heat grow. Switches off by itself on SCRAM.</div>
+		<div style="clear: both; color: #a0a0a0;">+30 % heat from the same rods: more steam and electricity, but the margin to the limits shrinks, the radiation and the decay heat grow. Switches off by itself on SCRAM.</div>
 		{{if data.boostBlock && !data.boost}}
 			<div class='average'>{{:data.boostBlock}}</div>
 		{{/if}}

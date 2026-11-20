@@ -121,6 +121,7 @@ var/global/list/nsr_centrifuge_recipes = list(
 	idle_power_usage = 30
 	active_power_usage = NSR_DREDGE_POWER
 	power_channel = EQUIP
+	interact_offline = TRUE
 	/// Включён ли сборщик (он может стоять без питания, тогда не собирает).
 	var/running = FALSE
 	/// Секунды до следующей конкреции.
@@ -265,6 +266,7 @@ var/global/list/nsr_centrifuge_recipes = list(
 	idle_power_usage = 50
 	active_power_usage = NSR_CENTRIFUGE_POWER
 	power_channel = EQUIP
+	interact_offline = TRUE
 	/// Тип сырья -> запас в центрифуге.
 	var/list/stock
 	/// id рецепта в работе или null.
@@ -320,6 +322,7 @@ var/global/list/nsr_centrifuge_recipes = list(
 		user.unEquip(sack)
 		qdel(sack)
 	SSnano.update_uis(src)
+	ui_interact(user)
 	return TRUE
 
 /obj/machinery/submarine_centrifuge/proc/start_job(id, mob/user)

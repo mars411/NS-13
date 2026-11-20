@@ -224,6 +224,9 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	return ..()
 
 /obj/machinery/submarine_reactor_section/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	// ТВЭЛы, стержни и лом работают через любую из четырёх частей реактора (правки 26.1), у той, по которой кликнули, плита должна быть снята.
+	if(core && !QDELETED(core) && core.fuel_tool(tool, user, src))
+		return TRUE
 	if(!isWrench(tool))
 		return ..()
 	if(nsr_wrench_casing(src, user, casing_open))
@@ -620,21 +623,36 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/submarine_reactor_core/use_tool(obj/item/tool, mob/living/user, list/click_params)
 	if(leaking && isWelder(tool))
 		return weld_leak(tool, user)
-	if(istype(tool, /obj/item/submarine_fuel_element))
-		return load_fuel(tool, user)
-	if(istype(tool, /obj/item/submarine_control_rod))
-		return swap_rod(tool, user)
-	if(isCrowbar(tool))
-		nsr_lang_for(user)
-		if(casing_open)
-			return unload_fuel(user)
-		to_chat(user, SPAN_NOTICE(nsr_tr("The fuel channels are behind the armour plate. Unbolt the plate with a wrench first.", "Каналы ТВЭЛов за бронеплитой ядра. Сначала отверните плиту гаечным ключом.")))
+	if(fuel_tool(tool, user, src))
+		return TRUE
 	if(!isWrench(tool))
 		return ..()
 	if(nsr_wrench_casing(src, user, casing_open))
 		casing_open = !casing_open
 		queue_icon_update()
 	return TRUE
+
+/// Снята ли броневая плита у этой части реактора (ядра или секции).
+/obj/machinery/submarine_reactor_core/proc/part_open(obj/machinery/hull)
+	if(istype(hull, /obj/machinery/submarine_reactor_section))
+		var/obj/machinery/submarine_reactor_section/S = hull
+		return S.casing_open
+	return casing_open
+
+/// Работа с топливом через любую часть реактора: ТВЭЛ вставляется, стержень меняется, ломом достаётся ТВЭЛ. hull: часть, по которой кликнули
+/// (ядро или секция), у неё должна быть снята плита. Возвращает TRUE, если инструмент обработан.
+/obj/machinery/submarine_reactor_core/proc/fuel_tool(obj/item/tool, mob/living/user, obj/machinery/hull)
+	if(istype(tool, /obj/item/submarine_fuel_element))
+		return load_fuel(tool, user, hull)
+	if(istype(tool, /obj/item/submarine_control_rod))
+		return swap_rod(tool, user, hull)
+	if(isCrowbar(tool))
+		nsr_lang_for(user)
+		if(part_open(hull))
+			return unload_fuel(user, hull)
+		to_chat(user, SPAN_NOTICE(nsr_tr("The fuel channels are behind the armour plate. Unbolt the plate of this part with a wrench first.", "Каналы ТВЭЛов за бронеплитой. Сначала отверните плиту этой части реактора гаечным ключом.")))
+		return TRUE
+	return FALSE
 
 // --- Топливо (ревизия 23) ---
 
@@ -684,15 +702,23 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		return nsr_tr("Insert all the control rods first.", "Сначала опустите все стержни СУЗ.")
 	if(core_temperature > NSR_FUEL_SWAP_TEMP)
 		return nsr_tr("The core is still too hot ([round(core_temperature)] C, it has to cool below [NSR_FUEL_SWAP_TEMP] C).", "Ядро ещё слишком горячее ([round(core_temperature)] C, нужно остудить ниже [NSR_FUEL_SWAP_TEMP] C).")
-	if(two_circuit ? (primary_pressure > NSR_FUEL_SWAP_PRESSURE) : (steam_pressure > NSR_FUEL_SWAP_PRESSURE))
-		return nsr_tr("The vessel is still under pressure.", "Сосуд ещё под давлением.")
+	var/fixed_pressure = two_circuit && (!pressurizer || QDELETED(pressurizer))
+	var/pressure = two_circuit ? primary_pressure : steam_pressure
+	if(!fixed_pressure && pressure > NSR_FUEL_SWAP_PRESSURE)
+		if(two_circuit)
+			return nsr_tr("The vessel is still under pressure: [round(pressure, 0.1)] bar in the primary circuit, it has to drop below [NSR_FUEL_SWAP_PRESSURE] bar. Switch the pressure automation off, set the heaters to zero and open the relief valve by hand.", \
+				"Сосуд ещё под давлением: [round(pressure, 0.1)] бар в первом контуре, нужно ниже [NSR_FUEL_SWAP_PRESSURE] бар. Выключите автоматику давления, поставьте нагреватели в ноль и откройте клапан сброса вручную.")
+		return nsr_tr("The vessel is still under pressure: [round(pressure, 0.1)] bar in the steam circuit, it has to drop below [NSR_FUEL_SWAP_PRESSURE] bar. Let the steam bleed off.", \
+			"Сосуд ещё под давлением: [round(pressure, 0.1)] бар в паровом контуре, нужно ниже [NSR_FUEL_SWAP_PRESSURE] бар. Дайте пару стравиться.")
 	return ""
 
 /// Вставить ТВЭЛ в свободный слот (плита ядра снята, реактор холодный и остановлен).
-/obj/machinery/submarine_reactor_core/proc/load_fuel(obj/item/submarine_fuel_element/E, mob/living/user)
+/obj/machinery/submarine_reactor_core/proc/load_fuel(obj/item/submarine_fuel_element/E, mob/living/user, obj/machinery/hull)
 	nsr_lang_for(user)
-	if(!casing_open)
-		to_chat(user, SPAN_WARNING(nsr_tr("The fuel channels are behind the armour plate. Unbolt the plate with a wrench first.", "Каналы ТВЭЛов за бронеплитой ядра. Сначала отверните плиту гаечным ключом.")))
+	if(!hull)
+		hull = src
+	if(!part_open(hull))
+		to_chat(user, SPAN_WARNING(nsr_tr("The fuel channels are behind the armour plate. Unbolt the plate of this part with a wrench first.", "Каналы ТВЭЛов за бронеплитой. Сначала отверните плиту этой части реактора гаечным ключом.")))
 		return TRUE
 	if(length(fuel_elements) >= NSR_FUEL_SLOTS)
 		to_chat(user, SPAN_WARNING(nsr_tr("All the fuel channels are full. Pry a spent element out with a crowbar first.", "Все каналы ТВЭЛов заняты. Сначала достаньте выгоревший ТВЭЛ ломом.")))
@@ -711,9 +737,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	return TRUE
 
 /// Вынуть ТВЭЛ ломом. Если в ядре их несколько, спрашивает, какой: можно достать любой, в том числе свежий.
-/obj/machinery/submarine_reactor_core/proc/unload_fuel(mob/living/user)
+/obj/machinery/submarine_reactor_core/proc/unload_fuel(mob/living/user, obj/machinery/hull)
 	nsr_lang_for(user)
-	if(!casing_open)
+	if(!hull)
+		hull = src
+	if(!part_open(hull))
 		return FALSE
 	if(!length(fuel_elements))
 		to_chat(user, SPAN_WARNING(nsr_tr("All the fuel channels are empty.", "Все каналы ТВЭЛов пусты.")))
@@ -732,7 +760,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			slot++
 			options[nsr_tr("[slot]. [E.fuel_name()], burnup [round(E.burnup)] %", "[slot]. [nsr_ru(E.fuel_name())], выгорание [round(E.burnup)] %")] = E
 		var/choice = input(user, nsr_tr("Which fuel element to pry out?", "Какой ТВЭЛ достать?"), nsr_tr("Core channels", "Каналы ядра")) as null|anything in options
-		if(!choice || QDELETED(user) || user.incapacitated() || !user.Adjacent(src))
+		if(!choice || QDELETED(user) || user.incapacitated() || !user.Adjacent(hull))
 			return TRUE
 		pick = options[choice]
 	if(!(pick in fuel_elements))
@@ -1056,10 +1084,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Заменить стержень СУЗ (ревизия 26): условия как для смены ТВЭЛов (плита снята, реактор холодный и остановлен). Спрашивает, какой стержень,
 /// старый с его износом оказывается в руках.
-/obj/machinery/submarine_reactor_core/proc/swap_rod(obj/item/submarine_control_rod/new_rod, mob/living/user)
+/obj/machinery/submarine_reactor_core/proc/swap_rod(obj/item/submarine_control_rod/new_rod, mob/living/user, obj/machinery/hull)
 	nsr_lang_for(user)
-	if(!casing_open)
-		to_chat(user, SPAN_WARNING(nsr_tr("The rod drives are behind the armour plate. Unbolt the plate with a wrench first.", "Приводы стержней за бронеплитой ядра. Сначала отверните плиту гаечным ключом.")))
+	if(!hull)
+		hull = src
+	if(!part_open(hull))
+		to_chat(user, SPAN_WARNING(nsr_tr("The rod drives are behind the armour plate. Unbolt the plate of this part with a wrench first.", "Приводы стержней за бронеплитой. Сначала отверните плиту этой части реактора гаечным ключом.")))
 		return TRUE
 	var/reason = fuel_swap_block_reason()
 	if(reason)
@@ -1069,7 +1099,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	for(var/i in 1 to NSR_ROD_COUNT)
 		options[nsr_tr("Rod [i], wear [round(rod_wear[i])] %[rod_seized(i) ? ", seized" : ""]", "Стержень [i], износ [round(rod_wear[i])] %[rod_seized(i) ? ", заклинил" : ""]")] = i
 	var/choice = input(user, nsr_tr("Which rod to replace?", "Какой стержень заменить?"), nsr_tr("Control rods", "Стержни СУЗ")) as null|anything in options
-	if(!choice || QDELETED(user) || QDELETED(new_rod) || user.incapacitated() || !user.Adjacent(src))
+	if(!choice || QDELETED(user) || QDELETED(new_rod) || user.incapacitated() || !user.Adjacent(hull))
 		return TRUE
 	var/index = options[choice]
 	user.visible_message(SPAN_NOTICE("\The [user] starts swapping a control rod drive of \the [src]."))
@@ -2230,7 +2260,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["fuelNow"] = isnull(now_left) ? null : round(now_left, 0.1)
 	data["fuelFull"] = isnull(full_left) ? null : round(full_left, 0.1)
 	var/swap_block = R.fuel_swap_block_reason()
-	data["fuelSwap"] = R.casing_open ? (swap_block ? swap_block : nsr_tr("Ready: pry an element out with a crowbar (any, your choice) and lower another in.", "Можно: достаньте ТВЭЛ ломом (любой, на выбор) и опустите на его место другой.")) : nsr_tr("The channels are behind the core armour plate (unbolt it with a wrench).", "Каналы за бронеплитой ядра (отверните её гаечным ключом).")
+	data["fuelSwap"] = R.count_open_casings() ? (swap_block ? swap_block : nsr_tr("Ready: click an open part of the reactor (the core or a section): a crowbar pries an element out (any, your choice), a fuel element or a rod goes in.", "Можно: кликайте по открытой части реактора (ядро или секция): ломом достаётся ТВЭЛ (любой, на выбор), ТВЭЛом или стержнем вставляется новый.")) : nsr_tr("The channels are behind the armour plates (unbolt the plate of the core or of any section with a wrench).", "Каналы за бронеплитами (отверните плиту ядра или любой секции гаечным ключом).")
 	data["tempMax"] = NSR_MELTDOWN_TEMP
 	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
 	data["pressure"] = round(R.steam_pressure, 0.1)

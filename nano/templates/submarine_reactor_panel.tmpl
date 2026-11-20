@@ -97,7 +97,7 @@
 		<div class="statusValue">
 			{{:data.xenon}} % от равновесия на полной мощности
 		</div>
-		<div style="color: #a0a0a0;">
+		<div style="clear: both; color: #a0a0a0;">
 			Йод {{:data.iodine}} %, ход стержней, потерянный на ксенон: {{:data.xenonPenalty}} %. Ксенон копится после остановки или потери мощности и выгорает под нагрузкой: горячий перезапуск в ксеноновой яме требует больше стержней.
 		</div>
 	</div>
@@ -108,7 +108,7 @@
 	</div>
 	<div class="itemContent">
 		{{for data.fuel}}
-			<div>
+			<div style="clear: both; padding-top: 3px;">
 				{{:value.slot}}. ТВЭЛ, {{:value.name}}
 				{{:helper.displayBar(value.burn, 0, 100, value.burnClass)}}
 				<div class="statusValue">
@@ -116,11 +116,11 @@
 				</div>
 			</div>
 		{{/for}}
-		<div style="color: #a0a0a0;">
+		<div style="clear: both; color: #a0a0a0;">
 			Номинальная мощность {{:data.fuelPower}} % от четырёх свежих обогащённых ТВЭЛов, реакция {{:data.fuelResponse}} %.
 			{{if data.fuelNow}}Самого выгоревшего ТВЭЛа хватит примерно на {{:data.fuelNow}} мин при нынешней мощности и на {{:data.fuelFull}} мин при полностью поднятых стержнях.{{else}}{{if data.fuelFull}}Самого выгоревшего ТВЭЛа хватит примерно на {{:data.fuelFull}} мин при полностью поднятых стержнях.{{/if}}{{/if}}
 		</div>
-		<div style="color: #a0a0a0;">
+		<div style="clear: both; color: #a0a0a0;">
 			Перегрузка: {{:data.fuelSwap}}
 		</div>
 	</div>
@@ -427,7 +427,7 @@
 				<span class='good'><b>ВЫКЛ</b></span>
 			{{/if}}
 		{{/if}}
-		<div style="color: #a0a0a0;">+30 % тепла от тех же стержней: больше пара и электричества, но запас до пределов сокращается, растут излучение и остаточное тепло. Сам выключается при SCRAM.</div>
+		<div style="clear: both; color: #a0a0a0;">+30 % тепла от тех же стержней: больше пара и электричества, но запас до пределов сокращается, растут излучение и остаточное тепло. Сам выключается при SCRAM.</div>
 		{{if data.boostBlock && !data.boost}}
 			<div class='average'>{{:data.boostBlock}}</div>
 		{{/if}}
