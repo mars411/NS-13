@@ -21,8 +21,8 @@
 
 #define NSR_DREDGE_PERIOD        20      // с: одна конкреция
 #define NSR_DREDGE_CAPACITY      15      // конкреций в бункере
-#define NSR_DREDGE_POWER         6000    // Вт, пока сборщик работает
-#define NSR_CENTRIFUGE_POWER     5000    // Вт, пока центрифуга крутит
+#define NSR_DREDGE_POWER         3000    // Вт, пока сборщик работает
+#define NSR_CENTRIFUGE_POWER     4000    // Вт, пока центрифуга крутит
 #define NSR_CENTRIFUGE_ORE_MAX   30      // конкреций каждого типа в запасе центрифуги
 
 /// Типы конкреций: ключ - тип. weight: вес выпадения в сборщике, name/ru: название для окна, color: оттенок мешка.
@@ -116,7 +116,6 @@ var/global/list/nsr_centrifuge_recipes = list(
 	density = TRUE
 	anchored = TRUE
 	construct_state = null
-	uncreated_component_parts = null
 	use_power = POWER_USE_IDLE
 	idle_power_usage = 30
 	active_power_usage = NSR_DREDGE_POWER
@@ -195,12 +194,12 @@ var/global/list/nsr_centrifuge_recipes = list(
 	var/list/rows = list()
 	var/status_text
 	var/status_class
-	if(!running)
+	if(inoperable())
+		status_text = nsr_tr("NO POWER (check the APC of the room)", "НЕТ ПИТАНИЯ (проверьте щиток помещения)")
+		status_class = "bad"
+	else if(!running)
 		status_text = nsr_tr("STOPPED", "ВЫКЛЮЧЕН")
 		status_class = "average"
-	else if(inoperable())
-		status_text = nsr_tr("NO POWER", "НЕТ ПИТАНИЯ")
-		status_class = "bad"
 	else
 		status_text = nsr_tr("DREDGING", "СБОР")
 		status_class = "good"
@@ -261,7 +260,6 @@ var/global/list/nsr_centrifuge_recipes = list(
 	density = TRUE
 	anchored = TRUE
 	construct_state = null
-	uncreated_component_parts = null
 	use_power = POWER_USE_IDLE
 	idle_power_usage = 50
 	active_power_usage = NSR_CENTRIFUGE_POWER
@@ -395,12 +393,12 @@ var/global/list/nsr_centrifuge_recipes = list(
 	var/list/recipe = job ? get_recipe(job) : null
 	var/status_text
 	var/status_class
-	if(!job)
+	if(inoperable())
+		status_text = nsr_tr("NO POWER (check the APC of the room)", "НЕТ ПИТАНИЯ (проверьте щиток помещения)")
+		status_class = "bad"
+	else if(!job)
 		status_text = nsr_tr("IDLE", "ЖДЁТ")
 		status_class = "average"
-	else if(inoperable())
-		status_text = nsr_tr("NO POWER", "НЕТ ПИТАНИЯ")
-		status_class = "bad"
 	else
 		status_text = nsr_tr("SPINNING: [recipe ? recipe["name"] : ""]", "КРУТИТ: [recipe ? recipe["ru"] : ""]")
 		status_class = "good"

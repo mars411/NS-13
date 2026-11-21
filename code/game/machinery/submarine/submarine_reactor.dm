@@ -86,6 +86,15 @@ GLOBAL_LIST_EMPTY(submarine_makeup_pumps)
 	return 221 + (temp - 375) * 8
 
 /// Плитки табло тревог (ревизия 17): порядок и подписи (русские с ревизии 24, до двух строк по 15 знаков, плитка в пульте узкая). Плитка жёлтая при предупреждении, красная при критической тревоге, мигает, пока её не подтвердили.
+/// Вкладки пульта реактора (ревизия 27): идентификаторы по порядку и плитки табло, которые к ним относятся (для знака тревоги на вкладке).
+var/global/list/nsr_tab_ids = list("summary", "reactor", "fuel", "primary", "steam", "help")
+var/global/list/nsr_tab_alarms = list(
+	"reactor" = list("temp", "rps", "xenon", "rodwear"),
+	"fuel" = list("fuel", "damage"),
+	"primary" = list("ppress_hi", "ppress_lo", "plevel_hi", "plevel_lo", "leak", "pump", "cooling"),
+	"steam" = list("steam", "water", "sg", "valve")
+)
+
 var/global/list/nsr_alarm_labels = list(
 	"temp" = "CORE TEMP",
 	"steam" = "STEAM PRESSURE",
@@ -387,10 +396,11 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		rod_pos += 0
 		rod_target += 0
 		rod_wear += 0
-	fuel_elements = list()
+	// Список по слотам: пустой слот это null. Слоты раздаются частям реактора (fuel_slots_of).
+	fuel_elements = new /list(NSR_FUEL_SLOTS)
 	if(preload_fuel)
 		for(var/i in 1 to NSR_FUEL_SLOTS)
-			fuel_elements += new /obj/item/submarine_fuel_element(src)
+			fuel_elements[i] = new /obj/item/submarine_fuel_element(src)
 	update_fuel_stats()
 	steam_gens = list()
 	// Привязка деталей откладывается до конца загрузки карты: парогенераторы должны успеть зарегистрироваться, прежде чем ядро решит, в каком оно режиме.
@@ -679,7 +689,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /// Выгорание самого выгоревшего ТВЭЛа, %. Пустой слот считается как полностью выгоревший.
 /obj/machinery/submarine_reactor_core/proc/fuel_worst_burnup()
-	. = (length(fuel_elements) < NSR_FUEL_SLOTS) ? 100 : 0
+	. = (fuel_count() < NSR_FUEL_SLOTS) ? 100 : 0
 	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
 		. = max(., E.burnup)
 
@@ -712,7 +722,74 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			"Сосуд ещё под давлением: [round(pressure, 0.1)] бар в паровом контуре, нужно ниже [NSR_FUEL_SWAP_PRESSURE] бар. Дайте пару стравиться.")
 	return ""
 
-/// Вставить ТВЭЛ в свободный слот (плита ядра снята, реактор холодный и остановлен).
+/// Сколько ТВЭЛов сейчас в ядре.
+/obj/machinery/submarine_reactor_core/proc/fuel_count()
+	. = 0
+	for(var/obj/item/submarine_fuel_element/E in fuel_elements)
+		.++
+
+/// Части реактора, в которых стоят каналы ТВЭЛов (ядро и секции), в устойчивом порядке: с севера на юг, с запада на восток.
+/obj/machinery/submarine_reactor_core/proc/fuel_parts()
+	var/list/parts = list(src)
+	for(var/obj/machinery/submarine_reactor_section/S in sections)
+		parts += S
+	for(var/i in 2 to length(parts))
+		var/obj/machinery/key = parts[i]
+		var/j = i - 1
+		while(j >= 1)
+			var/obj/machinery/other = parts[j]
+			if(!(key.y > other.y || (key.y == other.y && key.x < other.x)))
+				break
+			parts[j + 1] = other
+			j--
+		parts[j + 1] = key
+	return parts
+
+/// Часть реактора, которой принадлежит слот. Слоты раздаются частям по кругу: при четырёх частях и четырёх слотах у каждой части свой канал.
+/obj/machinery/submarine_reactor_core/proc/fuel_part_of_slot(slot)
+	var/list/parts = fuel_parts()
+	return parts[((slot - 1) % length(parts)) + 1]
+
+/// Номера слотов, которые принадлежат этой части реактора.
+/obj/machinery/submarine_reactor_core/proc/fuel_slots_of(obj/machinery/hull)
+	var/list/result = list()
+	for(var/i in 1 to NSR_FUEL_SLOTS)
+		if(fuel_part_of_slot(i) == hull)
+			result += i
+	return result
+
+/// Где слот стоит в блоке, словами: «северо-запад», «юго-восток» и так далее (по положению части относительно центра блока).
+/obj/machinery/submarine_reactor_core/proc/fuel_slot_label(slot)
+	var/list/parts = fuel_parts()
+	var/obj/machinery/part = fuel_part_of_slot(slot)
+	var/cx = 0
+	var/cy = 0
+	for(var/obj/machinery/P in parts)
+		cx += P.x
+		cy += P.y
+	cx /= length(parts)
+	cy /= length(parts)
+	var/key = "[(part.y > cy) ? "n" : ((part.y < cy) ? "s" : "")][(part.x > cx) ? "e" : ((part.x < cx) ? "w" : "")]"
+	switch(key)
+		if("nw")
+			return nsr_tr("north-west", "северо-запад")
+		if("ne")
+			return nsr_tr("north-east", "северо-восток")
+		if("sw")
+			return nsr_tr("south-west", "юго-запад")
+		if("se")
+			return nsr_tr("south-east", "юго-восток")
+		if("n")
+			return nsr_tr("north", "север")
+		if("s")
+			return nsr_tr("south", "юг")
+		if("w")
+			return nsr_tr("west", "запад")
+		if("e")
+			return nsr_tr("east", "восток")
+	return nsr_tr("centre", "центр")
+
+/// Вставить ТВЭЛ в канал той части реактора, по которой кликнули. Каждая часть держит свой канал: чтобы загрузить все четыре, откройте и заполните их по очереди.
 /obj/machinery/submarine_reactor_core/proc/load_fuel(obj/item/submarine_fuel_element/E, mob/living/user, obj/machinery/hull)
 	nsr_lang_for(user)
 	if(!hull)
@@ -720,60 +797,68 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	if(!part_open(hull))
 		to_chat(user, SPAN_WARNING(nsr_tr("The fuel channels are behind the armour plate. Unbolt the plate of this part with a wrench first.", "Каналы ТВЭЛов за бронеплитой. Сначала отверните плиту этой части реактора гаечным ключом.")))
 		return TRUE
-	if(length(fuel_elements) >= NSR_FUEL_SLOTS)
-		to_chat(user, SPAN_WARNING(nsr_tr("All the fuel channels are full. Pry a spent element out with a crowbar first.", "Все каналы ТВЭЛов заняты. Сначала достаньте выгоревший ТВЭЛ ломом.")))
+	var/slot = 0
+	for(var/i in fuel_slots_of(hull))
+		if(!fuel_elements[i])
+			slot = i
+			break
+	if(!slot)
+		to_chat(user, SPAN_WARNING(nsr_tr("The fuel channel of this part is already full. Pry the element out with a crowbar first, or open the next part.", "Канал ТВЭЛа этой части уже занят. Достаньте ТВЭЛ ломом или откройте следующую часть реактора.")))
 		return TRUE
 	var/reason = fuel_swap_block_reason()
 	if(reason)
 		to_chat(user, SPAN_WARNING(reason))
 		return TRUE
-	user.visible_message(SPAN_NOTICE("\The [user] starts lowering \a [E] into \the [src]."))
-	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || length(fuel_elements) >= NSR_FUEL_SLOTS || !user.unEquip(E, src))
+	user.visible_message(SPAN_NOTICE("\The [user] starts lowering \a [E] into \the [hull]."))
+	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || fuel_elements[slot] || !user.unEquip(E, src))
 		return TRUE
-	fuel_elements += E
+	fuel_elements[slot] = E
 	update_fuel_stats()
 	playsound(src, NS_SND_WRENCH, 40, TRUE)
-	user.visible_message(SPAN_NOTICE("\The [user] lowers \a [E] into a fuel channel of \the [src]."))
+	user.visible_message(SPAN_NOTICE("\The [user] lowers \a [E] into the fuel channel of \the [hull]."))
+	to_chat(user, SPAN_NOTICE(nsr_tr("Fuel channel [slot] ([fuel_slot_label(slot)]) loaded.", "Канал ТВЭЛа [slot] ([fuel_slot_label(slot)]) заряжен.")))
 	return TRUE
 
-/// Вынуть ТВЭЛ ломом. Если в ядре их несколько, спрашивает, какой: можно достать любой, в том числе свежий.
+/// Вынуть ТВЭЛ ломом из канала той части реактора, по которой кликнули. Если в части несколько каналов, спрашивает, какой: можно достать любой, в том числе свежий.
 /obj/machinery/submarine_reactor_core/proc/unload_fuel(mob/living/user, obj/machinery/hull)
 	nsr_lang_for(user)
 	if(!hull)
 		hull = src
 	if(!part_open(hull))
 		return FALSE
-	if(!length(fuel_elements))
-		to_chat(user, SPAN_WARNING(nsr_tr("All the fuel channels are empty.", "Все каналы ТВЭЛов пусты.")))
+	var/list/mine = list()
+	for(var/i in fuel_slots_of(hull))
+		if(fuel_elements[i])
+			mine += i
+	if(!length(mine))
+		to_chat(user, SPAN_WARNING(nsr_tr("The fuel channel of this part is empty.", "Канал ТВЭЛа этой части пуст.")))
 		return TRUE
 	var/reason = fuel_swap_block_reason()
 	if(reason)
 		to_chat(user, SPAN_WARNING(reason))
 		return TRUE
-	var/obj/item/submarine_fuel_element/pick
-	if(length(fuel_elements) == 1)
-		pick = fuel_elements[1]
-	else
+	var/slot = mine[1]
+	if(length(mine) > 1)
 		var/list/options = list()
-		var/slot = 0
-		for(var/obj/item/submarine_fuel_element/E in fuel_elements)
-			slot++
-			options[nsr_tr("[slot]. [E.fuel_name()], burnup [round(E.burnup)] %", "[slot]. [nsr_ru(E.fuel_name())], выгорание [round(E.burnup)] %")] = E
-		var/choice = input(user, nsr_tr("Which fuel element to pry out?", "Какой ТВЭЛ достать?"), nsr_tr("Core channels", "Каналы ядра")) as null|anything in options
+		for(var/i in mine)
+			var/obj/item/submarine_fuel_element/E = fuel_elements[i]
+			options[nsr_tr("[i]. [E.fuel_name()], burnup [round(E.burnup)] %", "[i]. [nsr_ru(E.fuel_name())], выгорание [round(E.burnup)] %")] = i
+		var/choice = input(user, nsr_tr("Which fuel element to pry out?", "Какой ТВЭЛ достать?"), nsr_tr("Fuel channels", "Каналы ТВЭЛов")) as null|anything in options
 		if(!choice || QDELETED(user) || user.incapacitated() || !user.Adjacent(hull))
 			return TRUE
-		pick = options[choice]
-	if(!(pick in fuel_elements))
+		slot = options[choice]
+	var/obj/item/submarine_fuel_element/pick = fuel_elements[slot]
+	if(!pick)
 		return TRUE
-	user.visible_message(SPAN_NOTICE("\The [user] starts prying \a [pick] out of \the [src]."))
-	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || !(pick in fuel_elements))
+	user.visible_message(SPAN_NOTICE("\The [user] starts prying \a [pick] out of \the [hull]."))
+	if(!do_after(user, NSR_FUEL_SWAP_TIME, src) || fuel_swap_block_reason() || fuel_elements[slot] != pick)
 		return TRUE
-	fuel_elements -= pick
+	fuel_elements[slot] = null
 	pick.forceMove(get_turf(user))
 	user.put_in_hands(pick)
 	update_fuel_stats()
 	playsound(src, NS_SND_WRENCH, 40, TRUE)
-	user.visible_message(SPAN_NOTICE("\The [user] pries \a [pick] out of \the [src]."))
+	user.visible_message(SPAN_NOTICE("\The [user] pries \a [pick] out of \the [hull]."))
 	return TRUE
 
 /obj/machinery/submarine_reactor_core/proc/is_dead()
@@ -1378,7 +1463,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	// Топливо на исходе: информационная плитка (сирены нет), горит, пока какой-то ТВЭЛ почти выгорел или слот пуст.
 	// Пустое ядро (старт раунда до загрузки ТВЭЛов) горит жёлтым, красной плитка становится, только когда топливо реально кончается.
 	var/worst = fuel_worst_burnup()
-	if(!length(fuel_elements))
+	if(!fuel_count())
 		tiles["fuel"] = 1
 	else if(worst >= NSR_FUEL_CRIT)
 		tiles["fuel"] = 2
@@ -2167,6 +2252,8 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	/// Метка реактора, которым управляет пульт. Должна совпадать с reactor_id ядра.
 	var/reactor_id = "main"
 	var/obj/machinery/submarine_reactor_core/reactor
+	/// Выбранная вкладка пульта по игрокам (ckey -> id вкладки), ревизия 27.
+	var/list/ui_tab
 	/// Положение стрелки и дуги насоса в прошлый раз, когда окно обновлялось: от него шкала плавно доезжает до нового значения (SVG-анимация).
 	var/last_pump_angle
 	var/last_pump_fill
@@ -2208,13 +2295,47 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	return "good"
 
 /// Данные для окна NanoUI. Шаблон: nano/templates/submarine_reactor_panel.tmpl.
-/obj/machinery/computer/submarine_reactor_console/proc/build_ui_data()
+/// Вкладки пульта (ревизия 27): выбранная игроком и список для шапки со знаком тревоги: «!» плитка вкладки горит жёлтым, «!!» красным.
+/obj/machinery/computer/submarine_reactor_console/proc/add_tab_data(mob/user, obj/machinery/submarine_reactor_core/R, list/data)
+	var/list/ids = list()
+	for(var/id in nsr_tab_ids)
+		if(id == "primary" && !R.two_circuit)
+			continue
+		ids += id
+	var/current = ui_tab ? ui_tab["[user.ckey]"] : null
+	if(!(current in ids))
+		current = "summary"
+	var/list/names = list(
+		"summary" = nsr_tr("Overview", "Сводка"),
+		"reactor" = nsr_tr("Rods and power", "Стержни и мощность"),
+		"fuel" = nsr_tr("Fuel", "Топливо"),
+		"primary" = nsr_tr("Primary circuit", "Первый контур"),
+		"steam" = nsr_tr("Steam and feed", "Пар и питание"),
+		"help" = nsr_tr("Help", "Справка"))
+	var/list/alerts = list()
+	var/overall = 0
+	for(var/id in ids)
+		var/level = 0
+		for(var/tile in nsr_tab_alarms[id])
+			level = max(level, R.annunciator.levels[tile] || 0)
+		alerts[id] = level
+		overall = max(overall, level)
+	alerts["summary"] = overall
+	var/list/tab_list = list()
+	for(var/id in ids)
+		var/level = alerts[id]
+		tab_list += list(list("id" = id, "label" = "[level >= 2 ? "!! " : (level == 1 ? "! " : "")][names[id]]"))
+	data["tab"] = current
+	data["tabs"] = tab_list
+
+/obj/machinery/computer/submarine_reactor_console/proc/build_ui_data(mob/user)
 	var/list/data = list()
 	var/obj/machinery/submarine_reactor_core/R = get_reactor()
 	data["linked"] = !!R
 	data["reactorId"] = reactor_id
 	if(!R)
 		return data
+	add_tab_data(user, R, data)
 	data["dead"] = R.is_dead()
 	data["status"] = nsr_ru(R.get_status_text())
 	data["statusClass"] = R.get_status_class()
@@ -2247,11 +2368,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["xenonClass"] = level_class(R.xenon_penalty, NSR_XENON_WARN, NSR_XENON_CRIT)
 	var/list/fuel_rows = list()
 	for(var/i in 1 to NSR_FUEL_SLOTS)
-		if(i > length(R.fuel_elements))
-			fuel_rows += list(list("slot" = i, "name" = nsr_tr("empty", "пусто"), "burn" = 100, "burnClass" = "bad", "output" = 0, "empty" = TRUE))
-			continue
+		var/obj/machinery/slot_part = R.fuel_part_of_slot(i)
+		var/part_name = R.fuel_slot_label(i)
+		var/part_open = slot_part ? R.part_open(slot_part) : FALSE
 		var/obj/item/submarine_fuel_element/E = R.fuel_elements[i]
-		fuel_rows += list(list("slot" = i, "name" = nsr_ru(E.fuel_name()), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.fuel_output() * 100), "empty" = FALSE))
+		if(!E)
+			fuel_rows += list(list("slot" = i, "part" = part_name, "open" = part_open, "name" = nsr_tr("empty", "пусто"), "burn" = 100, "burnClass" = "bad", "output" = 0, "empty" = TRUE))
+			continue
+		fuel_rows += list(list("slot" = i, "part" = part_name, "open" = part_open, "name" = nsr_ru(E.fuel_name()), "burn" = round(E.burnup, 0.1), "burnClass" = level_class(E.burnup, NSR_FUEL_WARN, NSR_FUEL_CRIT), "output" = round(E.fuel_output() * 100), "empty" = FALSE))
 	data["fuel"] = fuel_rows
 	data["fuelPower"] = round(R.fuel_power * 100)
 	data["fuelResponse"] = round(R.fuel_response * 100)
@@ -2260,7 +2384,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	data["fuelNow"] = isnull(now_left) ? null : round(now_left, 0.1)
 	data["fuelFull"] = isnull(full_left) ? null : round(full_left, 0.1)
 	var/swap_block = R.fuel_swap_block_reason()
-	data["fuelSwap"] = R.count_open_casings() ? (swap_block ? swap_block : nsr_tr("Ready: click an open part of the reactor (the core or a section): a crowbar pries an element out (any, your choice), a fuel element or a rod goes in.", "Можно: кликайте по открытой части реактора (ядро или секция): ломом достаётся ТВЭЛ (любой, на выбор), ТВЭЛом или стержнем вставляется новый.")) : nsr_tr("The channels are behind the armour plates (unbolt the plate of the core or of any section with a wrench).", "Каналы за бронеплитами (отверните плиту ядра или любой секции гаечным ключом).")
+	data["fuelSwap"] = R.count_open_casings() ? (swap_block ? swap_block : nsr_tr("Ready. Every part of the reactor has its own fuel channel (see the list above). Click an open part: a fuel element goes into its channel, a crowbar pries it out, a rod replaces a control rod.", "Можно. У каждой части реактора свой канал ТВЭЛа (см. список выше). Кликайте по открытой части: ТВЭЛ встаёт в её канал, ломом достаётся, стержень заменяет стержень СУЗ.")) : nsr_tr("The channels are behind the armour plates: unbolt the plate of the part whose channel you want to change with a wrench.", "Каналы за бронеплитами: отверните гаечным ключом плиту той части, чей канал хотите сменить.")
 	data["tempMax"] = NSR_MELTDOWN_TEMP
 	data["tempClass"] = level_class(R.core_temperature, NSR_TEMP_WARN, NSR_TEMP_CRIT)
 	data["pressure"] = round(R.steam_pressure, 0.1)
@@ -2408,7 +2532,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 
 /obj/machinery/computer/submarine_reactor_console/ui_interact(mob/user, ui_key = "main", datum/nanoui/ui = null, force_open = 1)
 	nsr_lang_for(user)
-	var/list/data = build_ui_data()
+	var/list/data = build_ui_data(user)
 	// Обновляет окно, если оно уже открыто. Если окна нет, возвращает null.
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
@@ -2428,6 +2552,14 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		SSnano.close_user_uis(user, src, "main")
 		ui_interact(user)
 		return TOPIC_HANDLED
+
+	if(action == "tab")
+		var/tab_id = href_list["tab"]
+		if(tab_id in nsr_tab_ids)
+			if(!ui_tab)
+				ui_tab = list()
+			ui_tab["[user.ckey]"] = tab_id
+		return TOPIC_REFRESH
 
 	if(action == "rescan")
 		reactor = null

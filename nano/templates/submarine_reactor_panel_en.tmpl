@@ -1,6 +1,5 @@
 <div class="item">
 	<div style="float: right;">{{:helper.link('Русский', 'globe', {'action' : 'lang'})}}</div>
-	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled, but the fission products keep heating the core for a long time (residual heat), so the core still needs water after a SCRAM. Three automations are available and off by default (the pressure one aside): the rod automation holds the core temperature, the makeup automation holds the pressurizer water level, and the protection drops the rods by itself when something dangerous happens. Automation helps but does not think: a leak or a failed pump still needs an operator.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
@@ -9,11 +8,6 @@
 	{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
 </div>
 {{else}}
-{{if data.twoCircuit}}
-<div class="item">
-	<i>Two-circuit plant. The core heats the primary water and never boils it. The main coolant pump drives that water through the steam generators, which boil the clean secondary water into steam for the turbine. If the pump stops, only natural circulation is left: enough for residual heat and low power, not for full power. Keep the steam generators supplied with feedwater.</i>
-</div>
-{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Unit:
@@ -64,8 +58,43 @@
 		{{/if}}
 	</div>
 </div>
-
-<h3>Monitoring</h3>
+{{if data.twoCircuit}}
+{{if data.leaking}}
+<div class='notice'>
+	<b>PRIMARY LEAK.</b> The vessel is cracked and loses water while it has pressure. Cool it below 60 C, let the pressure drop below 5 bar and weld the crack.
+</div>
+{{/if}}
+{{if data.pipeBroken > 0}}
+<div class='notice'>
+	<b>LOSS OF COOLANT.</b> A primary pipe has burst: the circuit loses its water and pressure, and the core loses its cooling. SCRAM now and raise the makeup pump. Once the core is below 60 C and the pressure below 5 bar, weld the pipe. Keep away from the puddles: they are radioactive.
+</div>
+{{/if}}
+{{/if}}
+{{if data.dead}}
+<div class='notice'>
+	<b>REACTOR LOST. NO CONTROL POSSIBLE.</b>
+</div>
+{{/if}}
+{{if !data.dead}}
+<div class="item">
+	<div class="itemLabel">
+		Emergency:
+	</div>
+	<div class="itemContent">
+		{{:helper.link('SCRAM', 'alert', {'action' : 'scram'}, data.scrammed ? 'disabled' : null, 'redButton')}}
+		{{:helper.link('Reset SCRAM', 'unlocked', {'action' : 'reset'}, data.scrammed ? null : 'disabled')}}
+		{{if data.scrammed}}
+			<span class='bad'>&nbsp;SCRAM ENGAGED{{if data.scramReason}} ({{:data.scramReason}}){{/if}}, rods locked</span>
+		{{/if}}
+	</div>
+</div>
+{{/if}}
+<div class="item" style="clear: both; padding: 6px 0;">
+	{{for data.tabs}}
+		{{:helper.link(value.label, null, {'action' : 'tab', 'tab' : value.id}, null, value.id == data.tab ? 'selected' : null)}}
+	{{/for}}
+</div>
+{{if data.tab == 'summary'}}
 <div class="item">
 	<div class="itemLabel">
 		Core temperature:
@@ -85,43 +114,6 @@
 		{{:helper.displayBar(data.decay, 0, data.decayMax, 'average')}}
 		<div class="statusValue">
 			{{:data.decay}} % of rated power
-		</div>
-	</div>
-</div>
-<div class="item">
-	<div class="itemLabel">
-		Xenon:
-	</div>
-	<div class="itemContent">
-		{{:helper.displayBar(data.xenon, 0, 250, data.xenonClass)}}
-		<div class="statusValue">
-			{{:data.xenon}} % of the full-power equilibrium
-		</div>
-		<div style="clear: both; color: #a0a0a0;">
-			Iodine {{:data.iodine}} %, rod travel lost to xenon: {{:data.xenonPenalty}} %. Xenon builds up after a shutdown or a power cut and burns out under power: a hot restart in the pit needs more rods.
-		</div>
-	</div>
-</div>
-<div class="item">
-	<div class="itemLabel">
-		Fuel:
-	</div>
-	<div class="itemContent">
-		{{for data.fuel}}
-			<div style="clear: both; padding-top: 3px;">
-				{{:value.slot}}. {{:value.name}} TVEL
-				{{:helper.displayBar(value.burn, 0, 100, value.burnClass)}}
-				<div class="statusValue">
-					{{if value.empty}}empty{{else}}burnup {{:value.burn}} %, output {{:value.output}} %{{/if}}
-				</div>
-			</div>
-		{{/for}}
-		<div style="clear: both; color: #a0a0a0;">
-			Rated power {{:data.fuelPower}} % of four fresh enriched elements, response {{:data.fuelResponse}} %.
-			{{if data.fuelNow}}The most burnt element lasts about {{:data.fuelNow}} min at the present power, {{:data.fuelFull}} min at full rods.{{else}}{{if data.fuelFull}}The most burnt element lasts about {{:data.fuelFull}} min at full rods.{{/if}}{{/if}}
-		</div>
-		<div style="clear: both; color: #a0a0a0;">
-			Refuelling: {{:data.fuelSwap}}
 		</div>
 	</div>
 </div>
@@ -147,6 +139,26 @@
 		</div>
 	</div>
 </div>
+{{if data.twoCircuit}}
+<div class="item">
+	<div class="itemLabel">
+		Primary pressure:
+	</div>
+	<div class="itemContent">
+		{{if data.hasPzr}}
+			{{:helper.displayBar(data.primaryPressure, 0, data.primaryBurst, data.primaryPressureClass)}}
+			<div class="statusValue">
+				{{:data.primaryPressure}} bar
+			</div>
+			{{if data.primaryBurstNow < data.primaryBurst}}
+				<div class='bad' style="clear: both;">Hot metal: the vessel bursts at {{:data.primaryBurstNow}} bar now.</div>
+			{{/if}}
+		{{else}}
+			{{:data.primaryPressure}} bar <i>(fixed: no pressurizer)</i>
+		{{/if}}
+	</div>
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		{{if data.twoCircuit}}Steam generator water (lowest):{{else}}Coolant (water) level:{{/if}}
@@ -166,45 +178,175 @@
 		{{:data.steamFlow}} mol/s
 	</div>
 </div>
-{{if !data.twoCircuit}}
-<div class="item">
-	<div class="itemLabel">
-		Steam port:
-	</div>
-	<div class="itemContent">
-		{{if data.hasPort}}
-			<span class='good'>connected to the pipes</span>
-		{{else}}
-			<span class='average'>none, sealed test vessel</span>
-		{{/if}}
-	</div>
-</div>
 {{/if}}
+{{if data.tab == 'reactor'}}
+<h3>Control rods</h3>
+{{if !data.dead}}
 <div class="item">
 	<div class="itemLabel">
-		Feedwater pump:
+		All rods:
 	</div>
 	<div class="itemContent">
-		{{if data.hasPump}}
-			<span class='{{:data.pumpClass}}'><b>{{:data.pumpState}}</b></span>
-			, rotor {{:data.pumpSpin}}, {{:data.pumpFlow}} mol/s, feed line {{:data.feedPressure}} bar
-		{{else}}
-			<span class='average'>none, free water valve</span>
-		{{/if}}
+		{{:helper.displayBar(data.rods, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.rods}} %
+			{{if data.rodsMoving}}
+				<span class='average'>average target {{:data.rodsTarget}} %</span>
+			{{/if}}
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'rods_move', 'amount' : -10}, (!data.rodsAuto && data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rods_move', 'amount' : -1}, (!data.rodsAuto && data.rodsTarget > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rods_move', 'amount' : 1}, (data.rodsAuto || data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rods_move', 'amount' : 10}, (data.rodsAuto || data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
+		</div>
 	</div>
 </div>
+{{for data.rodList}}
+<div class="item">
+	<div class="itemLabel">
+		Rod {{:value.n}}:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(value.pos, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:value.pos}} %
+			{{if value.moving}}
+				<span class='average'>moving to {{:value.target}} %</span>
+			{{/if}}
+		</div>
+		<div class="statusValue">
+			Wear: <span class='{{:value.wearCls}}'>{{:value.wear}} %</span>
+			{{if value.seized}}
+				<span class='bad'><b>SEIZED: will not go up</b></span>
+			{{/if}}
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('-10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -10}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -1}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (data.rodsAuto || value.locked || value.seized || value.target >= 100) ? 'disabled' : null)}}
+			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (data.rodsAuto || value.locked || value.seized || value.target >= 100) ? 'disabled' : null)}}
+		</div>
+	</div>
+</div>
+{{/for}}
+{{/if}}
+<h3>Xenon</h3>
+<div class="item">
+	<div class="itemLabel">
+		Xenon:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.xenon, 0, 250, data.xenonClass)}}
+		<div class="statusValue">
+			{{:data.xenon}} % of the full-power equilibrium
+		</div>
+		<div style="clear: both; color: #a0a0a0;">
+			Iodine {{:data.iodine}} %, rod travel lost to xenon: {{:data.xenonPenalty}} %. Xenon builds up after a shutdown or a power cut and burns out under power: a hot restart in the pit needs more rods.
+		</div>
+	</div>
+</div>
+<h3>Automation, boost and protection</h3>
+{{if !data.dead}}
 {{if data.twoCircuit}}
-<h3>Primary circuit</h3>
-{{if data.leaking}}
-<div class='notice'>
-	<b>PRIMARY LEAK.</b> The vessel is cracked and loses water while it has pressure. Cool it below 60 C, let the pressure drop below 5 bar and weld the crack.
+<div class="item">
+	<div class="itemLabel">
+		Rod automation:
+	</div>
+	<div class="itemContent">
+		{{if data.rodsAuto}}
+			<span class='good'><b>ON</b></span>, holds the core at <b>{{:data.rodsAutoSet}} C</b>
+		{{else}}
+			<span class='average'><b>OFF</b></span> (rods by hand)
+		{{/if}}
+		{{if data.rodsAutoText}}
+			<div class='average'>{{:data.rodsAutoText}}</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.rodsAuto ? 'Switch off' : 'Switch on', null, {'action' : 'rods_auto'}, (data.rodsAuto || data.automationAvailable) ? null : 'disabled', data.rodsAuto ? 'selected' : null)}}
+			<div style="float: left; padding: 4px 8px 0 8px;">temperature:</div>
+			{{:helper.link('-10', null, {'action' : 'rods_auto_set', 'amount' : -10}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'rods_auto_set', 'amount' : -1}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'rods_auto_set', 'amount' : 1}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'rods_auto_set', 'amount' : 10}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Overdrive:
+	</div>
+	<div class="itemContent">
+		{{if data.boost}}
+			<span class='average'><b>ON</b></span>, power x{{:data.boostMult}}
+		{{else}}
+			{{if data.boostMult > 1.01}}
+				<span class='average'><b>OFF</b></span>, power x{{:data.boostMult}} (settling)
+			{{else}}
+				<span class='good'><b>OFF</b></span>
+			{{/if}}
+		{{/if}}
+		<div style="clear: both; color: #a0a0a0;">+30 % heat from the same rods: more steam and electricity, but the margin to the limits shrinks, the radiation and the decay heat grow. Switches off by itself on SCRAM.</div>
+		{{if data.boostBlock && !data.boost}}
+			<div class='average'>{{:data.boostBlock}}</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.boost ? 'Switch off' : 'Switch on', null, {'action' : 'boost_toggle'}, (data.boost || !data.boostBlock) ? null : 'disabled', data.boost ? 'selected' : null)}}
+		</div>
+	</div>
 </div>
 {{/if}}
-{{if data.pipeBroken > 0}}
-<div class='notice'>
-	<b>LOSS OF COOLANT.</b> A primary pipe has burst: the circuit loses its water and pressure, and the core loses its cooling. SCRAM now and raise the makeup pump. Once the core is below 60 C and the pressure below 5 bar, weld the pipe. Keep away from the puddles: they are radioactive.
+{{/if}}
+{{if !data.dead}}
+<div class="item">
+	<div class="itemLabel">
+		Protection:
+	</div>
+	<div class="itemContent">
+		{{if data.rpsEnabled}}
+			<span class='good'><b>ARMED</b></span>: drops the rods by itself on high core temperature, high or low primary pressure, high or low pressurizer level, high steam pressure, low steam generator water, a seized main pump or lost cooling.
+		{{else}}
+			<span class='average'><b>DISARMED</b></span>: nothing drops the rods but you.
+		{{/if}}
+		{{if data.rpsCondition}}
+			<div class='bad'>Trip condition: {{:data.rpsCondition}}</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(data.rpsEnabled ? 'Disarm' : 'Arm', null, {'action' : 'rps_toggle'}, (data.rpsEnabled || data.automationAvailable) ? null : 'disabled', data.rpsEnabled ? 'selected' : null)}}
+		</div>
+	</div>
 </div>
 {{/if}}
+{{/if}}
+{{if data.tab == 'fuel'}}
+<h3>Fuel elements</h3>
+<div class="item">
+	<div class="itemLabel">
+		Fuel:
+	</div>
+	<div class="itemContent">
+		{{for data.fuel}}
+			<div style="clear: both; padding-top: 3px;">
+				{{:value.slot}}. Fuel element ({{:value.part}}{{if value.open}}, plate off{{/if}}), {{:value.name}}
+				{{:helper.displayBar(value.burn, 0, 100, value.burnClass)}}
+				<div class="statusValue">
+					{{if value.empty}}empty{{else}}burnup {{:value.burn}} %, output {{:value.output}} %{{/if}}
+				</div>
+			</div>
+		{{/for}}
+		<div style="clear: both; color: #a0a0a0;">
+			Rated power {{:data.fuelPower}} % of four fresh enriched elements, response {{:data.fuelResponse}} %.
+			{{if data.fuelNow}}The most burnt element lasts about {{:data.fuelNow}} min at the present power, {{:data.fuelFull}} min at full rods.{{else}}{{if data.fuelFull}}The most burnt element lasts about {{:data.fuelFull}} min at full rods.{{/if}}{{/if}}
+		</div>
+		<div style="clear: both; color: #a0a0a0;">
+			Refuelling: {{:data.fuelSwap}}
+		</div>
+	</div>
+</div>
+{{/if}}
+{{if data.tab == 'primary'}}
+{{if data.twoCircuit}}
+<h3>Primary circuit status</h3>
 {{if data.pipeTotal > 0}}
 <div class="item">
 	<div class="itemLabel">
@@ -302,240 +444,8 @@
 		{{/if}}
 	</div>
 </div>
-<h3>Steam generators</h3>
-{{for data.sgList}}
-<div class="item">
-	<div class="itemLabel">
-		Generator {{:value.n}}:
-	</div>
-	<div class="itemContent">
-		<span class='{{:value.stateClass}}'><b>{{:value.state}}</b></span>
-		{{:helper.displayBar(value.level, 0, 100, value.levelClass)}}
-		<div class="statusValue">
-			water {{:value.level}} %
-		</div>
-		<div style="clear: both; padding-top: 2px;">
-			{{:value.heat}} heat/s taken from the primary, {{:value.flow}} mol/s of steam, {{:value.pressure}} bar
-		</div>
-		{{if !value.ruptured}}
-		<div style="clear: both; padding-top: 2px;">
-			Tubes: <span class='{{:value.tubeClass}}'><b>{{:value.tube}}</b></span>, damage {{:value.tubeDamage}} %{{if value.tube == 'LEAKING'}}, leak {{:value.leakRate}} % of the primary water per second{{/if}}{{if value.plugged > 0}}, {{:value.plugged}} % plugged{{/if}}{{if value.contam > 0}}, <span class='average'>contamination {{:value.contam}}</span>{{/if}}
-		</div>
-		{{if value.valveClosed}}
-		<div class='average' style="clear: both; padding-top: 2px;">
-			Valve closed: the water keeps boiling into steam that stays inside, so the water level falls and the pressure rises until the valve is opened.
-		</div>
-		{{/if}}
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(value.valveClosed ? 'Steam valve: CLOSED' : 'Steam valve: open', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
-		</div>
-		{{/if}}
-	</div>
-</div>
-{{/for}}
-{{/if}}
-
-<h3>Controls</h3>
-{{if data.dead}}
-<div class='notice'>
-	<b>REACTOR LOST. NO CONTROL POSSIBLE.</b>
-</div>
-{{else}}
-<div class="item">
-	<div class="itemLabel">
-		All rods:
-	</div>
-	<div class="itemContent">
-		{{:helper.displayBar(data.rods, 0, 100, 'good')}}
-		<div class="statusValue">
-			{{:data.rods}} %
-			{{if data.rodsMoving}}
-				<span class='average'>average target {{:data.rodsTarget}} %</span>
-			{{/if}}
-		</div>
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'rods_move', 'amount' : -10}, (!data.rodsAuto && data.rodsTarget > 0) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'rods_move', 'amount' : -1}, (!data.rodsAuto && data.rodsTarget > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'rods_move', 'amount' : 1}, (data.rodsAuto || data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
-			{{:helper.link('+10', null, {'action' : 'rods_move', 'amount' : 10}, (data.rodsAuto || data.scrammed || data.rodsTarget >= 100) ? 'disabled' : null)}}
-		</div>
-	</div>
-</div>
-{{for data.rodList}}
-<div class="item">
-	<div class="itemLabel">
-		Rod {{:value.n}}:
-	</div>
-	<div class="itemContent">
-		{{:helper.displayBar(value.pos, 0, 100, 'good')}}
-		<div class="statusValue">
-			{{:value.pos}} %
-			{{if value.moving}}
-				<span class='average'>moving to {{:value.target}} %</span>
-			{{/if}}
-		</div>
-		<div class="statusValue">
-			Wear: <span class='{{:value.wearCls}}'>{{:value.wear}} %</span>
-			{{if value.seized}}
-				<span class='bad'><b>SEIZED: will not go up</b></span>
-			{{/if}}
-		</div>
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -10}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : -1}, (!data.rodsAuto && value.target > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 1}, (data.rodsAuto || value.locked || value.seized || value.target >= 100) ? 'disabled' : null)}}
-			{{:helper.link('+10', null, {'action' : 'rod_move', 'rod' : value.n, 'amount' : 10}, (data.rodsAuto || value.locked || value.seized || value.target >= 100) ? 'disabled' : null)}}
-		</div>
-	</div>
-</div>
-{{/for}}
-{{if data.twoCircuit}}
-<div class="item">
-	<div class="itemLabel">
-		Rod automation:
-	</div>
-	<div class="itemContent">
-		{{if data.rodsAuto}}
-			<span class='good'><b>ON</b></span>, holds the core at <b>{{:data.rodsAutoSet}} C</b>
-		{{else}}
-			<span class='average'><b>OFF</b></span> (rods by hand)
-		{{/if}}
-		{{if data.rodsAutoText}}
-			<div class='average'>{{:data.rodsAutoText}}</div>
-		{{/if}}
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.rodsAuto ? 'Switch off' : 'Switch on', null, {'action' : 'rods_auto'}, (data.rodsAuto || data.automationAvailable) ? null : 'disabled', data.rodsAuto ? 'selected' : null)}}
-			<div style="float: left; padding: 4px 8px 0 8px;">temperature:</div>
-			{{:helper.link('-10', null, {'action' : 'rods_auto_set', 'amount' : -10}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'rods_auto_set', 'amount' : -1}, (data.rodsAutoSet > data.rodsAutoMin) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'rods_auto_set', 'amount' : 1}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
-			{{:helper.link('+10', null, {'action' : 'rods_auto_set', 'amount' : 10}, (data.rodsAutoSet < data.rodsAutoMax) ? null : 'disabled')}}
-		</div>
-	</div>
-</div>
-<div class="item">
-	<div class="itemLabel">
-		Overdrive:
-	</div>
-	<div class="itemContent">
-		{{if data.boost}}
-			<span class='average'><b>ON</b></span>, power x{{:data.boostMult}}
-		{{else}}
-			{{if data.boostMult > 1.01}}
-				<span class='average'><b>OFF</b></span>, power x{{:data.boostMult}} (settling)
-			{{else}}
-				<span class='good'><b>OFF</b></span>
-			{{/if}}
-		{{/if}}
-		<div style="clear: both; color: #a0a0a0;">+30 % heat from the same rods: more steam and electricity, but the margin to the limits shrinks, the radiation and the decay heat grow. Switches off by itself on SCRAM.</div>
-		{{if data.boostBlock && !data.boost}}
-			<div class='average'>{{:data.boostBlock}}</div>
-		{{/if}}
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.boost ? 'Switch off' : 'Switch on', null, {'action' : 'boost_toggle'}, (data.boost || !data.boostBlock) ? null : 'disabled', data.boost ? 'selected' : null)}}
-		</div>
-	</div>
-</div>
-{{/if}}
-{{if data.hasPump}}
-<div class="item">
-	<div class="itemLabel">
-		Feedwater pump:
-	</div>
-	<div class="itemContent">
-		<svg width="150" height="125" viewBox="0 0 120 100">
-			<circle cx="60" cy="60" r="40" fill="none" stroke="#3a3a3a" stroke-width="9" stroke-dasharray="188.5 400" transform="rotate(135 60 60)"/>
-			<circle cx="60" cy="60" r="40" fill="none" stroke-width="9" stroke-dasharray="{{:data.pumpFillLen}} 400" transform="rotate(135 60 60)" stroke="{{if data.pumpClass == 'good'}}#4caf50{{else}}{{if data.pumpClass == 'average'}}#d9a82b{{else}}#c0392b{{/if}}{{/if}}">
-				<animate attributeName="stroke-dasharray" from="{{:data.pumpFillPrev}} 400" to="{{:data.pumpFillLen}} 400" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
-			</circle>
-			<line x1="60" y1="9" x2="60" y2="16" stroke="#f0c040" stroke-width="3" transform="rotate({{:data.pumpTargetAngle}} 60 60)"/>
-			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.pumpAngle}} 60 60)">
-				<animateTransform attributeName="transform" type="rotate" from="{{:data.pumpAnglePrev}} 60 60" to="{{:data.pumpAngle}} 60 60" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
-			</line>
-			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
-			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.pumpRpm}}</text>
-			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>
-		</svg>
-		<div>
-			Rotor: <b>{{:data.pumpSpin}}</b>
-		</div>
-		<div>
-			Motor heat:
-			{{:helper.displayBar(data.pumpHeat, 0, 100, data.pumpHeatClass)}}
-			<div class="statusValue">
-				{{:data.pumpHeat}}
-			</div>
-		</div>
-		{{if data.pumpBurnt}}
-			<div class='bad' style="clear: both;">
-				<b>MOTOR BURNT OUT.</b> Let it cool, then rewind it with cable.
-			</div>
-		{{else}}
-			{{if data.pumpHeat >= 60}}
-				<div class='bad' style="clear: both;">
-					Motor overheating. Check that the pump has water to pump.
-				</div>
-			{{/if}}
-		{{/if}}
-		{{:helper.displayBar(data.pumpSpeed, 0, 100, 'good')}}
-		<div class="statusValue">
-			set {{:data.pumpSpeed}} %
-		</div>
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
-			{{:helper.link('-1', null, {'action' : 'pump_move', 'amount' : -1}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
-			{{:helper.link('+1', null, {'action' : 'pump_move', 'amount' : 1}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
-			{{:helper.link('+10', null, {'action' : 'pump_move', 'amount' : 10}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
-		</div>
-		<div style="clear: both; padding-top: 6px;">
-			Automation:
-			{{if data.pumpAuto}}
-				<span class='good'><b>ON</b></span>, holds the water level at <b>{{:data.pumpAutoSet}} %</b>
-			{{else}}
-				<span class='average'><b>OFF</b></span> (manual speed)
-			{{/if}}
-			{{if data.pumpAutoText}}
-				<div class='average'>{{:data.pumpAutoText}}</div>
-			{{/if}}
-			<div style="padding-top: 4px;">
-				{{:helper.link(data.pumpAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pump_auto'}, data.pumpBurnt ? 'disabled' : null, data.pumpAuto ? 'selected' : null)}}
-				<div style="float: left; padding: 4px 8px 0 8px;">level:</div>
-				{{:helper.link('-5', null, {'action' : 'pump_auto_set', 'amount' : -5}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
-				{{:helper.link('-1', null, {'action' : 'pump_auto_set', 'amount' : -1}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
-				{{:helper.link('+1', null, {'action' : 'pump_auto_set', 'amount' : 1}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
-				{{:helper.link('+5', null, {'action' : 'pump_auto_set', 'amount' : 5}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
-			</div>
-		</div>
-	</div>
-</div>
-{{else}}
-{{if data.twoCircuit}}
-<div class="item">
-	<div class="itemLabel">
-		Feedwater pump:
-	</div>
-	<div class="itemContent">
-		<span class='bad'>none: the steam generators get no water</span>
-	</div>
-</div>
-{{else}}
-<div class="item">
-	<div class="itemLabel">
-		Feedwater valve:
-	</div>
-	<div class="itemContent">
-		{{:helper.displayBar(data.feedwater, 0, 100, 'good')}}
-		<div class="statusValue">
-			{{:data.feedwater}} %
-		</div>
-		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link('Close -10', 'triangle-1-s', {'action' : 'feed_down'}, (data.feedwater > 0) ? null : 'disabled')}}
-			{{:helper.link('Open +10', 'triangle-1-n', {'action' : 'feed_up'}, (data.feedwater < 100) ? null : 'disabled')}}
-		</div>
-	</div>
-</div>
-{{/if}}
-{{/if}}
+<h3>Primary circuit controls</h3>
+{{if !data.dead}}
 {{if data.twoCircuit && data.hasPrimaryPump}}
 <div class="item">
 	<div class="itemLabel">
@@ -656,6 +566,26 @@
 	</div>
 </div>
 {{/if}}
+{{/if}}
+{{/if}}
+{{/if}}
+{{if data.tab == 'steam'}}
+<h3>Steam</h3>
+{{if !data.twoCircuit}}
+<div class="item">
+	<div class="itemLabel">
+		Steam port:
+	</div>
+	<div class="itemContent">
+		{{if data.hasPort}}
+			<span class='good'>connected to the pipes</span>
+		{{else}}
+			<span class='average'>none, sealed test vessel</span>
+		{{/if}}
+	</div>
+</div>
+{{/if}}
+{{if !data.dead}}
 {{if !data.hasPort}}
 <div class="item">
 	<div class="itemLabel">
@@ -673,38 +603,168 @@
 	</div>
 </div>
 {{/if}}
+{{/if}}
+{{if data.twoCircuit}}
+<h3>Steam generators</h3>
+{{for data.sgList}}
 <div class="item">
 	<div class="itemLabel">
-		Emergency:
+		Generator {{:value.n}}:
 	</div>
 	<div class="itemContent">
-		{{:helper.link('SCRAM', 'alert', {'action' : 'scram'}, data.scrammed ? 'disabled' : null, 'redButton')}}
-		{{:helper.link('Reset SCRAM', 'unlocked', {'action' : 'reset'}, data.scrammed ? null : 'disabled')}}
-		{{if data.scrammed}}
-			<span class='bad'>&nbsp;SCRAM ENGAGED{{if data.scramReason}} ({{:data.scramReason}}){{/if}}, rods locked</span>
+		<span class='{{:value.stateClass}}'><b>{{:value.state}}</b></span>
+		{{:helper.displayBar(value.level, 0, 100, value.levelClass)}}
+		<div class="statusValue">
+			water {{:value.level}} %
+		</div>
+		<div style="clear: both; padding-top: 2px;">
+			{{:value.heat}} heat/s taken from the primary, {{:value.flow}} mol/s of steam, {{:value.pressure}} bar
+		</div>
+		{{if !value.ruptured}}
+		<div style="clear: both; padding-top: 2px;">
+			Tubes: <span class='{{:value.tubeClass}}'><b>{{:value.tube}}</b></span>, damage {{:value.tubeDamage}} %{{if value.tube == 'LEAKING'}}, leak {{:value.leakRate}} % of the primary water per second{{/if}}{{if value.plugged > 0}}, {{:value.plugged}} % plugged{{/if}}{{if value.contam > 0}}, <span class='average'>contamination {{:value.contam}}</span>{{/if}}
+		</div>
+		{{if value.valveClosed}}
+		<div class='average' style="clear: both; padding-top: 2px;">
+			Valve closed: the water keeps boiling into steam that stays inside, so the water level falls and the pressure rises until the valve is opened.
+		</div>
+		{{/if}}
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link(value.valveClosed ? 'Steam valve: CLOSED' : 'Steam valve: open', null, {'action' : 'sg_valve', 'n' : value.n}, null, value.valveClosed ? 'redButton' : null)}}
+		</div>
 		{{/if}}
 	</div>
 </div>
+{{/for}}
+{{/if}}
+<h3>Feed water</h3>
 <div class="item">
 	<div class="itemLabel">
-		Protection:
+		Feedwater pump:
 	</div>
 	<div class="itemContent">
-		{{if data.rpsEnabled}}
-			<span class='good'><b>ARMED</b></span>: drops the rods by itself on high core temperature, high or low primary pressure, high or low pressurizer level, high steam pressure, low steam generator water, a seized main pump or lost cooling.
+		{{if data.hasPump}}
+			<span class='{{:data.pumpClass}}'><b>{{:data.pumpState}}</b></span>
+			, rotor {{:data.pumpSpin}}, {{:data.pumpFlow}} mol/s, feed line {{:data.feedPressure}} bar
 		{{else}}
-			<span class='average'><b>DISARMED</b></span>: nothing drops the rods but you.
+			<span class='average'>none, free water valve</span>
 		{{/if}}
-		{{if data.rpsCondition}}
-			<div class='bad'>Trip condition: {{:data.rpsCondition}}</div>
+	</div>
+</div>
+{{if !data.dead}}
+{{if data.hasPump}}
+<div class="item">
+	<div class="itemLabel">
+		Feedwater pump:
+	</div>
+	<div class="itemContent">
+		<svg width="150" height="125" viewBox="0 0 120 100">
+			<circle cx="60" cy="60" r="40" fill="none" stroke="#3a3a3a" stroke-width="9" stroke-dasharray="188.5 400" transform="rotate(135 60 60)"/>
+			<circle cx="60" cy="60" r="40" fill="none" stroke-width="9" stroke-dasharray="{{:data.pumpFillLen}} 400" transform="rotate(135 60 60)" stroke="{{if data.pumpClass == 'good'}}#4caf50{{else}}{{if data.pumpClass == 'average'}}#d9a82b{{else}}#c0392b{{/if}}{{/if}}">
+				<animate attributeName="stroke-dasharray" from="{{:data.pumpFillPrev}} 400" to="{{:data.pumpFillLen}} 400" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
+			</circle>
+			<line x1="60" y1="9" x2="60" y2="16" stroke="#f0c040" stroke-width="3" transform="rotate({{:data.pumpTargetAngle}} 60 60)"/>
+			<line x1="60" y1="60" x2="60" y2="26" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" transform="rotate({{:data.pumpAngle}} 60 60)">
+				<animateTransform attributeName="transform" type="rotate" from="{{:data.pumpAnglePrev}} 60 60" to="{{:data.pumpAngle}} 60 60" dur="2s" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.3 0 0.2 1"/>
+			</line>
+			<circle cx="60" cy="60" r="5" fill="#dddddd"/>
+			<text x="60" y="86" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff">{{:data.pumpRpm}}</text>
+			<text x="60" y="97" text-anchor="middle" font-size="8" fill="#aaaaaa">rpm</text>
+		</svg>
+		<div>
+			Rotor: <b>{{:data.pumpSpin}}</b>
+		</div>
+		<div>
+			Motor heat:
+			{{:helper.displayBar(data.pumpHeat, 0, 100, data.pumpHeatClass)}}
+			<div class="statusValue">
+				{{:data.pumpHeat}}
+			</div>
+		</div>
+		{{if data.pumpBurnt}}
+			<div class='bad' style="clear: both;">
+				<b>MOTOR BURNT OUT.</b> Let it cool, then rewind it with cable.
+			</div>
+		{{else}}
+			{{if data.pumpHeat >= 60}}
+				<div class='bad' style="clear: both;">
+					Motor overheating. Check that the pump has water to pump.
+				</div>
+			{{/if}}
 		{{/if}}
+		{{:helper.displayBar(data.pumpSpeed, 0, 100, 'good')}}
+		<div class="statusValue">
+			set {{:data.pumpSpeed}} %
+		</div>
 		<div style="clear: both; padding-top: 4px;">
-			{{:helper.link(data.rpsEnabled ? 'Disarm' : 'Arm', null, {'action' : 'rps_toggle'}, (data.rpsEnabled || data.automationAvailable) ? null : 'disabled', data.rpsEnabled ? 'selected' : null)}}
+			{{:helper.link('-10', null, {'action' : 'pump_move', 'amount' : -10}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
+			{{:helper.link('-1', null, {'action' : 'pump_move', 'amount' : -1}, (!data.pumpAuto && data.pumpSpeed > 0) ? null : 'disabled')}}
+			{{:helper.link('+1', null, {'action' : 'pump_move', 'amount' : 1}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
+			{{:helper.link('+10', null, {'action' : 'pump_move', 'amount' : 10}, (!data.pumpAuto && data.pumpSpeed < 100) ? null : 'disabled')}}
+		</div>
+		<div style="clear: both; padding-top: 6px;">
+			Automation:
+			{{if data.pumpAuto}}
+				<span class='good'><b>ON</b></span>, holds the water level at <b>{{:data.pumpAutoSet}} %</b>
+			{{else}}
+				<span class='average'><b>OFF</b></span> (manual speed)
+			{{/if}}
+			{{if data.pumpAutoText}}
+				<div class='average'>{{:data.pumpAutoText}}</div>
+			{{/if}}
+			<div style="padding-top: 4px;">
+				{{:helper.link(data.pumpAuto ? 'Switch off' : 'Switch on', null, {'action' : 'pump_auto'}, data.pumpBurnt ? 'disabled' : null, data.pumpAuto ? 'selected' : null)}}
+				<div style="float: left; padding: 4px 8px 0 8px;">level:</div>
+				{{:helper.link('-5', null, {'action' : 'pump_auto_set', 'amount' : -5}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
+				{{:helper.link('-1', null, {'action' : 'pump_auto_set', 'amount' : -1}, (data.pumpAutoSet > 10) ? null : 'disabled')}}
+				{{:helper.link('+1', null, {'action' : 'pump_auto_set', 'amount' : 1}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
+				{{:helper.link('+5', null, {'action' : 'pump_auto_set', 'amount' : 5}, (data.pumpAutoSet < 95) ? null : 'disabled')}}
+			</div>
+		</div>
+	</div>
+</div>
+{{else}}
+{{if data.twoCircuit}}
+<div class="item">
+	<div class="itemLabel">
+		Feedwater pump:
+	</div>
+	<div class="itemContent">
+		<span class='bad'>none: the steam generators get no water</span>
+	</div>
+</div>
+{{else}}
+<div class="item">
+	<div class="itemLabel">
+		Feedwater valve:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.feedwater, 0, 100, 'good')}}
+		<div class="statusValue">
+			{{:data.feedwater}} %
+		</div>
+		<div style="clear: both; padding-top: 4px;">
+			{{:helper.link('Close -10', 'triangle-1-s', {'action' : 'feed_down'}, (data.feedwater > 0) ? null : 'disabled')}}
+			{{:helper.link('Open +10', 'triangle-1-n', {'action' : 'feed_up'}, (data.feedwater < 100) ? null : 'disabled')}}
 		</div>
 	</div>
 </div>
 {{/if}}
-
+{{/if}}
+{{/if}}
+{{/if}}
+{{if data.tab == 'help'}}
+<div class="item">
+	<i>The tabs above split the panel by task. An exclamation mark before a tab name means a tile of that tab is lit on the annunciator. The SCRAM button and the annunciator are visible on every tab.</i>
+</div>
+<div class="item">
+	<i>This panel runs the reactor unit. The control rods set the heat: raise them to make steam, lower them to cool the core. The feedwater pump keeps the vessel supplied with water: it needs power and takes about ten seconds to spin up or down. Its automation can hold the water level by itself. SCRAM drops every rod at once and locks them until the core has cooled, but the fission products keep heating the core for a long time (residual heat), so the core still needs water after a SCRAM. Three automations are available and off by default (the pressure one aside): the rod automation holds the core temperature, the makeup automation holds the pressurizer water level, and the protection drops the rods by itself when something dangerous happens. Automation helps but does not think: a leak or a failed pump still needs an operator.</i>
+</div>
+{{if data.twoCircuit}}
+<div class="item">
+	<i>Two-circuit plant. The core heats the primary water and never boils it. The main coolant pump drives that water through the steam generators, which boil the clean secondary water into steam for the turbine. If the pump stops, only natural circulation is left: enough for residual heat and low power, not for full power. Keep the steam generators supplied with feedwater.</i>
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Link:
@@ -713,4 +773,5 @@
 		{{:helper.link('Rescan links', 'refresh', {'action' : 'rescan'})}}
 	</div>
 </div>
+{{/if}}
 {{/if}}
