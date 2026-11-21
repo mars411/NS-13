@@ -175,6 +175,14 @@ var/global/list/nst_alarm_labels_ru = list(
 	"relief" = "ПРЕДОХРАН. КЛАПАН"
 )
 
+/// Вкладки пульта турбины (ревизия 28): порядок и какие плитки табло относятся к вкладке (для «!» и «!!» в названии).
+var/global/list/nst_tab_ids = list("summary", "control", "steam", "sections", "help")
+var/global/list/nst_tab_alarms = list(
+	"control" = list("overspeed", "stop", "breaker", "overload", "governor"),
+	"steam" = list("cond", "inlet", "relief"),
+	"sections" = list("vibration", "blades")
+)
+
 /proc/nst_network_gas(datum/pipe_network/net, gas_id)
 	. = 0
 	if(!net)
@@ -1122,6 +1130,8 @@ var/global/list/nst_alarm_labels_ru = list(
 	var/obj/machinery/power/submarine_turbine_generator/unit
 	/// Положение стрелки в прошлый раз, когда окно обновлялось: от него шкала плавно доезжает до нового значения (SVG-анимация).
 	var/last_rpm_angle
+	/// Выбранная вкладка окна по игрокам (ключ ckey, значение id из nst_tab_ids).
+	var/list/ui_tab
 
 /obj/machinery/computer/submarine_turbine_console/Initialize()
 	. = ..()
@@ -1167,14 +1177,42 @@ var/global/list/nst_alarm_labels_ru = list(
 		return 0
 	return round(air.return_pressure() / NSR_KPA_PER_BAR, 0.1)
 
+/// Вкладки окна: выбранная игроком и список для шапки; «!» в названии значит, что горит жёлтая плитка этой вкладки, «!!» красная.
+/obj/machinery/computer/submarine_turbine_console/proc/add_tab_data(mob/user, obj/machinery/power/submarine_turbine_generator/G, list/data)
+	var/current = ui_tab ? ui_tab["[user.ckey]"] : null
+	if(!(current in nst_tab_ids))
+		current = "summary"
+	var/list/names = list(
+		"summary" = nsr_tr("Overview", "Сводка"),
+		"control" = nsr_tr("Control", "Управление"),
+		"steam" = nsr_tr("Steam and condenser", "Пар и конденсатор"),
+		"sections" = nsr_tr("Sections", "Секции"),
+		"help" = nsr_tr("Help", "Справка"))
+	var/list/alerts = list()
+	var/overall = 0
+	for(var/id in nst_tab_ids)
+		var/level = 0
+		for(var/tile in nst_tab_alarms[id])
+			level = max(level, G.annunciator.levels[tile] || 0)
+		alerts[id] = level
+		overall = max(overall, level)
+	alerts["summary"] = overall
+	var/list/tab_list = list()
+	for(var/id in nst_tab_ids)
+		var/level = alerts[id] || 0
+		tab_list += list(list("id" = id, "label" = "[level >= 2 ? "!! " : (level == 1 ? "! " : "")][names[id]]"))
+	data["tab"] = current
+	data["tabs"] = tab_list
+
 /// Данные для окна NanoUI. Шаблон: nano/templates/submarine_turbine_panel.tmpl.
-/obj/machinery/computer/submarine_turbine_console/proc/build_ui_data()
+/obj/machinery/computer/submarine_turbine_console/proc/build_ui_data(mob/user)
 	var/list/data = list()
 	var/obj/machinery/power/submarine_turbine_generator/G = get_unit()
 	data["linked"] = !!G
 	data["turbineId"] = turbine_id
 	if(!G)
 		return data
+	add_tab_data(user, G, data)
 	data["alarmTiles"] = G.annunciator.ui_tiles()
 	data["alarmUnacked"] = G.annunciator.has_unacked()
 	var/rpm_now = round(G.rpm)
@@ -1276,7 +1314,7 @@ var/global/list/nst_alarm_labels_ru = list(
 
 /obj/machinery/computer/submarine_turbine_console/ui_interact(mob/user, ui_key = "main", datum/nanoui/ui = null, force_open = 1)
 	nsr_lang_for(user)
-	var/list/data = build_ui_data()
+	var/list/data = build_ui_data(user)
 	ui = SSnano.try_update_ui(user, src, ui_key, ui, data, force_open)
 	if(!ui)
 		ui = new(user, src, ui_key, nsr_tr("submarine_turbine_panel_en.tmpl", "submarine_turbine_panel.tmpl"), nsr_tr("Turbine control panel", "Пульт турбины"), 540, 960)
@@ -1293,6 +1331,14 @@ var/global/list/nst_alarm_labels_ru = list(
 		SSnano.close_user_uis(user, src, "main")
 		ui_interact(user)
 		return TOPIC_HANDLED
+
+	if(action == "tab")
+		var/tab_id = href_list["tab"]
+		if(tab_id in nst_tab_ids)
+			if(!ui_tab)
+				ui_tab = list()
+			ui_tab["[user.ckey]"] = tab_id
+		return TOPIC_REFRESH
 
 	if(action == "rescan")
 		unit = null

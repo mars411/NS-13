@@ -1,6 +1,5 @@
 <div class="item">
 	<div style="float: right;">{{:helper.link('English', 'globe', {'action' : 'lang'})}}</div>
-	<i>Эта панель управляет паровой турбиной. Пар поступает через впускной (регулирующий) клапан и уходит в конденсатор, охлаждение которого задаёт давление на выхлопе. Регулятор частоты вращения держит вал на уставке, двигая впускной клапан; выключите его, чтобы вести вручную. Выключатель генератора можно замкнуть, только пока стрелка в зелёной зоне. Стопорный клапан аварийно отсекает пар. Следите за вибрацией: изношенные или разрушенные секции и разгон поднимают её, а выше определённого уровня её чувствуют на палубе. Конденсатор может держать давление автоматически.</i>
 </div>
 {{if !data.linked}}
 <div class='notice'>
@@ -19,6 +18,17 @@
 	@keyframes nsrblink { 50% { opacity: 0.2; } }
 	@-webkit-keyframes nsrblink { 50% { opacity: 0.2; } }
 </style>
+<div class="item">
+	<div class="itemLabel">
+		Блок:
+	</div>
+	<div class="itemContent">
+		<b>{{:data.turbineId}}</b>
+		{{if data.missing > 0}}
+			<span class='bad'>&nbsp;НЕ НАЙДЕНО секций: {{:data.missing}} из 3</span>
+		{{/if}}
+	</div>
+</div>
 <div style="clear: both; padding: 4px 0;">
 	{{for data.alarmTiles}}
 		<div class="nsrTile nsrT{{:value.level}} {{if value.blink}}nsrBlink{{/if}}">
@@ -36,24 +46,30 @@
 		{{:helper.link('Подтвердить', 'check', {'action' : 'alarm_ack'}, data.alarmUnacked ? null : 'disabled')}}
 	</div>
 </div>
-<div class="item">
-	<div class="itemLabel">
-		Блок:
-	</div>
-	<div class="itemContent">
-		<b>{{:data.turbineId}}</b>
-		{{if data.missing > 0}}
-			<span class='bad'>&nbsp;НЕ НАЙДЕНО секций: {{:data.missing}} из 3</span>
-		{{/if}}
-	</div>
-</div>
-
-<h3>Вал и генератор</h3>
 {{if data.overloaded}}
 <div class='bad'>
 	<b>ГЕНЕРАТОР ПЕРЕГРУЖЕН.</b> Обмотки сгорели, когда секция разрушилась под нагрузкой. Подключить его нельзя, пока он не отремонтирован. Нужно: {{:data.genMissing}}.
 </div>
 {{/if}}
+<div class="item">
+	<div class="itemLabel">
+		Аварийное:
+	</div>
+	<div class="itemContent">
+		{{:helper.link('АВАРИЙНЫЙ ОСТАНОВ', 'alert', {'action' : 'stop_trip'}, data.stopTripped ? 'disabled' : null, 'redButton')}}
+		{{:helper.link('Сбросить стопорный клапан', 'unlocked', {'action' : 'stop_reset'}, data.stopTripped ? null : 'disabled')}}
+		{{if data.stopTripped}}
+			<span class='bad'>&nbsp;СТОПОРНЫЙ КЛАПАН ЗАКРЫТ, сброс ниже 6000 об/мин</span>
+		{{/if}}
+	</div>
+</div>
+<div class="item" style="clear: both; padding: 6px 0;">
+	{{for data.tabs}}
+		{{:helper.link(value.label, null, {'action' : 'tab', 'tab' : value.id}, null, value.id == data.tab ? 'selected' : null)}}
+	{{/for}}
+</div>
+{{if data.tab == 'summary'}}
+<h3>Вал и генератор</h3>
 <div class="item">
 	<div class="itemLabel">
 		Частота вращения вала:
@@ -118,34 +134,6 @@
 		</div>
 	</div>
 </div>
-<div class="item">
-	<div class="itemLabel">
-		Выключатель генератора:
-	</div>
-	<div class="itemContent">
-		{{if data.breaker}}
-			<span class='good'><b>ЗАМКНУТ</b></span>
-			{{:helper.link('Разомкнуть выключатель', 'unlocked', {'action' : 'breaker'})}}
-		{{else}}
-			<span class='average'><b>РАЗОМКНУТ</b></span>
-			{{:helper.link('Замкнуть выключатель', 'locked', {'action' : 'breaker'}, data.hasGrid ? null : 'disabled')}}
-			{{if data.tripReason}}
-				<span class='bad'>&nbsp;отключился: {{:data.tripReason}}</span>
-			{{/if}}
-			{{if !data.hasGrid}}
-				<span class='bad'>&nbsp;нет кабеля сети</span>
-			{{/if}}
-		{{/if}}
-		<div style="clear: both; color: #a0a0a0;">
-			{{if data.autoSync}}
-				Автосинхронизация: регулятор сам подключает генератор, когда вал продержится в рабочем окне 5 с. Выключатель, который вы разомкнули или который отключился из-за повреждения, сам не включается.
-			{{else}}
-				Автосинхронизация выключена вместе с регулятором: замыкайте выключатель вручную в рабочем окне.
-			{{/if}}
-		</div>
-	</div>
-</div>
-
 <h3>Ход пара</h3>
 <div class="item">
 	<div class="itemLabel">
@@ -155,68 +143,23 @@
 		перед турбиной <b>{{:data.p0}}</b>, после ЦВД <b>{{:data.p1}}</b>, после ЦНД 1 <b>{{:data.p2}}</b>, у конденсатора <b>{{:data.p3}}</b>
 	</div>
 </div>
-{{for data.sections}}
-<div class="item">
-	<div class="itemLabel">
-		Секция {{:value.name}}:
-	</div>
-	<div class="itemContent">
-		{{if value.broken}}
-			<span class='bad'><b>РАЗРУШЕНА</b></span>
-		{{else}}
-			{{:helper.displayBar(value.health, 0, 100, value.class)}}
-			<div class="statusValue">
-				{{:value.health}} %
-			</div>
-			<div style="clear: both; padding-top: 2px;">
-				{{:value.flow}} моль/с, {{:value.kw}} кВт
-			</div>
-			<div style="padding-top: 2px;">
-				{{if value.sensor}}
-					Ряды лопаток (по ходу пара):
-					<div style="padding-top: 3px;">
-					{{for value.rows}}
-						<span class='{{:value.c}}' style="display: inline-block; min-width: 44px; margin: 0 6px 3px 0; padding: 2px 0; text-align: center; border: 1px solid #40628a;">{{:value.p}}%</span>
-					{{/for}}
-					</div>
-					{{if value.lost}}
-						<span class='bad'>ПОТЕРЯНО рядов: {{:value.lost}}</span>
-					{{/if}}
-				{{else}}
-					Состояние: <b>{{:value.grade}}</b> <i>(нет модуля сканирования, ряды неизвестны)</i>
-				{{/if}}
-			</div>
-		{{/if}}
-	</div>
-</div>
-{{/for}}
-<div class="item">
-	<div class="itemLabel">
-		Конденсатор:
-	</div>
-	<div class="itemContent">
-		{{if data.hasCondenser}}
-			принимает {{:data.condenserFlow}} из {{:data.condenserMax}} моль/с
-		{{else}}
-			<span class='bad'>не подключён</span>
-		{{/if}}
-	</div>
-</div>
-<div class="item">
-	<div class="itemLabel">
-		Предохранительный клапан:
-	</div>
-	<div class="itemContent">
-		{{if data.hasRelief}}
-			<span class='{{:data.reliefClass}}'><b>{{:data.reliefState}}</b></span>
-			, открывается при {{:data.reliefBar}} бар, сбрасывает {{:data.reliefFlow}} моль/с
-		{{else}}
-			<span class='bad'>не подключён, реактор защищён только SCRAM</span>
-		{{/if}}
-	</div>
-</div>
-
+{{/if}}
+{{if data.tab == 'control'}}
 <h3>Управление</h3>
+<div class="item">
+	<div class="itemLabel">
+		Частота вращения вала:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.rpm, 0, data.rpmMax, data.rpmClass)}}
+		<div class="statusValue">
+			{{:data.rpm}} об/мин
+		</div>
+		<div style="clear: both; padding-top: 2px;">
+			Рабочее окно {{:data.rpmWindowLow}}-{{:data.rpmWindowHigh}} об/мин
+		</div>
+	</div>
+</div>
 <div class="item">
 	<div class="itemLabel">
 		Регулятор частоты:
@@ -268,6 +211,70 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
+		Выключатель генератора:
+	</div>
+	<div class="itemContent">
+		{{if data.breaker}}
+			<span class='good'><b>ЗАМКНУТ</b></span>
+			{{:helper.link('Разомкнуть выключатель', 'unlocked', {'action' : 'breaker'})}}
+		{{else}}
+			<span class='average'><b>РАЗОМКНУТ</b></span>
+			{{:helper.link('Замкнуть выключатель', 'locked', {'action' : 'breaker'}, data.hasGrid ? null : 'disabled')}}
+			{{if data.tripReason}}
+				<span class='bad'>&nbsp;отключился: {{:data.tripReason}}</span>
+			{{/if}}
+			{{if !data.hasGrid}}
+				<span class='bad'>&nbsp;нет кабеля сети</span>
+			{{/if}}
+		{{/if}}
+		<div style="clear: both; color: #a0a0a0;">
+			{{if data.autoSync}}
+				Автосинхронизация: регулятор сам подключает генератор, когда вал продержится в рабочем окне 5 с. Выключатель, который вы разомкнули или который отключился из-за повреждения, сам не включается.
+			{{else}}
+				Автосинхронизация выключена вместе с регулятором: замыкайте выключатель вручную в рабочем окне.
+			{{/if}}
+		</div>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Электрическая мощность:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.outputKw, 0, data.maxKw, 'good')}}
+		<div class="statusValue">
+			{{:data.outputKw}} кВт
+		</div>
+		<div style="clear: both; padding-top: 2px;">
+			Сеть запрашивает {{:data.demandKw}} кВт, номинал генератора {{:data.maxKw}} кВт
+		</div>
+	</div>
+</div>
+{{/if}}
+{{if data.tab == 'steam'}}
+<h3>Ход пара</h3>
+<div class="item">
+	<div class="itemLabel">
+		Давление, бар:
+	</div>
+	<div class="itemContent">
+		перед турбиной <b>{{:data.p0}}</b>, после ЦВД <b>{{:data.p1}}</b>, после ЦНД 1 <b>{{:data.p2}}</b>, у конденсатора <b>{{:data.p3}}</b>
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
+		Конденсатор:
+	</div>
+	<div class="itemContent">
+		{{if data.hasCondenser}}
+			принимает {{:data.condenserFlow}} из {{:data.condenserMax}} моль/с
+		{{else}}
+			<span class='bad'>не подключён</span>
+		{{/if}}
+	</div>
+</div>
+<div class="item">
+	<div class="itemLabel">
 		Охлаждение конденсатора (выхлоп):
 	</div>
 	<div class="itemContent">
@@ -305,17 +312,77 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Аварийное:
+		Предохранительный клапан:
 	</div>
 	<div class="itemContent">
-		{{:helper.link('АВАРИЙНЫЙ ОСТАНОВ', 'alert', {'action' : 'stop_trip'}, data.stopTripped ? 'disabled' : null, 'redButton')}}
-		{{:helper.link('Сбросить стопорный клапан', 'unlocked', {'action' : 'stop_reset'}, data.stopTripped ? null : 'disabled')}}
-		{{if data.stopTripped}}
-			<span class='bad'>&nbsp;СТОПОРНЫЙ КЛАПАН ЗАКРЫТ, сброс ниже 6000 об/мин</span>
+		{{if data.hasRelief}}
+			<span class='{{:data.reliefClass}}'><b>{{:data.reliefState}}</b></span>
+			, открывается при {{:data.reliefBar}} бар, сбрасывает {{:data.reliefFlow}} моль/с
+		{{else}}
+			<span class='bad'>не подключён, реактор защищён только SCRAM</span>
 		{{/if}}
 	</div>
 </div>
-
+{{/if}}
+{{if data.tab == 'sections'}}
+<h3>Секции турбины</h3>
+<div class="item">
+	<div class="itemLabel">
+		Вибрация:
+	</div>
+	<div class="itemContent">
+		{{:helper.displayBar(data.vib, 0, data.vibMax, data.vibClass)}}
+		<div class="statusValue">
+			{{:data.vib}} мм/с
+		</div>
+		<div style="clear: both; padding-top: 2px;">
+			<span class='{{:data.vibClass}}'><b>{{:data.vibText}}</b></span>, предупреждение при {{:data.vibHigh}}, опасно при {{:data.vibDanger}} мм/с
+		</div>
+	</div>
+</div>
+{{for data.sections}}
+<div class="item">
+	<div class="itemLabel">
+		Секция {{:value.name}}:
+	</div>
+	<div class="itemContent">
+		{{if value.broken}}
+			<span class='bad'><b>РАЗРУШЕНА</b></span>
+		{{else}}
+			{{:helper.displayBar(value.health, 0, 100, value.class)}}
+			<div class="statusValue">
+				{{:value.health}} %
+			</div>
+			<div style="clear: both; padding-top: 2px;">
+				{{:value.flow}} моль/с, {{:value.kw}} кВт
+			</div>
+			<div style="padding-top: 2px;">
+				{{if value.sensor}}
+					Ряды лопаток (по ходу пара):
+					<div style="padding-top: 3px;">
+					{{for value.rows}}
+						<span class='{{:value.c}}' style="display: inline-block; min-width: 44px; margin: 0 6px 3px 0; padding: 2px 0; text-align: center; border: 1px solid #40628a;">{{:value.p}}%</span>
+					{{/for}}
+					</div>
+					{{if value.lost}}
+						<span class='bad'>ПОТЕРЯНО рядов: {{:value.lost}}</span>
+					{{/if}}
+				{{else}}
+					Состояние: <b>{{:value.grade}}</b> <i>(нет модуля сканирования, ряды неизвестны)</i>
+				{{/if}}
+			</div>
+		{{/if}}
+	</div>
+</div>
+{{/for}}
+{{/if}}
+{{if data.tab == 'help'}}
+<div class="item">
+	<i>Вкладки сверху разбивают пульт по задачам: «Сводка» показывает общее состояние, «Управление» собирает регулятор, клапаны и выключатель генератора, «Пар и конденсатор» давление по ходу пара, конденсатор и предохранительный клапан, «Секции» износ лопаток и вибрацию. Восклицательный знак перед названием вкладки значит, что на табло горит плитка этой вкладки. Табло, подтверждение тревог и АВАРИЙНЫЙ ОСТАНОВ видны на любой вкладке.</i>
+</div>
+<div class="item">
+	<i>Эта панель управляет паровой турбиной. Пар поступает через впускной (регулирующий) клапан и уходит в конденсатор, охлаждение которого задаёт давление на выхлопе. Регулятор частоты вращения держит вал на уставке, двигая впускной клапан; выключите его, чтобы вести вручную. Выключатель генератора можно замкнуть, только пока стрелка в зелёной зоне. Стопорный клапан аварийно отсекает пар. Следите за вибрацией: изношенные или разрушенные секции и разгон поднимают её, а выше определённого уровня её чувствуют на палубе. Конденсатор может держать давление автоматически.</i>
+</div>
 <div class="item">
 	<div class="itemLabel">
 		Связь:
@@ -324,4 +391,5 @@
 		{{:helper.link('Пересканировать связи', 'refresh', {'action' : 'rescan'})}}
 	</div>
 </div>
+{{/if}}
 {{/if}}
