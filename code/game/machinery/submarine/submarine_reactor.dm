@@ -397,10 +397,12 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		rod_target += 0
 		rod_wear += 0
 	// Список по слотам: пустой слот это null. Слоты раздаются частям реактора (fuel_slots_of).
-	fuel_elements = new /list(NSR_FUEL_SLOTS)
-	if(preload_fuel)
-		for(var/i in 1 to NSR_FUEL_SLOTS)
-			fuel_elements[i] = new /obj/item/submarine_fuel_element(src)
+	fuel_elements = list()
+	for(var/i in 1 to NSR_FUEL_SLOTS)
+		if(preload_fuel)
+			fuel_elements += new /obj/item/submarine_fuel_element(src)
+		else
+			fuel_elements += list(null)
 	update_fuel_stats()
 	steam_gens = list()
 	// Привязка деталей откладывается до конца загрузки карты: парогенераторы должны успеть зарегистрироваться, прежде чем ядро решит, в каком оно режиме.
