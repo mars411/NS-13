@@ -88,12 +88,16 @@ GLOBAL_LIST_EMPTY(submarine_relief_valves)
 // Лопаточные венцы (этап 3в-2, часть 1): в каждой секции пять рядов лопастей, у каждого своё состояние 0-1
 #define NST_ROWS                  5      // рядов лопастей в секции
 #define NST_ROW_LOSS_KEEP         0.85   // доля энергии вала, которая остаётся, когда срывает один ряд лопастей
-#define NST_STRESS_LP             2      // множитель износа от перебора оборотов у длинных лопастей низкого давления (у высокого 1)
+#define NST_STRESS_LP             3      // множитель износа от перебора оборотов у длинных лопастей низкого давления (у высокого 1; до ревизии 31 было 2)
 #define NST_EROSION_RATE          0.00006 // доля здоровья ряда в секунду при расширении 100%, оборотах 10000 и множителях 1 (около 22% в час)
 #define NST_EROSION_MIN_RPM       500    // ниже этих оборотов эрозии нет
 #define NST_EROSION_HP            0.2    // множитель эрозии у высокого давления (пар сухой, почти не страдает)
-#define NST_EROSION_LP1           1      // у первой низкого давления
-#define NST_EROSION_LP2           1.5    // у второй низкого давления (самый влажный пар)
+#define NST_EROSION_LP1           2      // у первой низкого давления (до ревизии 31 было 1)
+#define NST_EROSION_LP2           3      // у второй низкого давления (самый влажный пар; до ревизии 31 было 1.5)
+#define NST_BACKP_BAR             2.5    // бар у конденсатора: выше этого вакуум плохой, лопасти низкого давления перегреваются и изнашиваются (на NST_COND_TRIP_BAR быстрее всего)
+#define NST_BACKP_RATE            0.0005 // доля здоровья ряда в секунду при давлении у конденсатора NST_COND_TRIP_BAR и оборотах 10000 при множителе ступени 1
+#define NST_BACKP_LP1             0.5    // множитель перегрева у первой низкого давления (дальше от конденсатора)
+#define NST_BACKP_LP2             1      // у второй низкого давления (она стоит прямо на выпуске)
 #define NST_CYCLE_FATIGUE         0.004  // доля здоровья каждого ряда за один цикл: пуск с нуля, срабатывание стопорного клапана, защитный сброс нагрузки
 #define NST_START_RPM_LO          200    // вал считается остановленным ниже этих оборотов
 #define NST_START_RPM_HI          1000   // разгон выше этих оборотов после остановки считается пуском
@@ -155,7 +159,7 @@ var/global/list/nst_alarm_labels = list(
 	"breaker" = "BREAKER TRIPPED",
 	"overload" = "GEN OVERLOAD",
 	"governor" = "GOVERNOR FAILED",
-	"cond" = "CONDENSER PRESS",
+	"cond" = "EXHAUST PRESS (COND.)",
 	"inlet" = "STEAM INLET HIGH",
 	"blades" = "BLADE DAMAGE",
 	"relief" = "RELIEF VALVE"
@@ -169,7 +173,7 @@ var/global/list/nst_alarm_labels_ru = list(
 	"breaker" = "ВЫКЛЮЧАТЕЛЬ ОТКЛЮЧИЛСЯ",
 	"overload" = "ПЕРЕГРУЗ ГЕНЕРАТОРА",
 	"governor" = "РЕГУЛЯТОР ОТКАЗАЛ",
-	"cond" = "ДАВЛЕНИЕ КОНДЕНСАТОРА",
+	"cond" = "ДАВЛ. ВЫПУСКА (КОНДЕНС.)",
 	"inlet" = "ДАВЛЕНИЕ ПАРА НА ВХОДЕ",
 	"blades" = "ПОВРЕЖДЕНИЕ ЛОПАТОК",
 	"relief" = "ПРЕДОХРАН. КЛАПАН"
@@ -255,6 +259,8 @@ var/global/list/nst_tab_alarms = list(
 	var/stress_mult = 1
 	/// Множитель эрозии влажным паром по ступени.
 	var/erosion_mult = 1
+	/// Множитель перегрева от плохого вакуума у конденсатора (у высокого 0: его это не касается).
+	var/backp_mult = 0
 	/// TRUE, если секция разрушена: пар через неё не идёт.
 	var/broken = FALSE
 	/// Пар через секцию за последний тик, моль/с.
@@ -296,12 +302,14 @@ var/global/list/nst_tab_alarms = list(
 			air2.volume = NST_VOL_LP
 			stress_mult = NST_STRESS_LP
 			erosion_mult = NST_EROSION_LP1
+			backp_mult = NST_BACKP_LP1
 		if(NST_STAGE_LP2)
 			flow_coef = NST_K_LP2
 			air1.volume = NST_VOL_LP
 			air2.volume = NST_VOL_LP
 			stress_mult = NST_STRESS_LP
 			erosion_mult = NST_EROSION_LP2
+			backp_mult = NST_BACKP_LP2
 
 /// Веса рядов при разных видах износа (в сумме по ряду это в среднем 1). Ряды считаются по ходу пара: первый у входа, пятый у выхода.
 /// over: перебор оборотов, длинные последние лопасти страдают сильнее. erosion: влажный пар бьёт по задним рядам. flat: усталость поровну.
@@ -357,6 +365,13 @@ var/global/list/nst_tab_alarms = list(
 	if(broken || last_expansion <= 0 || rpm_now < NST_EROSION_MIN_RPM)
 		return
 	damage_rows(NST_EROSION_RATE * (rpm_now / NST_VIB_RPM_REF) ** 2 * last_expansion * erosion_mult * wet_mult * dt, "erosion")
+
+/// Перегрев от плохого вакуума: когда давление на выпуске (у конденсатора) выше нормы, пар в длинных лопастях низкого давления не расширяется до конца, лопасти греются и бьются.
+/// factor это доля пути от NST_BACKP_BAR до NST_COND_TRIP_BAR, 0-1. Бьёт по задним рядам, как и эрозия. Высокое давление этим не страдает.
+/obj/machinery/atmospherics/binary/submarine_turbine_section/proc/wear_backpressure(dt, rpm_now, factor)
+	if(broken || backp_mult <= 0 || factor <= 0 || rpm_now < NST_EROSION_MIN_RPM)
+		return
+	damage_rows(NST_BACKP_RATE * factor * (rpm_now / NST_VIB_RPM_REF) ** 2 * backp_mult * dt, "erosion")
 
 /// Усталость от цикла (пуск, срабатывание защиты): мелкая и равная для всех рядов.
 /obj/machinery/atmospherics/binary/submarine_turbine_section/proc/apply_fatigue(amount)
@@ -656,6 +671,8 @@ var/global/list/nst_tab_alarms = list(
 	var/was_stopped = TRUE
 	/// Множитель влажности пара для эрозии лопастей. 1 без влагоотделителя; влагоотделитель (этап 3в-2, уровень Б) его понизит.
 	var/wet_mult = 1
+	/// Насколько плох вакуум у конденсатора, 0-1 (0 при давлении до NST_BACKP_BAR, 1 при NST_COND_TRIP_BAR). Пока выше нуля, секции низкого давления перегреваются.
+	var/backp_factor = 0
 	/// Петля звука работы (стоковый sound_player).
 	var/datum/sound_token/sound_token
 	/// TRUE, пока вал «работает» по звуку (гистерезис NST_SND_RPM_ON / NST_SND_RPM_OFF).
@@ -803,9 +820,10 @@ var/global/list/nst_tab_alarms = list(
 	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
 		S.take_overspeed_damage(damage)
 	if(rpm_now >= NST_RPM_EXPLODE)
+		// Длинные лопасти низкого давления рвёт первыми (запас прочности делится на множитель ступени), но сильно изношенный высокого давления может уйти раньше.
 		var/obj/machinery/atmospherics/binary/submarine_turbine_section/weakest
 		for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
-			if(!S.broken && (!weakest || S.health_frac < weakest.health_frac))
+			if(!S.broken && (!weakest || S.health_frac / S.stress_mult < weakest.health_frac / weakest.stress_mult))
 				weakest = S
 		if(weakest)
 			weakest.wreck()
@@ -848,9 +866,14 @@ var/global/list/nst_tab_alarms = list(
 	var/broken_before = count_broken()
 	var/rows_before = count_lost_rows()
 	update_separator(dt, rpm_now)
+	// Плохой вакуум у конденсатора: давление за последней секцией выше NST_BACKP_BAR.
+	backp_factor = 0
+	if(lp2 && !QDELETED(lp2))
+		backp_factor = clamp((lp2.air2.return_pressure() / NSR_KPA_PER_BAR - NST_BACKP_BAR) / (NST_COND_TRIP_BAR - NST_BACKP_BAR), 0, 1)
 	for(var/obj/machinery/atmospherics/binary/submarine_turbine_section/S in get_sections())
 		// Влагоотделитель стоит после высокого давления и защищает только секции низкого.
 		S.wear_blades(dt, rpm_now, (S.stage == NST_STAGE_HP) ? 1 : wet_mult)
+		S.wear_backpressure(dt, rpm_now, backp_factor)
 	handle_wrecks(broken_before, rows_before)
 
 /// Пересчитывает вибрацию: растёт с оборотами, износом секций, разрушенной секцией и перебором оборотов; число догоняет расчёт плавно.
@@ -1185,7 +1208,7 @@ var/global/list/nst_tab_alarms = list(
 	var/list/names = list(
 		"summary" = nsr_tr("Overview", "Сводка"),
 		"control" = nsr_tr("Control", "Управление"),
-		"steam" = nsr_tr("Steam and condenser", "Пар и конденсатор"),
+		"steam" = nsr_tr("Steam and exhaust", "Пар и выпуск"),
 		"sections" = nsr_tr("Sections", "Секции"),
 		"help" = nsr_tr("Help", "Справка"))
 	var/list/alerts = list()
@@ -1244,6 +1267,9 @@ var/global/list/nst_tab_alarms = list(
 	data["vibMax"] = NST_VIB_MAX
 	data["vibHigh"] = NST_VIB_HIGH
 	data["vibDanger"] = NST_VIB_DANGER
+	data["condTripBar"] = NST_COND_TRIP_BAR
+	data["backpBar"] = NST_BACKP_BAR
+	data["backpPct"] = round(G.backp_factor * 100)
 	data["vibClass"] = "good"
 	data["vibText"] = nsr_ru((G.vibration > 0) ? "normal" : "still")
 	if(G.vibration >= NST_VIB_DANGER)

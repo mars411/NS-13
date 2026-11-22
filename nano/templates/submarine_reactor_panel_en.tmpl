@@ -172,7 +172,7 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Steam production:
+		{{if data.twoCircuit}}Steam production (secondary circuit):{{else}}Steam production:{{/if}}
 	</div>
 	<div class="itemContent">
 		{{:data.steamFlow}} mol/s
@@ -347,6 +347,9 @@
 {{if data.tab == 'primary'}}
 {{if data.twoCircuit}}
 <h3>Primary circuit status</h3>
+<div class="item">
+	<i>The <b>primary circuit</b> is radioactive water under high pressure: it is heated in the core and hands its heat to the steam generators. The steam for the turbine is made in the secondary circuit (the Secondary circuit tab).</i>
+</div>
 {{if data.pipeTotal > 0}}
 <div class="item">
 	<div class="itemLabel">
@@ -570,7 +573,12 @@
 {{/if}}
 {{/if}}
 {{if data.tab == 'steam'}}
-<h3>Steam</h3>
+<h3>{{if data.twoCircuit}}Secondary circuit: steam{{else}}Steam{{/if}}</h3>
+{{if data.twoCircuit}}
+<div class="item">
+	<i>The <b>secondary circuit</b> is clean water that boils in the steam generators and drives the turbine. The walls of the steam generator tubes separate it from the radioactive primary circuit. The primary circuit (the water heated in the core) is on the Primary circuit tab.</i>
+</div>
+{{/if}}
 {{if !data.twoCircuit}}
 <div class="item">
 	<div class="itemLabel">
@@ -605,7 +613,7 @@
 {{/if}}
 {{/if}}
 {{if data.twoCircuit}}
-<h3>Steam generators</h3>
+<h3>Secondary circuit: steam generators</h3>
 {{for data.sgList}}
 <div class="item">
 	<div class="itemLabel">
@@ -637,7 +645,7 @@
 </div>
 {{/for}}
 {{/if}}
-<h3>Feed water</h3>
+<h3>{{if data.twoCircuit}}Secondary circuit: feed water{{else}}Feed water{{/if}}</h3>
 <div class="item">
 	<div class="itemLabel">
 		Feedwater pump:
@@ -762,7 +770,7 @@
 </div>
 {{if data.twoCircuit}}
 <div class="item">
-	<i>Two-circuit plant. The core heats the primary water and never boils it. The main coolant pump drives that water through the steam generators, which boil the clean secondary water into steam for the turbine. If the pump stops, only natural circulation is left: enough for residual heat and low power, not for full power. Keep the steam generators supplied with feedwater.</i>
+	<i>Two-circuit plant. The core heats the primary water and never boils it. The main coolant pump drives that water through the steam generators, which boil the clean secondary water into steam for the turbine. If the pump stops, only natural circulation is left: enough for residual heat and low power, not for full power. Keep the steam generators supplied with feedwater. The Primary circuit tab covers the radioactive water of the core loop, the Secondary circuit tab covers the clean water and steam for the turbine.</i>
 </div>
 {{/if}}
 <div class="item">

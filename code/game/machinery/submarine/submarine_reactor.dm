@@ -97,7 +97,7 @@ var/global/list/nsr_tab_alarms = list(
 
 var/global/list/nsr_alarm_labels = list(
 	"temp" = "CORE TEMP",
-	"steam" = "STEAM PRESSURE",
+	"steam" = "SECONDARY PRESS HIGH",
 	"water" = "SG WATER LOW",
 	"cooling" = "COOLING LOST",
 	"ppress_hi" = "PRIMARY PRESS HIGH",
@@ -118,7 +118,7 @@ var/global/list/nsr_alarm_labels = list(
 /// Русские подписи плиток (ревизия 24, переключатель языка 24.1): до двух строк по 15 знаков, плитка узкая.
 var/global/list/nsr_alarm_labels_ru = list(
 	"temp" = "ТЕМПЕРАТУРА ЗОНЫ",
-	"steam" = "ДАВЛЕНИЕ ПАРА",
+	"steam" = "ДАВЛ. 2 КОНТ. ВЫСОКОЕ",
 	"water" = "НИЗКИЙ УРОВЕНЬ ПГ",
 	"cooling" = "ПОТЕРЯ ОХЛАЖДЕНИЯ",
 	"ppress_hi" = "ДАВЛ. 1 КОНТ. ВЫСОКОЕ",
@@ -2312,7 +2312,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		"reactor" = nsr_tr("Rods and power", "Стержни и мощность"),
 		"fuel" = nsr_tr("Fuel", "Топливо"),
 		"primary" = nsr_tr("Primary circuit", "Первый контур"),
-		"steam" = nsr_tr("Steam and feed", "Пар и питание"),
+		"steam" = R.two_circuit ? nsr_tr("Secondary circuit", "Второй контур") : nsr_tr("Steam and feed", "Пар и питание"),
 		"help" = nsr_tr("Help", "Справка"))
 	var/list/alerts = list()
 	var/overall = 0

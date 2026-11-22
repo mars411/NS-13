@@ -136,11 +136,14 @@
 </div>
 <h3>Steam path</h3>
 <div class="item">
+	<i>Steam path: admission &rarr; HP &rarr; LP 1 &rarr; LP 2 &rarr; <b>exhaust into the condenser</b> (where the spent steam turns back into water).</i>
+</div>
+<div class="item">
 	<div class="itemLabel">
 		Pressure, bar:
 	</div>
 	<div class="itemContent">
-		before the turbine <b>{{:data.p0}}</b>, after HP <b>{{:data.p1}}</b>, after LP 1 <b>{{:data.p2}}</b>, at the condenser <b>{{:data.p3}}</b>
+		before the turbine <b>{{:data.p0}}</b>, after HP <b>{{:data.p1}}</b>, after LP 1 <b>{{:data.p2}}</b>, at the exhaust (in the condenser) <b>{{:data.p3}}</b>
 	</div>
 </div>
 {{/if}}
@@ -254,16 +257,24 @@
 {{if data.tab == 'steam'}}
 <h3>Steam path</h3>
 <div class="item">
+	<i><b>The condenser is the exhaust of the turbine.</b> Spent steam leaves the last section into the condenser, cools down there and turns back into water, and the feed pump returns it to the steam generators. The more cooling, the lower the exhaust pressure and the easier the turbine spins. If cooling is weak, the exhaust pressure climbs: above {{:data.backpBar}} bar the low-pressure blades overheat, and above {{:data.condTripBar}} bar the stop valve shuts by itself.</i>
+</div>
+{{if data.backpPct > 0}}
+<div class="item">
+	<span class='bad'><b>Poor vacuum at the exhaust ({{:data.backpPct}} %):</b> the low-pressure blades overheat and wear faster. Raise the condenser cooling.</span>
+</div>
+{{/if}}
+<div class="item">
 	<div class="itemLabel">
 		Pressure, bar:
 	</div>
 	<div class="itemContent">
-		before the turbine <b>{{:data.p0}}</b>, after HP <b>{{:data.p1}}</b>, after LP 1 <b>{{:data.p2}}</b>, at the condenser <b>{{:data.p3}}</b>
+		before the turbine <b>{{:data.p0}}</b>, after HP <b>{{:data.p1}}</b>, after LP 1 <b>{{:data.p2}}</b>, at the exhaust (in the condenser) <b>{{:data.p3}}</b>
 	</div>
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Condenser:
+		Condenser (exhaust):
 	</div>
 	<div class="itemContent">
 		{{if data.hasCondenser}}
@@ -275,7 +286,7 @@
 </div>
 <div class="item">
 	<div class="itemLabel">
-		Condenser cooling (exhaust):
+		Exhaust cooling (condenser):
 	</div>
 	<div class="itemContent">
 		{{if data.hasCondenser}}
@@ -326,6 +337,14 @@
 {{/if}}
 {{if data.tab == 'sections'}}
 <h3>Turbine sections</h3>
+<div class="item">
+	<i>The high-pressure section (HP) hardly suffers from moisture: overspeed and frequent starts wear it. The low-pressure sections (LP 1 and LP 2) are longer and run in wet steam, so they wear faster: from moisture (the moisture separator reduces it), from poor vacuum at the exhaust (condenser pressure above {{:data.backpBar}} bar) and from overspeed, and in an overspeed it is they that tear loose first.</i>
+</div>
+{{if data.backpPct > 0}}
+<div class="item">
+	<span class='bad'><b>Poor vacuum at the exhaust ({{:data.backpPct}} %):</b> the low-pressure blades overheat and wear faster. Raise the condenser cooling.</span>
+</div>
+{{/if}}
 <div class="item">
 	<div class="itemLabel">
 		Vibration:
@@ -378,10 +397,10 @@
 {{/if}}
 {{if data.tab == 'help'}}
 <div class="item">
-	<i>The tabs above split the panel by task: Overview shows the general state, Control holds the governor, the valves and the generator breaker, Steam and condenser has the pressures along the steam path, the condenser and the relief valve, Sections shows blade wear and vibration. An exclamation mark before a tab name means a tile of that tab is lit on the annunciator. The annunciator, alarm acknowledgement and EMERGENCY STOP are visible on every tab.</i>
+	<i>The tabs above split the panel by task: Overview shows the general state, Control holds the governor, the valves and the generator breaker, Steam and exhaust has the pressures along the steam path, the condenser (the exhaust of the turbine) and the relief valve, Sections shows blade wear and vibration. An exclamation mark before a tab name means a tile of that tab is lit on the annunciator. The annunciator, alarm acknowledgement and EMERGENCY STOP are visible on every tab.</i>
 </div>
 <div class="item">
-	<i>This panel runs the steam turbine. Steam comes in through the admission (inlet) valve and leaves through the condenser, whose cooling sets the exhaust side. The speed governor holds the shaft at its setting by moving the admission valve; switch it off to do that by hand. The generator breaker can be closed only while the needle is in the green band. The stop valve shuts the steam off in an emergency. Keep an eye on the vibration: worn or wrecked sections and overspeed make it climb, and above a point you feel it in the deck. The condenser can hold its pressure automatically.</i>
+	<i>This panel runs the steam turbine. Steam comes in through the admission (inlet) valve and leaves through the exhaust: the condenser, where the spent steam cools and turns back into water. Its cooling sets the exhaust pressure. The speed governor holds the shaft at its setting by moving the admission valve; switch it off to do that by hand. The generator breaker can be closed only while the needle is in the green band. The stop valve shuts the steam off in an emergency. Keep an eye on the vibration: worn or wrecked sections and overspeed make it climb, and above a point you feel it in the deck. The condenser can hold its pressure automatically.</i>
 </div>
 <div class="item">
 	<div class="itemLabel">
