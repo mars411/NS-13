@@ -162,7 +162,8 @@ var/global/list/nst_alarm_labels = list(
 	"cond" = "EXHAUST PRESS (COND.)",
 	"inlet" = "STEAM INLET HIGH",
 	"blades" = "BLADE DAMAGE",
-	"relief" = "RELIEF VALVE"
+	"relief" = "RELIEF VALVE",
+	"bypass" = "PROTECTION BYPASSED"
 )
 
 /// Русские подписи плиток (ревизия 24, переключатель языка 24.1): до двух строк по 15 знаков, плитка узкая.
@@ -176,16 +177,21 @@ var/global/list/nst_alarm_labels_ru = list(
 	"cond" = "ДАВЛ. ВЫПУСКА (КОНДЕНС.)",
 	"inlet" = "ДАВЛЕНИЕ ПАРА НА ВХОДЕ",
 	"blades" = "ПОВРЕЖДЕНИЕ ЛОПАТОК",
-	"relief" = "ПРЕДОХРАН. КЛАПАН"
+	"relief" = "ПРЕДОХРАН. КЛАПАН",
+	"bypass" = "ЗАЩИТА ОТКЛЮЧЕНА"
 )
 
 /// Вкладки пульта турбины (ревизия 28): порядок и какие плитки табло относятся к вкладке (для «!» и «!!» в названии).
 var/global/list/nst_tab_ids = list("summary", "control", "steam", "sections", "help")
 var/global/list/nst_tab_alarms = list(
-	"control" = list("overspeed", "stop", "breaker", "overload", "governor"),
+	"control" = list("overspeed", "stop", "breaker", "overload", "governor", "bypass"),
 	"steam" = list("cond", "inlet", "relief"),
 	"sections" = list("vibration", "blades")
 )
+
+/// Разрешён ли на этом сервере обход защиты турбины (ревизия 32). Запрещает настройка NS13_TURBINE_BYPASS_LOCKED в config.txt.
+/proc/nst_bypass_allowed()
+	return !config.ns13_turbine_bypass_locked
 
 /proc/nst_network_gas(datum/pipe_network/net, gas_id)
 	. = 0
@@ -683,6 +689,8 @@ var/global/list/nst_tab_alarms = list(
 	var/datum/ns_annunciator/annunciator
 	/// Причина, по которой закрылся стопорный клапан, для табло (ручная остановка не красная).
 	var/stop_reason = ""
+	/// TRUE, когда оператор обошёл защиту (ревизия 32): стопорный клапан не закрывается сам ни от разгона, ни от давления у конденсатора. Вручную закрыть можно всегда.
+	var/protection_bypass = FALSE
 
 /obj/machinery/power/submarine_turbine_generator/Initialize()
 	. = ..()
@@ -795,6 +803,16 @@ var/global/list/nst_tab_alarms = list(
 	visible_message(SPAN_DANGER("The turbine stop valve slams shut ([reason])!"))
 	playsound(src, NS_SND_TRIP, 80, TRUE)
 	add_cycle()
+
+/// Включает или выключает обход защиты. Включение пишется в журнал и сообщается админам: оно позволяет сломать турбину.
+/obj/machinery/power/submarine_turbine_generator/proc/set_protection_bypass(state, mob/user)
+	state = !!state
+	if(state == protection_bypass)
+		return
+	protection_bypass = state
+	cond_over = 0
+	if(state)
+		log_and_message_admins("bypassed the protection of turbine '[turbine_id]'.", user)
 
 /// Сброс стопорного клапана оператором. Только когда обороты упали ниже NST_RPM_STOP_RESET; заслонка при этом закрывается.
 /obj/machinery/power/submarine_turbine_generator/proc/reset_stop_valve(mob/user)
@@ -1019,7 +1037,7 @@ var/global/list/nst_tab_alarms = list(
 	rpm = shaft_rpm()
 
 	// Давление у конденсатора слишком высокое и держится: конденсатор не справляется, стопорный клапан закрывается.
-	if(lp2 && !QDELETED(lp2) && !stop_tripped)
+	if(lp2 && !QDELETED(lp2) && !stop_tripped && !protection_bypass)
 		if(lp2.air2.return_pressure() / NSR_KPA_PER_BAR > NST_COND_TRIP_BAR)
 			cond_over += dt
 			if(cond_over >= NST_COND_TRIP_TIME)
@@ -1036,7 +1054,7 @@ var/global/list/nst_tab_alarms = list(
 	apply_blade_wear(dt, rpm)
 
 	// Защиты.
-	if(!stop_tripped && rpm >= NST_RPM_STOP)
+	if(!stop_tripped && !protection_bypass && rpm >= NST_RPM_STOP)
 		trip_stop_valve("OVERSPEED")
 	if(rpm > NST_RPM_DAMAGE)
 		apply_overspeed(rpm, dt)
@@ -1061,6 +1079,8 @@ var/global/list/nst_tab_alarms = list(
 		tiles["overload"] = 2
 	if(!governor_ok)
 		tiles["governor"] = 1
+	if(protection_bypass)
+		tiles["bypass"] = 1
 	var/inlet_bar = 0
 	if(hp && !QDELETED(hp))
 		inlet_bar = hp.air1.return_pressure() / NSR_KPA_PER_BAR
@@ -1270,6 +1290,9 @@ var/global/list/nst_tab_alarms = list(
 	data["condTripBar"] = NST_COND_TRIP_BAR
 	data["backpBar"] = NST_BACKP_BAR
 	data["backpPct"] = round(G.backp_factor * 100)
+	data["protBypass"] = G.protection_bypass
+	data["bypassAllowed"] = nst_bypass_allowed()
+	data["stopRpm"] = NST_RPM_STOP
 	data["vibClass"] = "good"
 	data["vibText"] = nsr_ru((G.vibration > 0) ? "normal" : "still")
 	if(G.vibration >= NST_VIB_DANGER)
@@ -1416,6 +1439,16 @@ var/global/list/nst_tab_alarms = list(
 			G.trip_stop_valve("EMERGENCY STOP")
 		if("stop_reset")
 			G.reset_stop_valve(user)
+		if("prot_bypass")
+			if(G.protection_bypass)
+				G.set_protection_bypass(FALSE, user)
+			else if(!nst_bypass_allowed())
+				to_chat(user, SPAN_WARNING(nsr_tr("The server settings forbid bypassing the turbine protection.", "Настройки сервера запрещают обход защиты турбины.")))
+			else
+				var/bypass_label = nsr_tr("Bypass", "Отключить")
+				var/bypass_answer = alert(user, nsr_tr("Bypass the turbine protection? The stop valve will no longer close by itself on overspeed or high condenser pressure, and the turbine can be damaged.", "Отключить защиту турбины? Стопорный клапан перестанет закрываться сам при разгоне и высоком давлении у конденсатора, турбину можно повредить."), nsr_tr("Turbine protection", "Защита турбины"), bypass_label, nsr_tr("Cancel", "Отмена"))
+				if(bypass_answer == bypass_label)
+					G.set_protection_bypass(TRUE, user)
 		if("cool_move")
 			var/cool_amount = text2num(href_list["amount"])
 			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()

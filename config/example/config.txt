@@ -87,6 +87,9 @@ LOG_ATTACK
 ## disconnect players who did nothing during the set amount of minutes
 # KICK_INACTIVE 10
 
+## NS-13: if uncommented, the turbine console cannot bypass the turbine protection (the stop valve then always closes by itself).
+#NS13_TURBINE_BYPASS_LOCKED
+
 ## Prevent Secret from being added to mode votes
 # SECRET_DISABLED
 

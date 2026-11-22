@@ -56,6 +56,9 @@
 	/// Allows admins with relevant permissions to have their own ooc colour
 	var/static/allow_admin_ooccolor = FALSE
 
+	/// NS-13: запретить обход защиты турбины на пульте (ревизия 32)
+	var/static/ns13_turbine_bypass_locked = FALSE
+
 	/// allow votes to restart
 	var/static/allow_vote_restart = FALSE
 
@@ -595,6 +598,8 @@
 				no_click_cooldown = TRUE
 			if ("allow_admin_ooccolor")
 				allow_admin_ooccolor = TRUE
+			if ("ns13_turbine_bypass_locked")
+				ns13_turbine_bypass_locked = TRUE
 			if ("allow_vote_restart")
 				allow_vote_restart = TRUE
 			if ("allow_vote_mode")
