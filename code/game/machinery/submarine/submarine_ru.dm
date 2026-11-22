@@ -113,6 +113,11 @@ var/global/list/nsr_ru_table = list(
 	nsr_lang_cur = pref ? pref : NSR_LANG_DEFAULT
 	return nsr_lang_cur
 
+/// Язык игрока ("ru" или "en") без побочных эффектов (nsr_lang_cur не трогает): для оповещений, которые идут сразу многим игрокам.
+/proc/nsr_lang_code(mob/user)
+	var/pref = (user && user.ckey) ? nsr_lang_pref[user.ckey] : null
+	return pref ? pref : NSR_LANG_DEFAULT
+
 /// Переключить язык игрока (русский и английский по очереди).
 /proc/nsr_lang_toggle(mob/user)
 	if(!user || !user.ckey)
@@ -133,3 +138,17 @@ var/global/list/nsr_ru_table = list(
 		return text
 	var/ru = nsr_ru_table[text]
 	return ru ? ru : text
+
+/// Выбор языка без пульта, в том числе в лобби: тот же язык у окон пультов и у голосовых оповещений.
+/client/verb/ns13_language()
+	set name = "NS-13 Language"
+	set category = "OOC"
+	set desc = "Switch the language of NS-13 console windows and voice announcements (English or Russian)."
+
+	if(!mob)
+		return
+	nsr_lang_toggle(mob)
+	if(nsr_lang_cur == "en")
+		to_chat(src, SPAN_NOTICE("NS-13 consoles and announcements: English. Use this command again to switch back to Russian."))
+	else
+		to_chat(src, SPAN_NOTICE("Пульты и оповещения NS-13: русский. Чтобы вернуть английский, вызовите эту команду ещё раз."))

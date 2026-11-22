@@ -25,11 +25,11 @@
 #define NS_SND_BUILT            'sound/items/Deconstruct.ogg'              // что-то собрано, починено
 #define NS_SND_RELIEF           'sound/machines/hiss.ogg'                  // предохранительный клапан компенсатора открылся
 #define NS_SND_SPARKS           'sound/effects/sparks4.ogg'
+#define NS_SND_BEACON_HORN      'sound/obj/machinery/rotating_alarm/supermatter.ogg' // сирена маяка тревог, временно сирена суперматерии из стока (зацикленная)
 
-// Язык голосовых оповещений (см. submarine_announce.dm). Пока один общий на раунд, потом голосование или личная настройка.
+// Язык голосовых оповещений (см. submarine_announce.dm): личная настройка игрока, та же, что у окон пультов (nsr_lang_pref, по умолчанию NSR_LANG_DEFAULT).
 #define NS_ANNOUNCE_LANG_RU "ru"
 #define NS_ANNOUNCE_LANG_EN "en"
-#define NS_ANNOUNCE_LANG_DEFAULT NS_ANNOUNCE_LANG_EN
 #define NS_ANNOUNCE_VOLUME 35 // громкость голосовых оповещений, 0-100 (стоковые объявления играют на 100, это было слишком громко)
 
 // ============================================================================

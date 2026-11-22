@@ -359,6 +359,30 @@
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Bk" = (
+/obj/machinery/rotating_alarm/submarine/reactor{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Bm" = (
+/obj/machinery/rotating_alarm/submarine/reactor{
+	dir = 4
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Bq" = (
+/obj/machinery/rotating_alarm/submarine/turbine{
+	dir = 8
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Bt" = (
+/obj/machinery/rotating_alarm/submarine/turbine{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Cu" = (
 /obj/structure/closet/crate/submarine_fuel,
 /turf/simulated/floor/tiled,
@@ -1830,7 +1854,7 @@ OC
 Zq
 Zj
 Ze
-Ze
+Bm
 Ze
 Ze
 Ze
@@ -2067,7 +2091,7 @@ OC
 OC
 Zq
 Vk
-Ze
+Bq
 Ze
 Ze
 Ze
@@ -2507,7 +2531,7 @@ OC
 OC
 OC
 Zq
-Ze
+Bk
 Ze
 Ze
 Zp
@@ -3119,7 +3143,7 @@ OC
 OC
 OC
 Zq
-Ze
+Bt
 Ze
 Ze
 Ze
