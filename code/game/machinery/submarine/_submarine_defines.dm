@@ -326,3 +326,8 @@
 #define NSR_SECTION_LINK_RANGE    3      // радиус поиска секций от ядра, тайлов
 #define NSR_CASING_TIME           (3 SECONDS)
 #define NSR_ALARM_REPEAT          (6 SECONDS)
+
+// Провода пульта турбины (ревизия 33): биты для /datum/wires/submarine_turbine_console
+#define NST_WIRE_ACCESS           1      // кардридер: оборвать = доступ не проверяется, импульс = 30 секунд подходит любая карта
+#define NST_WIRE_PROTECT          2      // цепь защиты: оборвать = защита не работает, импульс = стопорный клапан закрывается
+#define NST_WIRE_LAMP             4      // лампа табло: оборвать = плитка «защита отключена» не горит

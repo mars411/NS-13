@@ -248,15 +248,23 @@
 			<span class='bad'><b>BYPASSED: the stop valve will not shut by itself</b></span>
 			{{:helper.link('Restore protection', 'locked', {'action' : 'prot_bypass'}, null, 'selected')}}
 		{{else}}
-			<span class='good'><b>ACTIVE</b></span>
-			{{if data.bypassAllowed}}
-				{{:helper.link('Bypass protection', 'alert', {'action' : 'prot_bypass'}, null, 'redButton')}}
+			{{if data.protCut}}
+				<span class='bad'><b>PROTECTION CIRCUIT BROKEN: the protection does not work</b></span>
 			{{else}}
-				<span class='average'>&nbsp;bypass is forbidden by the server settings</span>
+				<span class='good'><b>ACTIVE</b></span>
+				{{if data.bypassAllowed}}
+					{{:helper.link('Bypass protection', 'alert', {'action' : 'prot_bypass'}, null, 'redButton')}}
+					{{if !data.bypassAccess}}
+						<span class='average'>&nbsp;engineering access (ID card) is required</span>
+					{{/if}}
+				{{else}}
+					<span class='average'>&nbsp;bypass is forbidden by the server settings</span>
+				{{/if}}
 			{{/if}}
 		{{/if}}
 		<div style="clear: both; color: #a0a0a0;">
 			The protection shuts the stop valve by itself when the shaft reaches {{:data.stopRpm}} rpm or the condenser pressure stays above {{:data.condTripBar}} bar. With the bypass on, that does not happen: the turbine can be overspun until it is damaged. The EMERGENCY STOP button always works.
+			{{if data.protCut}}The protection wire is cut: open the panel of this console with a screwdriver and mend it with wirecutters.{{/if}}
 		</div>
 	</div>
 </div>

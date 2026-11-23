@@ -248,15 +248,23 @@
 			<span class='bad'><b>ОБХОД: стопорный клапан не закроется сам</b></span>
 			{{:helper.link('Вернуть защиту', 'locked', {'action' : 'prot_bypass'}, null, 'selected')}}
 		{{else}}
-			<span class='good'><b>ВКЛЮЧЕНА</b></span>
-			{{if data.bypassAllowed}}
-				{{:helper.link('Отключить защиту (обход)', 'alert', {'action' : 'prot_bypass'}, null, 'redButton')}}
+			{{if data.protCut}}
+				<span class='bad'><b>ЦЕПЬ ЗАЩИТЫ ОБОРВАНА: защита не работает</b></span>
 			{{else}}
-				<span class='average'>&nbsp;обход запрещён настройками сервера</span>
+				<span class='good'><b>ВКЛЮЧЕНА</b></span>
+				{{if data.bypassAllowed}}
+					{{:helper.link('Отключить защиту (обход)', 'alert', {'action' : 'prot_bypass'}, null, 'redButton')}}
+					{{if !data.bypassAccess}}
+						<span class='average'>&nbsp;нужен инженерный допуск (карта ID)</span>
+					{{/if}}
+				{{else}}
+					<span class='average'>&nbsp;обход запрещён настройками сервера</span>
+				{{/if}}
 			{{/if}}
 		{{/if}}
 		<div style="clear: both; color: #a0a0a0;">
 			Защита сама закрывает стопорный клапан, когда обороты доходят до {{:data.stopRpm}} или давление у конденсатора держится выше {{:data.condTripBar}} бар. При обходе этого не происходит: турбину можно разогнать до повреждений. Кнопка АВАРИЙНЫЙ ОСТАНОВ работает всегда.
+			{{if data.protCut}}Провод защиты перерезан: откройте панель пульта отвёрткой и срастите его кусачками.{{/if}}
 		</div>
 	</div>
 </div>

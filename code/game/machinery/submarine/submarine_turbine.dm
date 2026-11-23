@@ -691,6 +691,10 @@ var/global/list/nst_tab_alarms = list(
 	var/stop_reason = ""
 	/// TRUE, когда оператор обошёл защиту (ревизия 32): стопорный клапан не закрывается сам ни от разгона, ни от давления у конденсатора. Вручную закрыть можно всегда.
 	var/protection_bypass = FALSE
+	/// TRUE, когда оборван провод цепи защиты на пульте (ревизия 33): защита не работает так же, как при обходе, но без кнопки.
+	var/protection_cut = FALSE
+	/// TRUE, когда оборван провод лампы табло: плитка про отключённую защиту не горит.
+	var/bypass_lamp_cut = FALSE
 
 /obj/machinery/power/submarine_turbine_generator/Initialize()
 	. = ..()
@@ -803,6 +807,12 @@ var/global/list/nst_tab_alarms = list(
 	visible_message(SPAN_DANGER("The turbine stop valve slams shut ([reason])!"))
 	playsound(src, NS_SND_TRIP, 80, TRUE)
 	add_cycle()
+
+/// Работает ли автоматика защиты. Настройка сервера сильнее обхода и оборванного провода.
+/obj/machinery/power/submarine_turbine_generator/proc/protection_active()
+	if(!nst_bypass_allowed())
+		return TRUE
+	return !(protection_bypass || protection_cut)
 
 /// Включает или выключает обход защиты. Включение пишется в журнал и сообщается админам: оно позволяет сломать турбину.
 /obj/machinery/power/submarine_turbine_generator/proc/set_protection_bypass(state, mob/user)
@@ -1037,7 +1047,7 @@ var/global/list/nst_tab_alarms = list(
 	rpm = shaft_rpm()
 
 	// Давление у конденсатора слишком высокое и держится: конденсатор не справляется, стопорный клапан закрывается.
-	if(lp2 && !QDELETED(lp2) && !stop_tripped && !protection_bypass)
+	if(lp2 && !QDELETED(lp2) && !stop_tripped && protection_active())
 		if(lp2.air2.return_pressure() / NSR_KPA_PER_BAR > NST_COND_TRIP_BAR)
 			cond_over += dt
 			if(cond_over >= NST_COND_TRIP_TIME)
@@ -1054,7 +1064,7 @@ var/global/list/nst_tab_alarms = list(
 	apply_blade_wear(dt, rpm)
 
 	// Защиты.
-	if(!stop_tripped && !protection_bypass && rpm >= NST_RPM_STOP)
+	if(!stop_tripped && protection_active() && rpm >= NST_RPM_STOP)
 		trip_stop_valve("OVERSPEED")
 	if(rpm > NST_RPM_DAMAGE)
 		apply_overspeed(rpm, dt)
@@ -1079,7 +1089,7 @@ var/global/list/nst_tab_alarms = list(
 		tiles["overload"] = 2
 	if(!governor_ok)
 		tiles["governor"] = 1
-	if(protection_bypass)
+	if(!protection_active() && !bypass_lamp_cut)
 		tiles["bypass"] = 1
 	var/inlet_bar = 0
 	if(hp && !QDELETED(hp))
@@ -1175,20 +1185,59 @@ var/global/list/nst_tab_alarms = list(
 	var/last_rpm_angle
 	/// Выбранная вкладка окна по игрокам (ключ ckey, значение id из nst_tab_ids).
 	var/list/ui_tab
+	/// Какой допуск нужен, чтобы отключить защиту (ревизия 33). Пока стоковый инженерный, потом заменить на свой из профессий.
+	var/list/bypass_access = list(access_engine)
+	/// TRUE после ЕМАГа: кардридер больше не проверяет допуск.
+	var/access_hacked = FALSE
+	/// TRUE, пока оборван провод кардридера.
+	var/access_wire_cut = FALSE
+	/// До какого момента (world.time) кардридер принимает любую карту после импульса на провод.
+	var/access_open_until = 0
 
 /obj/machinery/computer/submarine_turbine_console/Initialize()
 	. = ..()
 	GLOB.submarine_turbine_consoles += src
+	wires = new /datum/wires/submarine_turbine_console(src)
 
 /obj/machinery/computer/submarine_turbine_console/Destroy()
 	GLOB.submarine_turbine_consoles -= src
 	unit = null
+	QDEL_NULL(wires)
 	return ..()
 
 /obj/machinery/computer/submarine_turbine_console/on_update_icon()
 	// Не вызываем родителя: он рисует экран и клавиатуру компьютера, которых у пульта нет.
 	ClearOverlays()
 	icon_state = "control_on"
+
+/// Пускает ли кардридер этого человека отключать защиту: нужен допуск из bypass_access, пока кардридер не взломан (ЕМАГ, оборванный провод, импульс).
+/obj/machinery/computer/submarine_turbine_console/proc/can_bypass(mob/user)
+	if(access_hacked || access_wire_cut || world.time < access_open_until)
+		return TRUE
+	return user && has_access(bypass_access, user.GetAccess())
+
+/obj/machinery/computer/submarine_turbine_console/emag_act(remaining_charges, mob/user, emag_source)
+	if(access_hacked)
+		return -1
+	access_hacked = TRUE
+	var/datum/effect/spark_spread/spark = new /datum/effect/spark_spread
+	spark.set_up(3, 1, src)
+	spark.start()
+	to_chat(user, SPAN_NOTICE("You short out the ID reader of \the [src]."))
+	log_and_message_admins("emagged the ID reader of turbine panel '[turbine_id]'.", user)
+	return 1
+
+/// Отвёртка открывает и закрывает панель с проводами, кусачки, мультитул и сигнализатор работают с проводами при открытой панели.
+/obj/machinery/computer/submarine_turbine_console/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	if(isScrewdriver(tool))
+		panel_open = !panel_open
+		user.visible_message("[user] [panel_open ? "opens" : "closes"] the maintenance panel of \the [src].", "You [panel_open ? "open" : "close"] the maintenance panel of \the [src].")
+		playsound(src, 'sound/items/Screwdriver.ogg', 50, TRUE)
+		return TRUE
+	if(panel_open && (isWirecutter(tool) || isMultitool(tool) || istype(tool, /obj/item/device/assembly/signaler)))
+		wires.Interact(user)
+		return TRUE
+	return ..()
 
 /obj/machinery/computer/submarine_turbine_console/proc/get_unit()
 	if(unit && !QDELETED(unit))
@@ -1291,6 +1340,8 @@ var/global/list/nst_tab_alarms = list(
 	data["backpBar"] = NST_BACKP_BAR
 	data["backpPct"] = round(G.backp_factor * 100)
 	data["protBypass"] = G.protection_bypass
+	data["protCut"] = G.protection_cut && nst_bypass_allowed()
+	data["bypassAccess"] = can_bypass(user)
 	data["bypassAllowed"] = nst_bypass_allowed()
 	data["stopRpm"] = NST_RPM_STOP
 	data["vibClass"] = "good"
@@ -1444,6 +1495,8 @@ var/global/list/nst_tab_alarms = list(
 				G.set_protection_bypass(FALSE, user)
 			else if(!nst_bypass_allowed())
 				to_chat(user, SPAN_WARNING(nsr_tr("The server settings forbid bypassing the turbine protection.", "Настройки сервера запрещают обход защиты турбины.")))
+			else if(!can_bypass(user))
+				to_chat(user, SPAN_WARNING(nsr_tr("The ID reader refuses: engineering access is required to bypass the turbine protection.", "Кардридер отказывает: для обхода защиты турбины нужен инженерный допуск.")))
 			else
 				var/bypass_label = nsr_tr("Bypass", "Отключить")
 				var/bypass_answer = alert(user, nsr_tr("Bypass the turbine protection? The stop valve will no longer close by itself on overspeed or high condenser pressure, and the turbine can be damaged.", "Отключить защиту турбины? Стопорный клапан перестанет закрываться сам при разгоне и высоком давлении у конденсатора, турбину можно повредить."), nsr_tr("Turbine protection", "Защита турбины"), bypass_label, nsr_tr("Cancel", "Отмена"))
