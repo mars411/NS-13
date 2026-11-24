@@ -201,7 +201,7 @@
 		icon_state = new_state
 	if(new_text != shown_text)
 		shown_text = new_text
-		maptext = length(new_text) ? "<span style='font-family: Arial; font-size: 6px; color: [G.stop_tripped ? "#FF8080" : "#7CFC9A"]; text-align: center;'>[new_text]</span>" : ""
+		maptext = length(new_text) ? "<span style='font-family: Arial; font-size: 6px; color: [G.stop_tripped ? "#ff8080" : "#7cfc9a"]; text-align: center;'>[new_text]</span>" : ""
 
 /// Полное состояние текстом, на языке игрока.
 /obj/structure/turbine_display/proc/status_lines(mob/user)
