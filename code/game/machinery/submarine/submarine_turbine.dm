@@ -824,6 +824,21 @@ var/global/list/nst_tab_alarms = list(
 	if(state)
 		log_and_message_admins("bypassed the protection of turbine '[turbine_id]'.", user)
 
+/// Подтвердить тревоги табло. Зовут и окно пульта, и физическая кнопка на столе (ревизия 34). Язык игрока уже выбран вызывающим.
+/obj/machinery/power/submarine_turbine_generator/proc/act_ack(mob/user)
+	if(annunciator.has_unacked())
+		annunciator.acknowledge()
+	else if(user)
+		to_chat(user, SPAN_NOTICE(nsr_tr("No unacknowledged alarm.", "Неподтверждённых тревог нет.")))
+
+/// Аварийный останов оператором: стопорный клапан закрывается сразу. Зовут и окно пульта, и кнопка под крышкой на столе.
+/obj/machinery/power/submarine_turbine_generator/proc/act_emergency_stop(mob/user)
+	if(stop_tripped)
+		if(user)
+			to_chat(user, SPAN_NOTICE(nsr_tr("The stop valve is already shut.", "Стопорный клапан уже закрыт.")))
+		return
+	trip_stop_valve("EMERGENCY STOP")
+
 /// Сброс стопорного клапана оператором. Только когда обороты упали ниже NST_RPM_STOP_RESET; заслонка при этом закрывается.
 /obj/machinery/power/submarine_turbine_generator/proc/reset_stop_valve(mob/user)
 	if(!stop_tripped)
@@ -1457,10 +1472,7 @@ var/global/list/nst_tab_alarms = list(
 
 	switch(action)
 		if("alarm_ack")
-			if(G.annunciator.has_unacked())
-				G.annunciator.acknowledge()
-			else
-				to_chat(user, SPAN_NOTICE(nsr_tr("No unacknowledged alarm.", "Неподтверждённых тревог нет.")))
+			G.act_ack(user)
 		if("adm_move")
 			var/adm_amount = text2num(href_list["amount"])
 			if(!(adm_amount in list(-10, -1, 1, 10)))
@@ -1487,7 +1499,7 @@ var/global/list/nst_tab_alarms = list(
 			else
 				G.try_close_breaker(user)
 		if("stop_trip")
-			G.trip_stop_valve("EMERGENCY STOP")
+			G.act_emergency_stop(user)
 		if("stop_reset")
 			G.reset_stop_valve(user)
 		if("prot_bypass")

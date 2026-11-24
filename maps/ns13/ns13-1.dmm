@@ -502,35 +502,36 @@
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bV" = (
-/obj/machinery/computer/submarine_reactor_console,
+/obj/structure/turbine_desk{
+	dir = 6;
+	pixel_y = 5
+	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bW" = (
-/obj/structure/table/standard,
-/obj/item/paper/ns13/hatches,
+/obj/structure/turbine_desk{
+	dir = 4;
+	pixel_y = 5
+	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bX" = (
-/obj/structure/table/standard,
-/obj/item/paper/ns13/control_room,
+/obj/machinery/computer/submarine_reactor_console,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bY" = (
-/obj/structure/table/standard,
-/obj/item/device/scanner/gas,
-/obj/item/device/geiger,
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/turbine_button/stop{
+	pixel_y = -5
+	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bZ" = (
-/obj/machinery/power/apc/high{
-	dir = 4;
-	locked = 0;
-	pixel_x = 24
-	},
-/obj/structure/cable{
-	d2 = 2;
-	icon_state = "0-2"
-	},
+/obj/structure/table/standard,
+/obj/item/paper/ns13/hatches,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "ba" = (
@@ -705,18 +706,59 @@
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/reactor_hall)
 "cA" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/corridor)
+"cB" = (
+/turf/simulated/wall/r_wall,
+/area/ns13/deck3/workshop)
+"cC" = (
+/obj/structure/closet/crate/radiation_gear/ns13,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/radiation_lockers)
+"cD" = (
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"cE" = (
+/obj/structure/closet/firecloset,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"cF" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"cG" = (
+/obj/machinery/light{
+	dir = 2
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/workshop)
+"cH" = (
 /obj/machinery/submarine_centrifuge{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"cB" = (
+"cI" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/algae_bay)
-"cC" = (
+"cJ" = (
 /turf/simulated/wall,
 /area/ns13/deck3/algae_bay)
-"cD" = (
+"cK" = (
 /obj/machinery/power/apc/high{
 	dir = 1;
 	locked = 0;
@@ -728,14 +770,14 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"cE" = (
+"cL" = (
 /obj/item/submarine_ore_sack/test,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"cF" = (
+"cM" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/algae_bay)
-"cG" = (
+"cN" = (
 /obj/structure/cable{
 	d2 = 2;
 	icon_state = "0-2"
@@ -750,7 +792,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"cH" = (
+"cO" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 8;
@@ -758,11 +800,11 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"cI" = (
+"cP" = (
 /obj/machinery/portable_atmospherics/hydroponics,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/algae_bay)
-"cJ" = (
+"cQ" = (
 /obj/machinery/power/apc/high{
 	dir = 1;
 	locked = 0;
@@ -774,17 +816,17 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"cK" = (
+"cR" = (
 /obj/machinery/submarine_dredge,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"cL" = (
+"cS" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/algae_bay)
-"cM" = (
+"cT" = (
 /obj/structure/table/standard,
 /obj/item/wrench,
 /obj/item/crowbar,
@@ -792,22 +834,22 @@
 /obj/item/wirecutters,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/workshop)
-"cN" = (
+"cU" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/algae_bay)
-"cO" = (
+"cV" = (
 /turf/simulated/wall,
 /area/ns13/deck3/emergency_power)
-"cP" = (
+"cW" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/emergency_power)
-"cQ" = (
+"cX" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"cR" = (
+"cY" = (
 /obj/machinery/power/apc/high{
 	dir = 2;
 	locked = 0;
@@ -819,71 +861,74 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/algae_bay)
-"cS" = (
+"cZ" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/emergency_power,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"cT" = (
-/obj/machinery/light{
-	dir = 2
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/emergency_power)
-"cU" = (
-/obj/structure/cable{
-	d1 = 2;
-	d2 = 8;
-	icon_state = "2-8"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/algae_bay)
-"cV" = (
-/obj/machinery/light{
-	dir = 1
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/emergency_power)
-"cW" = (
-/obj/structure/cable{
-	d1 = 2;
-	d2 = 4;
-	icon_state = "2-4"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/emergency_power)
-"cX" = (
-/obj/machinery/power/port_gen/pacman{
-	anchored = 1
-	},
-/obj/floor_decal/industrial/hatch/yellow,
-/obj/structure/cable{
-	d2 = 1;
-	icon_state = "0-1"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/emergency_power)
-"cY" = (
-/obj/structure/cable{
-	d1 = 4;
-	d2 = 8;
-	icon_state = "4-8"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/emergency_power)
-"cZ" = (
-/obj/machinery/power/apc/high{
-	dir = 1;
-	locked = 0;
-	pixel_y = 24
-	},
-/obj/structure/cable{
-	d2 = 4;
-	icon_state = "0-4"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/emergency_power)
 "ca" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/turbine_button/ack{
+	pixel_x = 8;
+	pixel_y = -5
+	},
+/obj/structure/turbine_button/reset{
+	pixel_x = -8;
+	pixel_y = -5
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"cb" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/turbine_display{
+	pixel_y = 12
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"cc" = (
+/obj/structure/table/standard,
+/obj/item/paper/ns13/control_room,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"cd" = (
+/obj/structure/turbine_desk{
+	dir = 10;
+	pixel_y = 5
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"ce" = (
+/obj/structure/turbine_desk{
+	dir = 8;
+	pixel_y = 5
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"cf" = (
+/obj/structure/table/standard,
+/obj/item/device/scanner/gas,
+/obj/item/device/geiger,
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"cg" = (
+/obj/machinery/power/apc/high{
+	dir = 4;
+	locked = 0;
+	pixel_x = 24
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/control_room)
+"ch" = (
 /obj/machinery/rotating_alarm/submarine/reactor{
 	dir = 8
 	},
@@ -894,7 +939,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"cb" = (
+"ci" = (
 /obj/structure/cable{
 	d2 = 1;
 	icon_state = "0-1"
@@ -909,10 +954,10 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"cc" = (
+"cj" = (
 /turf/simulated/wall,
 /area/ns13/deck3/control_room)
-"cd" = (
+"ck" = (
 /obj/machinery/door/airlock,
 /obj/structure/cable{
 	d1 = 4;
@@ -921,19 +966,19 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
-"ce" = (
+"cl" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/radiation_lockers)
-"cf" = (
+"cm" = (
 /turf/simulated/wall,
 /area/ns13/deck3/radiation_lockers)
-"cg" = (
+"cn" = (
 /turf/simulated/wall,
 /area/ns13/deck3/corridor)
-"ch" = (
+"co" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"ci" = (
+"cp" = (
 /obj/structure/cable{
 	d1 = 4;
 	d2 = 8;
@@ -941,35 +986,35 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"cj" = (
+"cq" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/corridor)
-"ck" = (
+"cr" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"cl" = (
+"cs" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"cm" = (
+"ct" = (
 /obj/structure/closet/firecloset,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"cn" = (
+"cu" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"co" = (
+"cv" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"cp" = (
+"cw" = (
 /obj/machinery/power/apc/high{
 	dir = 2;
 	locked = 0;
@@ -981,7 +1026,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"cq" = (
+"cx" = (
 /obj/structure/cable{
 	d1 = 2;
 	d2 = 8;
@@ -989,7 +1034,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/radiation_lockers)
-"cr" = (
+"cy" = (
 /obj/machinery/door/airlock,
 /obj/structure/cable{
 	d1 = 1;
@@ -998,7 +1043,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"cs" = (
+"cz" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 2;
@@ -1006,71 +1051,93 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"ct" = (
-/obj/structure/cable{
-	d2 = 1;
-	icon_state = "0-1"
-	},
-/obj/structure/cable{
-	d2 = 8;
-	icon_state = "0-8"
-	},
-/obj/structure/cable{
-	d2 = 4;
-	icon_state = "0-4"
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/corridor)
-"cu" = (
-/turf/simulated/wall/r_wall,
-/area/ns13/deck3/workshop)
-"cv" = (
-/obj/structure/closet/crate/radiation_gear/ns13,
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/radiation_lockers)
-"cw" = (
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/workshop)
-"cx" = (
-/obj/structure/closet/firecloset,
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/workshop)
-"cy" = (
-/obj/machinery/light{
-	dir = 1
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/workshop)
-"cz" = (
+"dA" = (
+/obj/landmark/test/space_turf,
+/turf/space,
+/area/space)
+"da" = (
 /obj/machinery/light{
 	dir = 2
-	},
-/turf/simulated/floor/tiled,
-/area/ns13/deck3/workshop)
-"da" = (
-/obj/structure/cable{
-	d2 = 1;
-	icon_state = "0-1"
-	},
-/obj/structure/cable{
-	d2 = 2;
-	icon_state = "0-2"
-	},
-/obj/structure/cable{
-	d2 = 8;
-	icon_state = "0-8"
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
 "db" = (
 /obj/structure/cable{
+	d1 = 2;
+	d2 = 8;
+	icon_state = "2-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/algae_bay)
+"dc" = (
+/obj/machinery/light{
+	dir = 1
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"dd" = (
+/obj/structure/cable{
+	d1 = 2;
+	d2 = 4;
+	icon_state = "2-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"de" = (
+/obj/machinery/power/port_gen/pacman{
+	anchored = 1
+	},
+/obj/floor_decal/industrial/hatch/yellow,
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"df" = (
+/obj/structure/cable{
+	d1 = 4;
+	d2 = 8;
+	icon_state = "4-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"dg" = (
+/obj/machinery/power/apc/high{
+	dir = 1;
+	locked = 0;
+	pixel_y = 24
+	},
+/obj/structure/cable{
+	d2 = 4;
+	icon_state = "0-4"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"dh" = (
+/obj/structure/cable{
+	d2 = 1;
+	icon_state = "0-1"
+	},
+/obj/structure/cable{
+	d2 = 2;
+	icon_state = "0-2"
+	},
+/obj/structure/cable{
+	d2 = 8;
+	icon_state = "0-8"
+	},
+/turf/simulated/floor/tiled,
+/area/ns13/deck3/emergency_power)
+"di" = (
+/obj/structure/cable{
 	d1 = 1;
 	d2 = 2;
 	icon_state = "1-2"
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"dc" = (
+"dj" = (
 /obj/structure/cable{
 	d2 = 1;
 	icon_state = "0-1"
@@ -1089,7 +1156,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"dd" = (
+"dk" = (
 /obj/structure/cable{
 	d1 = 2;
 	d2 = 8;
@@ -1097,7 +1164,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"de" = (
+"dl" = (
 /obj/machinery/power/port_gen/pacman{
 	anchored = 1;
 	sheets = 50
@@ -1109,35 +1176,35 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"df" = (
+"dm" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/algae,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/algae_bay)
-"dg" = (
+"dn" = (
 /obj/structure/table/standard,
 /obj/item/stack/material/phoron/fifty,
 /obj/item/stack/material/phoron/fifty,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/emergency_power)
-"dh" = (
+"do" = (
 /obj/landmark{
 	name = "JoinLate"
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"di" = (
+"dp" = (
 /obj/landmark/start,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"dj" = (
+"dq" = (
 /obj/landmark/test/safe_turf,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"dk" = (
+"dr" = (
 /turf/simulated/wall/r_wall,
 /area/ns13/deck3/battery_bay)
-"dl" = (
+"ds" = (
 /obj/machinery/door/airlock,
 /obj/structure/cable{
 	d1 = 4;
@@ -1146,10 +1213,10 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/corridor)
-"dm" = (
+"dt" = (
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"dn" = (
+"du" = (
 /obj/machinery/power/apc/high{
 	dir = 8;
 	locked = 0;
@@ -1161,7 +1228,7 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"do" = (
+"dv" = (
 /obj/structure/cable{
 	d1 = 1;
 	d2 = 8;
@@ -1169,31 +1236,27 @@
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"dp" = (
+"dw" = (
 /obj/machinery/light{
 	dir = 1
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"dq" = (
+"dx" = (
 /obj/structure/closet/crate,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"dr" = (
+"dy" = (
 /obj/machinery/light{
 	dir = 2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"ds" = (
+"dz" = (
 /obj/structure/table/standard,
 /obj/item/paper/ns13/battery,
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/battery_bay)
-"dt" = (
-/obj/landmark/test/space_turf,
-/turf/space,
-/area/space)
 
 (1,1,1) = {"
 OC
@@ -3263,8 +3326,8 @@ bU
 bR
 bR
 bN
-bR
-bR
+bV
+bW
 bR
 bL
 OC
@@ -3297,11 +3360,11 @@ OC
 OC
 OC
 bL
-bV
+bX
 bR
 bR
 bN
-bR
+bY
 bR
 bR
 bL
@@ -3335,11 +3398,11 @@ OC
 OC
 OC
 bL
-bW
+bZ
 bR
 bR
 bN
-bR
+ca
 bR
 bS
 bL
@@ -3377,7 +3440,7 @@ bT
 bR
 bR
 bN
-bR
+cb
 bR
 bR
 bL
@@ -3411,13 +3474,13 @@ OC
 OC
 OC
 bL
-bX
+cc
 bR
 bR
 bN
-bR
-bR
-bY
+cd
+ce
+cf
 bL
 OC
 OC
@@ -3450,9 +3513,9 @@ OC
 OC
 bL
 bT
-bZ
-ca
-cb
+cg
+ch
+ci
 bR
 bR
 bS
@@ -3487,11 +3550,11 @@ OC
 OC
 OC
 bL
-cc
-cc
-cc
-cd
-cc
+cj
+cj
+cj
+ck
+cj
 bL
 bL
 bL
@@ -3519,18 +3582,18 @@ OC
 OC
 OC
 OC
-ce
-ce
-ce
-ce
-ce
-ce
-cf
-cg
-ch
-ci
-ch
-cj
+cl
+cl
+cl
+cl
+cl
+cl
+cm
+cn
+co
+cp
+co
+cq
 OC
 OC
 OC
@@ -3557,18 +3620,18 @@ OC
 OC
 OC
 OC
-ce
-ck
-ck
-ck
-ck
-ck
-ck
-cg
-ch
-ci
 cl
-cj
+cr
+cr
+cr
+cr
+cr
+cr
+cn
+co
+cp
+cs
+cq
 OC
 OC
 OC
@@ -3595,18 +3658,18 @@ OC
 OC
 OC
 OC
-ce
-ck
-cm
-ck
-ck
-ck
-ck
-cg
+cl
+cr
+ct
+cr
+cr
+cr
+cr
 cn
-ci
-ch
-cj
+cu
+cp
+co
+cq
 OC
 OC
 OC
@@ -3633,18 +3696,18 @@ OC
 OC
 OC
 OC
-ce
+cl
+cv
+cr
+cr
+cr
+cr
+cr
+cn
 co
-ck
-ck
-ck
-ck
-ck
-cg
-ch
-ci
-ch
-cj
+cp
+co
+cq
 OC
 OC
 OC
@@ -3671,18 +3734,18 @@ OC
 OC
 OC
 OC
-ce
-ck
-ck
-ck
-ck
-ck
+cl
+cr
+cr
+cr
+cr
+cr
+cw
+cn
+co
 cp
-cg
-ch
-ci
-ch
-cj
+co
+cq
 OC
 OC
 OC
@@ -3709,26 +3772,26 @@ OC
 OC
 OC
 OC
-ce
-ck
-ck
-ck
-ck
-ck
-cq
+cl
 cr
-cs
-ct
-ch
-cj
-cu
-cu
-cu
-cu
-cu
-cu
-cu
-cu
+cr
+cr
+cr
+cr
+cx
+cy
+cz
+cA
+co
+cq
+cB
+cB
+cB
+cB
+cB
+cB
+cB
+cB
 OC
 OC
 OC
@@ -3747,26 +3810,26 @@ OC
 OC
 OC
 OC
-ce
-ck
-cv
-ck
-ck
-ck
-ck
-cg
-ch
-ci
-ch
-cg
-cw
-cw
-cw
-cw
-cw
-cw
-cw
-cu
+cl
+cr
+cC
+cr
+cr
+cr
+cr
+cn
+co
+cp
+co
+cn
+cD
+cD
+cD
+cD
+cD
+cD
+cD
+cB
 OC
 OC
 OC
@@ -3785,26 +3848,26 @@ OC
 OC
 OC
 OC
-ce
-ck
-ck
-ck
-ck
-ck
-ck
-cg
-ch
-ci
 cl
-cg
-cw
-cw
-cw
-cw
-cw
-cx
-cw
-cu
+cr
+cr
+cr
+cr
+cr
+cr
+cn
+co
+cp
+cs
+cn
+cD
+cD
+cD
+cD
+cD
+cE
+cD
+cB
 OC
 OC
 OC
@@ -3823,26 +3886,26 @@ OC
 OC
 OC
 OC
-ce
-co
+cl
 cv
-ck
-ck
-ck
-ck
-cg
+cC
+cr
+cr
+cr
+cr
 cn
-ci
-ch
-cg
-cy
-cw
-cw
-cw
-cw
-cw
-cz
 cu
+cp
+co
+cn
+cF
+cD
+cD
+cD
+cD
+cD
+cG
+cB
 OC
 OC
 OC
@@ -3861,26 +3924,26 @@ OC
 OC
 OC
 OC
-ce
-ck
-ck
-ck
-ck
-ck
-ck
-cg
-ch
-ci
-ch
-cg
-cw
-cw
-cw
-cw
-cA
-cw
-cw
-cu
+cl
+cr
+cr
+cr
+cr
+cr
+cr
+cn
+co
+cp
+co
+cn
+cD
+cD
+cD
+cD
+cH
+cD
+cD
+cB
 OC
 OC
 OC
@@ -3897,28 +3960,28 @@ OC
 OC
 OC
 OC
-cB
-cB
-cB
-cC
-cC
-cC
-cC
-cC
-cC
-cg
-ch
-ci
-ch
-cg
+cI
+cI
+cI
+cJ
+cJ
+cJ
+cJ
+cJ
+cJ
+cn
+co
+cp
+co
+cn
+cK
 cD
-cw
-cw
-cw
-cE
-cw
-cw
-cu
+cD
+cD
+cL
+cD
+cD
+cB
 OC
 OC
 OC
@@ -3935,28 +3998,28 @@ OC
 OC
 OC
 OC
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cN
+cz
+cy
+cO
+cD
+cD
+cD
+cD
+cD
+cD
 cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-cG
-cs
-cr
-cH
-cw
-cw
-cw
-cw
-cw
-cw
-cu
 OC
 OC
 OC
@@ -3973,28 +4036,28 @@ OC
 OC
 OC
 OC
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+cD
+cD
+cD
+cD
+cD
+cD
+cD
 cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cw
-cw
-cw
-cw
-cw
-cw
-cw
-cu
 OC
 OC
 OC
@@ -4011,28 +4074,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cF
-cg
-cJ
-ct
-ch
-cg
-cw
-cw
-cw
-cw
-cK
-cw
-cw
-cu
+cM
+cM
+cM
+cP
+cM
+cM
+cM
+cM
+cn
+cQ
+cA
+co
+cn
+cD
+cD
+cD
+cD
+cR
+cD
+cD
+cB
 OC
 OC
 OC
@@ -4049,28 +4112,28 @@ OC
 OC
 OC
 OC
-cB
-cL
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cy
+cI
+cS
 cM
-cw
-cw
-cw
-cw
-cz
-cu
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+cF
+cT
+cD
+cD
+cD
+cD
+cG
+cB
 OC
 OC
 OC
@@ -4087,28 +4150,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cN
-cg
-ch
-ci
-cl
-cg
-cw
 cM
-cw
-cw
-cw
-cw
-cw
-cu
+cM
+cM
+cP
+cM
+cM
+cM
+cU
+cn
+co
+cp
+cs
+cn
+cD
+cT
+cD
+cD
+cD
+cD
+cD
+cB
 OC
 OC
 OC
@@ -4125,28 +4188,28 @@ OC
 OC
 OC
 OC
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+cD
+cD
+cD
+cD
+cD
+cD
+cD
 cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cw
-cw
-cw
-cw
-cw
-cw
-cw
-cu
 OC
 OC
 OC
@@ -4163,28 +4226,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cF
-cg
-cn
-ci
-ch
-cg
-cO
-cO
-cO
-cO
-cO
-cO
-cO
+cM
+cM
+cM
 cP
+cM
+cM
+cM
+cM
+cn
+cu
+cp
+co
+cn
+cV
+cV
+cV
+cV
+cV
+cV
+cV
+cW
 OC
 OC
 OC
@@ -4201,28 +4264,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cQ
-cQ
-cQ
-cQ
-cQ
-cQ
-cQ
-cP
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+cX
+cX
+cX
+cX
+cX
+cX
+cX
+cW
 OC
 OC
 OC
@@ -4239,28 +4302,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cR
-cg
-ch
-ci
-ch
-cg
-cQ
-cS
-cQ
-cQ
-cQ
-cQ
-cT
+cM
+cM
+cM
 cP
+cM
+cM
+cM
+cY
+cn
+co
+cp
+co
+cn
+cX
+cZ
+cX
+cX
+cX
+cX
+da
+cW
 OC
 OC
 OC
@@ -4277,28 +4340,28 @@ OC
 OC
 OC
 OC
-cB
-cL
-cF
-cF
-cF
-cF
-cF
-cF
-cU
-cr
-cs
-ct
-ch
-cg
-cV
-cQ
-cQ
-cQ
-cW
+cI
+cS
+cM
+cM
+cM
+cM
+cM
+cM
+db
+cy
+cz
+cA
+co
+cn
+dc
 cX
-cQ
-cP
+cX
+cX
+dd
+de
+cX
+cW
 OC
 OC
 OC
@@ -4315,28 +4378,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cQ
-cQ
-cQ
-cQ
-cY
-cQ
-cQ
+cM
+cM
+cM
 cP
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+cX
+cX
+cX
+cX
+df
+cX
+cX
+cW
 OC
 OC
 OC
@@ -4353,28 +4416,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cZ
-cQ
-cQ
-cQ
-cY
-cQ
-cQ
-cP
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+dg
+cX
+cX
+cX
+df
+cX
+cX
+cW
 OC
 OC
 OC
@@ -4391,28 +4454,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cF
-cg
-ch
-cG
-cs
-cr
-da
-db
-db
-db
-dc
-cX
-cQ
+cM
+cM
+cM
 cP
+cM
+cM
+cM
+cM
+cn
+co
+cN
+cz
+cy
+dh
+di
+di
+di
+dj
+de
+cX
+cW
 OC
 OC
 OC
@@ -4429,28 +4492,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cN
-cg
-ch
-ci
-ch
-cg
-cQ
-cQ
-cQ
-cQ
-cY
-cQ
-cQ
-cP
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cU
+cn
+co
+cp
+co
+cn
+cX
+cX
+cX
+cX
+df
+cX
+cX
+cW
 OC
 OC
 OC
@@ -4467,28 +4530,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
 cI
-cF
-cF
-cF
-cF
-cg
-cn
-ci
-cl
-cg
-cQ
-cQ
-cQ
-cQ
-cY
-cQ
-cQ
+cM
+cM
+cM
 cP
+cM
+cM
+cM
+cM
+cn
+cu
+cp
+cs
+cn
+cX
+cX
+cX
+cX
+df
+cX
+cX
+cW
 OC
 OC
 OC
@@ -4505,28 +4568,28 @@ OC
 OC
 OC
 OC
-cB
-cL
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-ch
-ci
-ch
-cg
-cV
-cQ
-cQ
-cQ
-dd
-de
-cQ
-cP
+cI
+cS
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+co
+cp
+co
+cn
+dc
+cX
+cX
+cX
+dk
+dl
+cX
+cW
 OC
 OC
 OC
@@ -4543,28 +4606,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
-cF
-cF
-cF
-df
-cF
-cg
-ch
-ci
-ch
-cg
-cQ
-dg
-cQ
-cQ
-cQ
-cQ
-cT
-cP
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+dm
+cM
+cn
+co
+cp
+co
+cn
+cX
+dn
+cX
+cX
+cX
+cX
+da
+cW
 OC
 OC
 OC
@@ -4581,28 +4644,28 @@ OC
 OC
 OC
 OC
-cB
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cF
-cg
-dh
-ci
-dh
-cg
-cQ
-cQ
-cQ
-cQ
-cQ
-cQ
-cQ
-cP
+cI
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cM
+cn
+do
+cp
+do
+cn
+cX
+cX
+cX
+cX
+cX
+cX
+cX
+cW
 OC
 OC
 OC
@@ -4619,28 +4682,28 @@ OC
 OC
 OC
 OC
-cB
-cB
-cB
-cB
-cB
-cB
-cB
-cB
-cB
-cj
-di
-ci
-di
-cj
-cP
-cP
-cP
-cP
-cP
-cP
-cP
-cP
+cI
+cI
+cI
+cI
+cI
+cI
+cI
+cI
+cI
+cq
+dp
+cp
+dp
+cq
+cW
+cW
+cW
+cW
+cW
+cW
+cW
+cW
 OC
 OC
 OC
@@ -4666,11 +4729,11 @@ OC
 OC
 OC
 OC
-cj
-ch
-ci
-dj
-cj
+cq
+co
+cp
+dq
+cq
 OC
 OC
 OC
@@ -4699,21 +4762,21 @@ OC
 OC
 OC
 OC
-dk
-dk
-dk
-dk
-dk
-cj
-cg
-dl
-cg
-cj
-dk
-dk
-dk
-dk
-dk
+dr
+dr
+dr
+dr
+dr
+cq
+cn
+ds
+cn
+cq
+dr
+dr
+dr
+dr
+dr
 OC
 OC
 OC
@@ -4737,21 +4800,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dn
-do
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+du
+dv
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -4775,21 +4838,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -4813,21 +4876,21 @@ OC
 OC
 OC
 OC
-dk
-dp
-dm
-dq
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dq
-dm
 dr
-dk
+dw
+dt
+dx
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dx
+dt
+dy
+dr
 OC
 OC
 OC
@@ -4851,21 +4914,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dq
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dq
-dm
-dm
-dk
+dr
+dt
+dt
+dx
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dx
+dt
+dt
+dr
 OC
 OC
 OC
@@ -4889,21 +4952,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -4927,21 +4990,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -4965,21 +5028,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-ds
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dz
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -5003,21 +5066,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -5041,21 +5104,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dq
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dq
-dm
-dm
-dk
+dr
+dt
+dt
+dx
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dx
+dt
+dt
+dr
 OC
 OC
 OC
@@ -5079,21 +5142,21 @@ OC
 OC
 OC
 OC
-dk
-dp
-dm
-dq
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dq
-dm
 dr
-dk
+dw
+dt
+dx
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dx
+dt
+dy
+dr
 OC
 OC
 OC
@@ -5117,21 +5180,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -5155,21 +5218,21 @@ OC
 OC
 OC
 OC
-dk
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dm
-dk
+dr
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dt
+dr
 OC
 OC
 OC
@@ -5193,21 +5256,21 @@ OC
 OC
 OC
 OC
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
-dk
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
+dr
 OC
 OC
 OC
@@ -5410,7 +5473,7 @@ OC
 OC
 OC
 OC
-dt
+dA
 OC
 "}
 (112,1,1) = {"
