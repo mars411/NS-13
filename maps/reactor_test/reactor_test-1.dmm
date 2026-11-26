@@ -392,11 +392,26 @@
 	dir = 2;
 	pixel_y = 6
 	},
-/obj/structure/turbine_button/ack{
+/obj/structure/turbine_part/button/ack{
 	pixel_x = -8;
 	pixel_y = -2
 	},
-/obj/structure/turbine_button/reset{
+/obj/structure/turbine_part/button/reset{
+	pixel_x = 8;
+	pixel_y = -2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Do" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/turbine_part/toggle/breaker{
+	pixel_x = -8;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/toggle/governor{
 	pixel_x = 8;
 	pixel_y = -2
 	},
@@ -415,7 +430,7 @@
 	dir = 2;
 	pixel_y = 6
 	},
-/obj/structure/turbine_button/stop{
+/obj/structure/turbine_part/button/stop{
 	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
@@ -439,8 +454,24 @@
 	dir = 2;
 	pixel_y = 6
 	},
-/obj/structure/turbine_display{
+/obj/structure/turbine_part/display{
 	pixel_y = 12
+	},
+/obj/structure/turbine_part/lamp/stop{
+	pixel_x = -12;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/lamp/breaker{
+	pixel_x = -4;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/lamp/alarm{
+	pixel_x = 4;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/lamp/protection{
+	pixel_x = 12;
+	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
@@ -2091,8 +2122,8 @@ Tb
 Ze
 Ze
 Ze
-Dt
-Du
+Do
+Ze
 Ze
 Zq
 OC
@@ -2125,8 +2156,8 @@ Zj
 Ze
 Ze
 Ze
-Ze
-Ze
+Dt
+Du
 Zn
 Zq
 OC

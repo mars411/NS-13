@@ -824,6 +824,21 @@ var/global/list/nst_tab_alarms = list(
 	if(state)
 		log_and_message_admins("bypassed the protection of turbine '[turbine_id]'.", user)
 
+/// Переключить регулятор оборотов. Зовут и окно пульта, и тумблер на столе (ревизия 36).
+/obj/machinery/power/submarine_turbine_generator/proc/act_governor_toggle(mob/user)
+	if(!governor_ok)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("The governor has failed.", "Регулятор отказал.")))
+		return
+	governor_on = !governor_on
+
+/// Автомат генератора: разомкнуть, если замкнут, иначе попробовать замкнуть (условия синхронизации проверяет try_close_breaker).
+/obj/machinery/power/submarine_turbine_generator/proc/act_breaker_toggle(mob/user)
+	if(breaker_closed)
+		open_breaker("MANUAL")
+	else
+		try_close_breaker(user)
+
 /// Подтвердить тревоги табло. Зовут и окно пульта, и физическая кнопка на столе (ревизия 34). Язык игрока уже выбран вызывающим.
 /obj/machinery/power/submarine_turbine_generator/proc/act_ack(mob/user)
 	if(annunciator.has_unacked())
@@ -1484,20 +1499,14 @@ var/global/list/nst_tab_alarms = list(
 			else
 				G.admission = clamp(G.admission + adm_amount, 0, 100)
 		if("gov_toggle")
-			if(!G.governor_ok)
-				to_chat(user, SPAN_WARNING(nsr_tr("The governor has failed.", "Регулятор отказал.")))
-			else
-				G.governor_on = !G.governor_on
+			G.act_governor_toggle(user)
 		if("gov_set")
 			var/gov_amount = text2num(href_list["amount"])
 			if(!(gov_amount in list(-NST_GOV_SET_STEP, NST_GOV_SET_STEP)))
 				return TOPIC_HANDLED
 			G.governor_set = clamp(G.governor_set + gov_amount, NST_GOV_SET_MIN, NST_GOV_SET_MAX)
 		if("breaker")
-			if(G.breaker_closed)
-				G.open_breaker("MANUAL")
-			else
-				G.try_close_breaker(user)
+			G.act_breaker_toggle(user)
 		if("stop_trip")
 			G.act_emergency_stop(user)
 		if("stop_reset")
