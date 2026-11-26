@@ -504,6 +504,7 @@
 "bV" = (
 /obj/structure/turbine_desk{
 	dir = 6;
+	pixel_x = -2;
 	pixel_y = 5
 	},
 /turf/simulated/floor/tiled,
@@ -511,6 +512,7 @@
 "bW" = (
 /obj/structure/turbine_desk{
 	dir = 4;
+	pixel_x = 8;
 	pixel_y = 5
 	},
 /turf/simulated/floor/tiled,
@@ -525,7 +527,7 @@
 	pixel_y = 6
 	},
 /obj/structure/turbine_button/stop{
-	pixel_y = -5
+	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
@@ -873,11 +875,11 @@
 	},
 /obj/structure/turbine_button/ack{
 	pixel_x = 8;
-	pixel_y = -5
+	pixel_y = -2
 	},
 /obj/structure/turbine_button/reset{
 	pixel_x = -8;
-	pixel_y = -5
+	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)

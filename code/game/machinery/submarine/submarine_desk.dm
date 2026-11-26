@@ -163,14 +163,17 @@
 /// По клику (и в осмотре вблизи) выдаёт в чат полное состояние.
 /obj/structure/turbine_display
 	name = "turbine display"
-	desc = "A small display showing the turbine shaft speed and the electric output. Click it for the full status."
+	desc = "A small display. It alternates between the turbine shaft speed (rpm, digits only) and the electric output (kW). Click it for the full status."
 	icon = 'icons/obj/submarine_controls.dmi'
 	icon_state = "disp_off"
 	anchored = TRUE
 	density = FALSE
 	layer = ABOVE_WINDOW_LAYER
-	maptext_width = 32
+	maptext_width = 40
+	maptext_x = -4
 	maptext_y = 10
+	/// Что показывать сейчас: обороты или мощность. Меняется на каждом такте, в одну строку на экран больше не влезает.
+	var/show_power = FALSE
 	var/turbine_id = "main"
 	/// Что сейчас показано, чтобы не перерисовывать без нужды.
 	var/shown_text = ""
@@ -195,13 +198,13 @@
 	if(G)
 		var/alarm = G.stop_tripped || G.annunciator.has_unacked()
 		new_state = alarm ? "disp_alarm" : "disp_ok"
-		var/line2 = G.stop_tripped ? "TRIP" : "[round(G.last_output / 1000, 0.1)]kW"
-		new_text = "[round(G.rpm)]<br>[line2]"
+		show_power = !show_power
+		new_text = G.stop_tripped ? "TRIP" : (show_power ? "[round(G.last_output / 1000, 0.1)]kW" : "[round(G.rpm)]")
 	if(icon_state != new_state)
 		icon_state = new_state
 	if(new_text != shown_text)
 		shown_text = new_text
-		maptext = length(new_text) ? "<span style='font-family: Arial; font-size: 6px; color: [G.stop_tripped ? "#ff8080" : "#7cfc9a"]; text-align: center;'>[new_text]</span>" : ""
+		maptext = length(new_text) ? "<span style='font-family: Arial; font-size: 5px; color: [G.stop_tripped ? "#ff8080" : "#7cfc9a"]; text-align: center;'>[new_text]</span>" : ""
 
 /// Полное состояние текстом, на языке игрока.
 /obj/structure/turbine_display/proc/status_lines(mob/user)
