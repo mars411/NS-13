@@ -226,6 +226,7 @@
 /obj/machinery/light/Initialize(mapload, obj/machinery/light_construct/construct = null)
 	. = ..(mapload)
 
+	light_hum_ensure() // NS-13: общий цикл гула ламп, submarine_hum.dm
 	s.set_up(1, 1, src)
 
 	if(construct)
