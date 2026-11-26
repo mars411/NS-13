@@ -447,6 +447,10 @@
 	dir = 8;
 	pixel_y = 5
 	},
+/obj/structure/turbine_part/panel{
+	pixel_x = -4;
+	pixel_y = -2
+	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)
 "Dw" = (
@@ -480,6 +484,10 @@
 	dir = 4;
 	pixel_x = 8;
 	pixel_y = 5
+	},
+/obj/structure/turbine_part/toggle/bypass{
+	pixel_x = 4;
+	pixel_y = 4
 	},
 /turf/simulated/floor/tiled,
 /area/constructionsite)

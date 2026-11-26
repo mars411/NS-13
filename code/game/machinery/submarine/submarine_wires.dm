@@ -42,3 +42,46 @@
 			var/obj/machinery/power/submarine_turbine_generator/G = C.get_unit()
 			if(G)
 				G.trip_stop_valve("PROTECTION RELAY")
+
+/// Провода сервисной панели стола турбины (ревизия 37). Панель открывается отвёрткой, провода режутся кусачками, импульсы подаёт мультитул.
+/// Цвета проводов случайные на раунд. Три провода: кардридер ключа обхода защиты, цепь аварийного останова и индикация (лампы и дисплей).
+/datum/wires/submarine_turbine_desk
+	holder_type = /obj/structure/turbine_part/panel
+	wire_count = 3
+	descriptions = list(
+		new /datum/wire_description(NST_WIRE_DESK_ID, "This wire runs to the ID reader of the bypass key.", "ID", SKILL_EXPERIENCED),
+		new /datum/wire_description(NST_WIRE_DESK_STOP, "This wire leads to the emergency stop circuit.", "Stop", SKILL_EXPERIENCED),
+		new /datum/wire_description(NST_WIRE_DESK_LAMP, "This wire leads to the lamps and the display.", "Indication", SKILL_EXPERIENCED)
+	)
+
+/datum/wires/submarine_turbine_desk/CanUse(mob/living/L)
+	var/obj/structure/turbine_part/panel/P = holder
+	return P.panel_open
+
+/datum/wires/submarine_turbine_desk/GetInteractWindow(mob/user)
+	. += ..()
+	. += "<BR>The green light is [IsIndexCut(NST_WIRE_DESK_ID) ? "off" : "on"].<BR>"
+	. += "The red light is [IsIndexCut(NST_WIRE_DESK_STOP) ? "off" : "on"].<BR>"
+	. += "The amber light is [IsIndexCut(NST_WIRE_DESK_LAMP) ? "off" : "on"].<BR>"
+
+/datum/wires/submarine_turbine_desk/UpdateCut(index, mended)
+	var/obj/structure/turbine_part/panel/P = holder
+	switch(index)
+		if(NST_WIRE_DESK_ID)
+			P.access_wire_cut = !mended
+		if(NST_WIRE_DESK_STOP)
+			P.stop_cut = !mended
+		if(NST_WIRE_DESK_LAMP)
+			P.lamp_cut = !mended
+
+/datum/wires/submarine_turbine_desk/UpdatePulsed(index)
+	var/obj/structure/turbine_part/panel/P = holder
+	switch(index)
+		if(NST_WIRE_DESK_ID)
+			P.access_open_until = world.time + 30 SECONDS
+		if(NST_WIRE_DESK_STOP)
+			var/obj/machinery/power/submarine_turbine_generator/G = P.find_unit()
+			if(G)
+				G.trip_stop_valve("DESK RELAY")
+		if(NST_WIRE_DESK_LAMP)
+			P.lamp_test_until = world.time + 5 SECONDS

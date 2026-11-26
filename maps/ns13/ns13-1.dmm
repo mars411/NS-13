@@ -510,6 +510,10 @@
 	pixel_x = 8;
 	pixel_y = 5
 	},
+/obj/structure/turbine_part/toggle/bypass{
+	pixel_x = 4;
+	pixel_y = 4
+	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
 "bW" = (
@@ -943,6 +947,10 @@
 /obj/structure/turbine_desk{
 	dir = 8;
 	pixel_y = 5
+	},
+/obj/structure/turbine_part/panel{
+	pixel_x = -4;
+	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
