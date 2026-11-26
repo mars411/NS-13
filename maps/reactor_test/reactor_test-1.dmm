@@ -586,6 +586,72 @@
 /obj/machinery/submarine_pressurizer,
 /turf/simulated/floor/tiled,
 /area/constructionsite)
+"Re" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/reactor_part/button/ack{
+	pixel_x = -8;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/button/reset{
+	pixel_x = 8;
+	pixel_y = -2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Rq" = (
+/obj/structure/turbine_desk{
+	dir = 6;
+	pixel_x = -2;
+	pixel_y = 5
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Rr" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/reactor_part/button/scram{
+	pixel_y = -2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Rt" = (
+/obj/structure/turbine_desk{
+	dir = 10;
+	pixel_y = 5
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Rw" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/reactor_part/display{
+	pixel_y = 12
+	},
+/obj/structure/reactor_part/lamp/scram{
+	pixel_x = -12;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/lamp/alarm{
+	pixel_x = -4;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/lamp/protection{
+	pixel_x = 4;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/lamp/rods_auto{
+	pixel_x = 12;
+	pixel_y = -2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
 "Tb" = (
 /obj/structure/table/standard,
 /obj/item/paper/reactor_test/blackout,
@@ -2026,7 +2092,7 @@ OC
 Zq
 Zj
 Ze
-Ze
+Rq
 Ze
 Dw
 Ze
@@ -2060,7 +2126,7 @@ OC
 Zq
 Th
 Ze
-Ze
+Rw
 Ze
 De
 Ze
@@ -2094,7 +2160,7 @@ OC
 Zq
 Zc
 Ze
-Ze
+Re
 Ze
 Dr
 Ze
@@ -2128,7 +2194,7 @@ OC
 Zq
 Tb
 Ze
-Ze
+Rr
 Ze
 Do
 Ze
@@ -2162,7 +2228,7 @@ OC
 Zq
 Zj
 Ze
-Ze
+Rt
 Ze
 Dt
 Du

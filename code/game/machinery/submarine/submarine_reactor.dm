@@ -1491,6 +1491,29 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 /obj/machinery/submarine_reactor_core/proc/has_unacked_alarm()
 	return annunciator.has_unacked()
 
+/// Кнопка «подтвердить и заглушить»: вернуть сирену, если она заглушена, иначе подтвердить горящие плитки. Зовут и окно пульта, и кнопка на столе (ревизия 38).
+/// Язык игрока уже выбран вызывающим.
+/obj/machinery/submarine_reactor_core/proc/act_alarm_mute(mob/user)
+	if(alarm_mute_level)
+		alarm_mute_level = 0
+	else if(alarm_level > 0 || has_unacked_alarm())
+		acknowledge_alarms()
+	else if(user)
+		to_chat(user, SPAN_NOTICE(nsr_tr("No alarm is lit.", "Ни одна тревога не горит.")))
+
+/// Сброс SCRAM оператором с объяснением, если нельзя. Зовут и окно пульта, и кнопка на столе (ревизия 38).
+/obj/machinery/submarine_reactor_core/proc/act_reset_scram(mob/user)
+	if(!scrammed)
+		if(user)
+			to_chat(user, SPAN_NOTICE(nsr_tr("SCRAM is not engaged.", "SCRAM не сработал.")))
+		return
+	var/block_text = reset_block_reason()
+	if(block_text)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("Cannot reset SCRAM: [block_text].", "Нельзя сбросить SCRAM: [block_text].")))
+		return
+	reset_scram()
+
 /obj/machinery/submarine_reactor_core/proc/update_alarm()
 	var/list/tiles = compute_alarm_tiles()
 	var/damage_rising = core_damage > alarm_last_damage + 0.001
@@ -2716,12 +2739,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			else
 				R.adjust_steam_valve(action == "steam_up" ? NSR_VALVE_STEP : -NSR_VALVE_STEP)
 		if("alarm_mute")
-			if(R.alarm_mute_level)
-				R.alarm_mute_level = 0
-			else if(R.alarm_level > 0 || R.has_unacked_alarm())
-				R.acknowledge_alarms()
-			else
-				to_chat(user, SPAN_NOTICE(nsr_tr("No alarm is lit.", "Ни одна тревога не горит.")))
+			R.act_alarm_mute(user)
 		if("sg_valve")
 			var/sg_n = text2num(href_list["n"])
 			var/obj/machinery/submarine_steam_generator/target_sg
@@ -2740,12 +2758,5 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		if("scram")
 			R.scram()
 		if("reset")
-			if(!R.scrammed)
-				to_chat(user, SPAN_NOTICE(nsr_tr("SCRAM is not engaged.", "SCRAM не сработал.")))
-			else
-				var/block_text = R.reset_block_reason()
-				if(block_text)
-					to_chat(user, SPAN_WARNING(nsr_tr("Cannot reset SCRAM: [block_text].", "Нельзя сбросить SCRAM: [block_text].")))
-				else
-					R.reset_scram()
+			R.act_reset_scram(user)
 	return TOPIC_REFRESH
