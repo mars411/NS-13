@@ -1007,7 +1007,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	auto_rods_i = rods_target
 	auto_rods_text = ""
 	if(user)
-		to_chat(user, SPAN_NOTICE("Rod automation [auto_rods ? "on" : "off"]."))
+		to_chat(user, SPAN_NOTICE(nsr_tr("Rod automation [auto_rods ? "on" : "off"].", "Автоматика стержней [auto_rods ? "включена" : "выключена"].")))
 
 /// Почему форсаж сейчас нельзя включить (пустая строка, если можно): нужны два контура и снятый SCRAM.
 /obj/machinery/submarine_reactor_core/proc/boost_block_reason()
@@ -1500,6 +1500,26 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 		acknowledge_alarms()
 	else if(user)
 		to_chat(user, SPAN_NOTICE(nsr_tr("No alarm is lit.", "Ни одна тревога не горит.")))
+
+/// Сдвиг всех стержней вручную на amount процентов. Зовут и окно пульта, и кнопки на столе (ревизия 39). Возвращает TRUE, если стержни сдвинуты.
+/// Язык игрока уже выбран вызывающим.
+/obj/machinery/submarine_reactor_core/proc/act_rods_move(mob/user, amount)
+	if(scrammed)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("The control rods are locked by SCRAM. Reset it first.", "Стержни СУЗ заперты SCRAM. Сначала сбросьте его.")))
+		return FALSE
+	if(auto_rods)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("The rod automation is on. Switch it off to move the rods by hand.", "Включена автоматика стержней. Выключите её, чтобы двигать стержни вручную.")))
+		return FALSE
+	adjust_rods(amount)
+	return TRUE
+
+/// Переключатель аварийной защиты реактора. Зовут и окно пульта, и тумблер на столе (ревизия 39). Язык игрока уже выбран вызывающим.
+/obj/machinery/submarine_reactor_core/proc/act_rps_toggle(mob/user)
+	rps_enabled = !rps_enabled
+	if(user)
+		to_chat(user, SPAN_NOTICE(nsr_tr("Reactor protection [rps_enabled ? "armed" : "disarmed"].", "Защита реактора [rps_enabled ? "включена" : "отключена"].")))
 
 /// Сброс SCRAM оператором с объяснением, если нельзя. Зовут и окно пульта, и кнопка на столе (ревизия 38).
 /obj/machinery/submarine_reactor_core/proc/act_reset_scram(mob/user)
@@ -2617,12 +2637,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			var/rods_amount = text2num(href_list["amount"])
 			if(!(rods_amount in list(-10, -1, 1, 10)))
 				return TOPIC_HANDLED
-			if(R.scrammed)
-				to_chat(user, SPAN_WARNING(nsr_tr("The control rods are locked by SCRAM. Reset it first.", "Стержни СУЗ заперты SCRAM. Сначала сбросьте его.")))
-			else if(R.auto_rods)
-				to_chat(user, SPAN_WARNING(nsr_tr("The rod automation is on. Switch it off to move the rods by hand.", "Включена автоматика стержней. Выключите её, чтобы двигать стержни вручную.")))
-			else
-				R.adjust_rods(rods_amount)
+			R.act_rods_move(user, rods_amount)
 		if("rod_move")
 			var/rod = text2num(href_list["rod"])
 			var/rod_amount = text2num(href_list["amount"])
@@ -2715,8 +2730,7 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 			if(rods_set_amount in list(-10, -5, -1, 1, 5, 10))
 				R.auto_rods_set = clamp(R.auto_rods_set + rods_set_amount, NSR_AUTO_RODS_SET_MIN, NSR_AUTO_RODS_SET_MAX)
 		if("rps_toggle")
-			R.rps_enabled = !R.rps_enabled
-			to_chat(user, SPAN_NOTICE(nsr_tr("Reactor protection [R.rps_enabled ? "armed" : "disarmed"].", "Защита реактора [R.rps_enabled ? "включена" : "отключена"].")))
+			R.act_rps_toggle(user)
 		if("pump_auto")
 			if(!R.feed_pump)
 				to_chat(user, SPAN_WARNING(nsr_tr("No feedwater pump is connected.", "Питательный насос не подключён.")))

@@ -592,11 +592,14 @@
 	pixel_y = 6
 	},
 /obj/structure/reactor_part/button/ack{
-	pixel_x = -8;
+	pixel_x = -10;
 	pixel_y = -2
 	},
 /obj/structure/reactor_part/button/reset{
-	pixel_x = 8;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/button/scram{
+	pixel_x = 10;
 	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
@@ -614,7 +617,35 @@
 	dir = 2;
 	pixel_y = 6
 	},
-/obj/structure/reactor_part/button/scram{
+/obj/structure/reactor_part/button/rods/down10{
+	pixel_x = -12;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/button/rods/down1{
+	pixel_x = -4;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/button/rods/up1{
+	pixel_x = 4;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/button/rods/up10{
+	pixel_x = 12;
+	pixel_y = -2
+	},
+/turf/simulated/floor/tiled,
+/area/constructionsite)
+"Rs" = (
+/obj/structure/turbine_desk{
+	dir = 2;
+	pixel_y = 6
+	},
+/obj/structure/reactor_part/toggle/protection{
+	pixel_x = -8;
+	pixel_y = -2
+	},
+/obj/structure/reactor_part/toggle/rods_auto{
+	pixel_x = 8;
 	pixel_y = -2
 	},
 /turf/simulated/floor/tiled,
@@ -2228,7 +2259,7 @@ OC
 Zq
 Zj
 Ze
-Rt
+Rs
 Ze
 Dt
 Du
@@ -2262,7 +2293,7 @@ OC
 Zq
 Vk
 Bq
-Ze
+Rt
 Ze
 Ze
 Ze

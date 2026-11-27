@@ -5,14 +5,17 @@
 	детали свои, чтобы не путать с турбиной. Спрайты общие: icons/obj/submarine_controls.dmi (кнопки NuPhase, лампы и дисплеи свои).
 
 	Что есть:
-	- кнопки (/obj/structure/reactor_part/button): ПОДТВЕРДИТЬ И ЗАГЛУШИТЬ ТРЕВОГИ, СБРОС SCRAM, SCRAM под защитной крышкой;
+	- кнопки (/obj/structure/reactor_part/button): ПОДТВЕРДИТЬ И ЗАГЛУШИТЬ ТРЕВОГИ, СБРОС SCRAM, SCRAM под защитной крышкой,
+	  четыре кнопки стержней (-10, -1, +1, +10 процентов, ревизия 39);
+	- тумблеры (/obj/structure/reactor_part/toggle): ЗАЩИТА РЕАКТОРА и АВТОМАТИКА СТЕРЖНЕЙ (ревизия 39), вверху включено;
 	- лампы (/obj/structure/reactor_part/lamp): SCRAM сработал, непринятая тревога (мигает), защита реактора включена, автоматика стержней включена;
 	- дисплей (/obj/structure/reactor_part/display): температура ядра и положение стержней по очереди, полные данные по клику.
 
-	Кнопки зовут те же процедуры реактора (scram, act_alarm_mute, act_reset_scram), что и окно пульта, поэтому поведение одинаковое.
+	Кнопки и тумблеры зовут те же процедуры реактора (scram, act_alarm_mute, act_reset_scram, act_rods_move, act_rps_toggle,
+	toggle_auto_rods), что и окно пульта, поэтому поведение одинаковое.
 	Связь с реактором по reactor_id (по умолчанию "main").
 
-	Не сделано: тумблеры защиты и автоматики стержней, движение стержней и насосы со стола (они пока только в окне пульта), панель и провода.
+	Не сделано: насосы, подпитка, парогенераторы и клапаны со стола (они пока только в окне пульта), панель и провода, отдельные стержни.
 */
 
 /// Общая основа деталей стола реактора: метка реактора, поиск ядра, подпись на русском, обновление вида по таймеру.
@@ -161,6 +164,121 @@
 		return
 	R.scram()
 
+/// Кнопка сдвига всех стержней на amount процентов (ревизия 39). Работает как кнопки «-10», «-1», «+1», «+10» в окне пульта.
+/obj/structure/reactor_part/button/rods
+	name = "ROD button"
+	desc = "A button that moves all the control rods by a fixed step. Up raises the rods (more power), down lowers them."
+	ru_desc = "Кнопка сдвигает все стержни СУЗ на фиксированный шаг. Вверх поднимает стержни (больше мощности), вниз опускает."
+	cooldown = 4
+	icon_state = "btn_amber"
+	/// На сколько процентов сдвигать стержни, со знаком.
+	var/amount = 1
+
+/obj/structure/reactor_part/button/rods/Initialize()
+	. = ..()
+	name = "RODS [amount > 0 ? "+" : ""][amount]% button"
+
+/obj/structure/reactor_part/button/rods/press(mob/user, obj/machinery/submarine_reactor_core/R)
+	if(R.act_rods_move(user, amount))
+		to_chat(user, SPAN_NOTICE(nsr_tr("Rod target: [round(R.rods_target)] %.", "Цель стержней: [round(R.rods_target)] %.")))
+
+/obj/structure/reactor_part/button/rods/down10
+	amount = -10
+
+/obj/structure/reactor_part/button/rods/down1
+	amount = -1
+
+/obj/structure/reactor_part/button/rods/up1
+	amount = 1
+	icon_state = "btn_green"
+
+/obj/structure/reactor_part/button/rods/up10
+	amount = 10
+	icon_state = "btn_green"
+
+// ----------------------------------------------------------------------------
+// ТУМБЛЕРЫ (ревизия 39)
+// ----------------------------------------------------------------------------
+
+/// Тумблер на столе реактора: вверху включено. Подтипы задают is_on() и flip(). Положение берётся из состояния реактора.
+/obj/structure/reactor_part/toggle
+	name = "switch"
+	desc = "A hardwired toggle switch."
+	icon_state = "sw_down"
+	shows_state = TRUE
+	var/cooldown = 10
+	var/next_flip = 0
+	var/icon_on = "sw_up"
+	var/icon_off = "sw_down"
+
+/// Включено ли то, чем управляет тумблер. Подтипы переопределяют.
+/obj/structure/reactor_part/toggle/proc/is_on(obj/machinery/submarine_reactor_core/R)
+	return FALSE
+
+/// Само переключение. Подтипы переопределяют. Язык игрока уже выбран, реактор жив.
+/obj/structure/reactor_part/toggle/proc/flip(mob/user, obj/machinery/submarine_reactor_core/R)
+	return
+
+/obj/structure/reactor_part/toggle/refresh()
+	var/obj/machinery/submarine_reactor_core/R = find_unit()
+	var/new_state = (R && is_on(R)) ? icon_on : icon_off
+	if(icon_state != new_state)
+		icon_state = new_state
+
+/obj/structure/reactor_part/toggle/attack_hand(mob/user)
+	toggle(user)
+	return TRUE
+
+/obj/structure/reactor_part/toggle/use_tool(obj/item/tool, mob/living/user, list/click_params)
+	SHOULD_CALL_PARENT(FALSE)
+	toggle(user)
+	return TRUE
+
+/obj/structure/reactor_part/toggle/proc/toggle(mob/user)
+	if(world.time < next_flip)
+		return
+	next_flip = world.time + cooldown
+	nsr_lang_for(user)
+	var/obj/machinery/submarine_reactor_core/R = find_unit()
+	playsound(src, pick('sound/machines/switch1.ogg', 'sound/machines/switch2.ogg', 'sound/machines/switch3.ogg', 'sound/machines/switch4.ogg'), 50, TRUE)
+	if(!R)
+		to_chat(user, SPAN_WARNING(nsr_tr("The switch does nothing: there is no link to a reactor.", "Тумблер ничего не делает: нет связи с реактором.")))
+		return
+	if(R.is_dead())
+		to_chat(user, SPAN_DANGER(nsr_tr("The reactor is beyond control.", "Реактор вышел из-под контроля.")))
+		return
+	flip(user, R)
+	refresh()
+
+/obj/structure/reactor_part/toggle/examine(mob/user, distance)
+	. = ..()
+	nsr_lang_for(user)
+	to_chat(user, nsr_tr("It is [icon_state == icon_on ? "up (on)" : "down (off)"].", "Он [icon_state == icon_on ? "вверху (включено)" : "внизу (выключено)"]."))
+
+/// Защита реактора: вверху включена (аварийный SCRAM по условиям).
+/obj/structure/reactor_part/toggle/protection
+	name = "REACTOR PROTECTION switch"
+	desc = "A toggle switch. Up means the reactor protection is armed: it drops the rods by itself when a limit is crossed."
+	ru_desc = "Тумблер. Вверху защита реактора включена: при выходе за предел она сама сбрасывает стержни."
+
+/obj/structure/reactor_part/toggle/protection/is_on(obj/machinery/submarine_reactor_core/R)
+	return R.rps_enabled
+
+/obj/structure/reactor_part/toggle/protection/flip(mob/user, obj/machinery/submarine_reactor_core/R)
+	R.act_rps_toggle(user)
+
+/// Автоматика стержней: вверху включена (держит заданную температуру ядра).
+/obj/structure/reactor_part/toggle/rods_auto
+	name = "ROD AUTOMATION switch"
+	desc = "A toggle switch. Up means the rod automation is on and moves the rods by itself. Switch it off to move the rods by hand."
+	ru_desc = "Тумблер. Вверху автоматика стержней включена и двигает стержни сама. Выключите её, чтобы двигать стержни вручную."
+
+/obj/structure/reactor_part/toggle/rods_auto/is_on(obj/machinery/submarine_reactor_core/R)
+	return R.auto_rods
+
+/obj/structure/reactor_part/toggle/rods_auto/flip(mob/user, obj/machinery/submarine_reactor_core/R)
+	R.toggle_auto_rods(user)
+
 // ----------------------------------------------------------------------------
 // ЛАМПЫ
 // ----------------------------------------------------------------------------
@@ -217,7 +335,7 @@
 	lit_color = "green"
 
 /obj/structure/reactor_part/lamp/protection/is_lit(obj/machinery/submarine_reactor_core/R)
-	return R.rps_enabled
+	return R.rps_enabled && R.automation_available()
 
 /// Зелёная: автоматика стержней включена.
 /obj/structure/reactor_part/lamp/rods_auto
@@ -227,7 +345,7 @@
 	lit_color = "green"
 
 /obj/structure/reactor_part/lamp/rods_auto/is_lit(obj/machinery/submarine_reactor_core/R)
-	return R.auto_rods
+	return R.auto_rods && R.automation_available()
 
 // ----------------------------------------------------------------------------
 // ДИСПЛЕЙ
