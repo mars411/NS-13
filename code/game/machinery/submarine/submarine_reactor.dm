@@ -1935,6 +1935,16 @@ GLOBAL_LIST_EMPTY(submarine_condensers)
 	auto_i = cooling
 	auto_pressure = air1.return_pressure() / NSR_KPA_PER_BAR
 
+/// Сдвиг охлаждения вручную на amount процентов. Зовут и окно пульта турбины, и кнопки на столе (ревизия 41). Возвращает TRUE, если сдвинуто.
+/// Язык игрока уже выбран вызывающим.
+/obj/machinery/atmospherics/binary/submarine_condenser/proc/act_cool_move(mob/user, amount)
+	if(auto)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("The condenser is in automatic mode. Switch the automation off to set its cooling by hand.", "Конденсатор в автоматическом режиме. Выключите автоматику, чтобы задать охлаждение вручную.")))
+		return FALSE
+	cooling = clamp(cooling + amount, 0, 100)
+	return TRUE
+
 /obj/machinery/atmospherics/binary/submarine_condenser/Process(wait)
 	. = ..()
 	last_flow = 0

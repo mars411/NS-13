@@ -919,11 +919,19 @@
 	},
 /obj/structure/turbine_part/toggle/breaker{
 	pixel_x = 8;
-	pixel_y = -2
+	pixel_y = 9
 	},
 /obj/structure/turbine_part/toggle/governor{
 	pixel_x = -8;
-	pixel_y = -2
+	pixel_y = 9
+	},
+/obj/structure/turbine_part/button/step/gov/down{
+	pixel_x = -4;
+	pixel_y = -3
+	},
+/obj/structure/turbine_part/button/step/gov/up{
+	pixel_x = -12;
+	pixel_y = -3
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
@@ -954,8 +962,37 @@
 	dir = 2;
 	pixel_y = 6
 	},
-/obj/structure/turbine_part/button/stop{
+/obj/structure/turbine_part/button/step/adm/down10{
+	pixel_x = 12;
 	pixel_y = -2
+	},
+/obj/structure/turbine_part/button/step/adm/down1{
+	pixel_x = 4;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/button/step/adm/up1{
+	pixel_x = -4;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/button/step/adm/up10{
+	pixel_x = -12;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/button/step/cool/down10{
+	pixel_x = 12;
+	pixel_y = 6
+	},
+/obj/structure/turbine_part/button/step/cool/down1{
+	pixel_x = 4;
+	pixel_y = 6
+	},
+/obj/structure/turbine_part/button/step/cool/up1{
+	pixel_x = -4;
+	pixel_y = 6
+	},
+/obj/structure/turbine_part/button/step/cool/up10{
+	pixel_x = -12;
+	pixel_y = 6
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)
@@ -996,12 +1033,18 @@
 	pixel_y = 6
 	},
 /obj/structure/turbine_part/button/ack{
-	pixel_x = 8;
+	pixel_x = 10;
 	pixel_y = -2
 	},
 /obj/structure/turbine_part/button/reset{
-	pixel_x = -8;
 	pixel_y = -2
+	},
+/obj/structure/turbine_part/button/stop{
+	pixel_x = -10;
+	pixel_y = -2
+	},
+/obj/structure/turbine_part/toggle/cond_auto{
+	pixel_y = 8
 	},
 /turf/simulated/floor/tiled,
 /area/ns13/deck3/control_room)

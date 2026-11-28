@@ -198,6 +198,94 @@ GLOBAL_LIST_EMPTY(turbine_desk_panels)
 		return
 	G.act_emergency_stop(user)
 
+/// Найти конденсатор этой турбины (по turbine_id), как это делает пульт (ревизия 41).
+/obj/structure/turbine_part/proc/find_condenser()
+	for(var/obj/machinery/atmospherics/binary/submarine_condenser/C in GLOB.submarine_condensers)
+		if(C.turbine_id == turbine_id)
+			return C
+
+/// Кнопка шага (ревизия 41): двигает заслонку, охлаждение или уставку на фиксированный шаг, как кнопки «-10», «-1», «+1», «+10» в окне пульта.
+/obj/structure/turbine_part/button/step
+	cooldown = 4
+	icon_state = "btn_amber"
+	/// Шаг со знаком: проценты для заслонки и охлаждения, обороты в минуту для уставки.
+	var/amount = 1
+	/// Чем управляет кнопка, для имени.
+	var/label = "VALVE"
+
+/obj/structure/turbine_part/button/step/Initialize()
+	. = ..()
+	name = "[label] [amount > 0 ? "+" : ""][amount] button"
+
+/// Впускная заслонка пара: вверх открывает (больше пара и мощности), вниз закрывает.
+/obj/structure/turbine_part/button/step/adm
+	label = "ADMISSION"
+	desc = "Moves the admission valve by a fixed step. Up opens it (more steam, more power), down closes it. It does not work while the governor holds the valve or the stop valve is shut."
+	ru_desc = "Сдвигает впускную заслонку на фиксированный шаг. Вверх открывает её (больше пара и мощности), вниз закрывает. Не работает, пока заслонку держит регулятор или закрыт стопорный клапан."
+
+/obj/structure/turbine_part/button/step/adm/press(mob/user, obj/machinery/power/submarine_turbine_generator/G)
+	if(G.act_adm_move(user, amount))
+		to_chat(user, SPAN_NOTICE(nsr_tr("Admission valve: [round(G.admission)] %.", "Впускная заслонка: [round(G.admission)] %.")))
+
+/obj/structure/turbine_part/button/step/adm/down10
+	amount = -10
+
+/obj/structure/turbine_part/button/step/adm/down1
+	amount = -1
+
+/obj/structure/turbine_part/button/step/adm/up1
+	amount = 1
+	icon_state = "btn_green"
+
+/obj/structure/turbine_part/button/step/adm/up10
+	amount = 10
+	icon_state = "btn_green"
+
+/// Охлаждение конденсатора вручную: вверх сильнее, вниз слабее. Работает, только когда автоматика конденсатора выключена.
+/obj/structure/turbine_part/button/step/cool
+	label = "COOLING"
+	desc = "Moves the condenser cooling by a fixed step. Up cools harder, down cools less. It only works while the condenser automation is off."
+	ru_desc = "Сдвигает охлаждение конденсатора на фиксированный шаг. Вверх охлаждает сильнее, вниз слабее. Работает, только когда автоматика конденсатора выключена."
+
+/obj/structure/turbine_part/button/step/cool/press(mob/user, obj/machinery/power/submarine_turbine_generator/G)
+	var/obj/machinery/atmospherics/binary/submarine_condenser/C = find_condenser()
+	if(!C)
+		to_chat(user, SPAN_WARNING(nsr_tr("No condenser is connected to this turbine.", "К этой турбине не подключён конденсатор.")))
+		return
+	if(C.act_cool_move(user, amount))
+		to_chat(user, SPAN_NOTICE(nsr_tr("Condenser cooling: [round(C.cooling)] %.", "Охлаждение конденсатора: [round(C.cooling)] %.")))
+
+/obj/structure/turbine_part/button/step/cool/down10
+	amount = -10
+
+/obj/structure/turbine_part/button/step/cool/down1
+	amount = -1
+
+/obj/structure/turbine_part/button/step/cool/up1
+	amount = 1
+	icon_state = "btn_green"
+
+/obj/structure/turbine_part/button/step/cool/up10
+	amount = 10
+	icon_state = "btn_green"
+
+/// Уставка регулятора оборотов: вверх выше, вниз ниже.
+/obj/structure/turbine_part/button/step/gov
+	label = "GOVERNOR SETPOINT"
+	desc = "Moves the governor speed setpoint by a fixed step. Up raises it, down lowers it."
+	ru_desc = "Сдвигает уставку регулятора оборотов на фиксированный шаг. Вверх повышает, вниз понижает."
+
+/obj/structure/turbine_part/button/step/gov/press(mob/user, obj/machinery/power/submarine_turbine_generator/G)
+	G.act_gov_set(user, amount)
+	to_chat(user, SPAN_NOTICE(nsr_tr("Governor setpoint: [round(G.governor_set)] rpm.", "Уставка регулятора: [round(G.governor_set)] об/мин.")))
+
+/obj/structure/turbine_part/button/step/gov/down
+	amount = -NST_GOV_SET_STEP
+
+/obj/structure/turbine_part/button/step/gov/up
+	amount = NST_GOV_SET_STEP
+	icon_state = "btn_green"
+
 // ----------------------------------------------------------------------------
 // ТУМБЛЕРЫ
 // ----------------------------------------------------------------------------
@@ -384,6 +472,24 @@ GLOBAL_LIST_EMPTY(turbine_desk_panels)
 		wires.Interact(user)
 		return TRUE
 	return TRUE
+
+/// Автоматика конденсатора: вверху включена (давление за турбиной держится само), внизу охлаждение задают кнопками (ревизия 41).
+/obj/structure/turbine_part/toggle/cond_auto
+	name = "CONDENSER AUTOMATION switch"
+	desc = "A toggle switch. Up means the condenser automation is on and holds the condenser pressure by itself. Switch it off to set the cooling by hand."
+	ru_desc = "Тумблер. Вверху автоматика конденсатора включена и сама держит давление у конденсатора. Выключите её, чтобы задавать охлаждение вручную."
+
+/obj/structure/turbine_part/toggle/cond_auto/is_on(obj/machinery/power/submarine_turbine_generator/G)
+	var/obj/machinery/atmospherics/binary/submarine_condenser/C = find_condenser()
+	return C && C.auto
+
+/obj/structure/turbine_part/toggle/cond_auto/flip(mob/user, obj/machinery/power/submarine_turbine_generator/G)
+	var/obj/machinery/atmospherics/binary/submarine_condenser/C = find_condenser()
+	if(!C)
+		to_chat(user, SPAN_WARNING(nsr_tr("No condenser is connected to this turbine.", "К этой турбине не подключён конденсатор.")))
+		return
+	C.toggle_auto()
+	to_chat(user, SPAN_NOTICE(nsr_tr("Condenser automation [C.auto ? "on" : "off"].", "Автоматика конденсатора [C.auto ? "включена" : "выключена"].")))
 
 // ----------------------------------------------------------------------------
 // ЛАМПЫ

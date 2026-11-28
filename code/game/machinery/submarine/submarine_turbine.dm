@@ -839,6 +839,24 @@ var/global/list/nst_tab_alarms = list(
 	else
 		try_close_breaker(user)
 
+/// Сдвиг впускной заслонки вручную на amount процентов. Зовут и окно пульта, и кнопки на столе (ревизия 41). Возвращает TRUE, если заслонка сдвинута.
+/// Язык игрока уже выбран вызывающим.
+/obj/machinery/power/submarine_turbine_generator/proc/act_adm_move(mob/user, amount)
+	if(governor_on && governor_ok)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("The governor holds the admission valve. Switch it off for manual control.", "Регулятор держит впускной клапан. Выключите его для ручного управления.")))
+		return FALSE
+	if(stop_tripped)
+		if(user)
+			to_chat(user, SPAN_WARNING(nsr_tr("The stop valve is shut: reset it first.", "Стопорный клапан закрыт: сначала сбросьте его.")))
+		return FALSE
+	admission = clamp(admission + amount, 0, 100)
+	return TRUE
+
+/// Сдвиг уставки регулятора на amount оборотов в минуту. Зовут и окно пульта, и кнопки на столе (ревизия 41).
+/obj/machinery/power/submarine_turbine_generator/proc/act_gov_set(mob/user, amount)
+	governor_set = clamp(governor_set + amount, NST_GOV_SET_MIN, NST_GOV_SET_MAX)
+
 /// Подтвердить тревоги табло. Зовут и окно пульта, и физическая кнопка на столе (ревизия 34). Язык игрока уже выбран вызывающим.
 /obj/machinery/power/submarine_turbine_generator/proc/act_ack(mob/user)
 	if(annunciator.has_unacked())
@@ -1492,19 +1510,14 @@ var/global/list/nst_tab_alarms = list(
 			var/adm_amount = text2num(href_list["amount"])
 			if(!(adm_amount in list(-10, -1, 1, 10)))
 				return TOPIC_HANDLED
-			if(G.governor_on && G.governor_ok)
-				to_chat(user, SPAN_WARNING(nsr_tr("The governor holds the admission valve. Switch it off for manual control.", "Регулятор держит впускной клапан. Выключите его для ручного управления.")))
-			else if(G.stop_tripped)
-				to_chat(user, SPAN_WARNING(nsr_tr("The stop valve is shut: reset it first.", "Стопорный клапан закрыт: сначала сбросьте его.")))
-			else
-				G.admission = clamp(G.admission + adm_amount, 0, 100)
+			G.act_adm_move(user, adm_amount)
 		if("gov_toggle")
 			G.act_governor_toggle(user)
 		if("gov_set")
 			var/gov_amount = text2num(href_list["amount"])
 			if(!(gov_amount in list(-NST_GOV_SET_STEP, NST_GOV_SET_STEP)))
 				return TOPIC_HANDLED
-			G.governor_set = clamp(G.governor_set + gov_amount, NST_GOV_SET_MIN, NST_GOV_SET_MAX)
+			G.act_gov_set(user, gov_amount)
 		if("breaker")
 			G.act_breaker_toggle(user)
 		if("stop_trip")
@@ -1528,10 +1541,8 @@ var/global/list/nst_tab_alarms = list(
 			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
 			if(!cond)
 				to_chat(user, SPAN_WARNING(nsr_tr("No condenser is connected to this turbine.", "К этой турбине не подключён конденсатор.")))
-			else if(cond.auto)
-				to_chat(user, SPAN_WARNING(nsr_tr("The condenser is in automatic mode. Switch the automation off to set its cooling by hand.", "Конденсатор в автоматическом режиме. Выключите автоматику, чтобы задать охлаждение вручную.")))
 			else if(cool_amount in list(-10, -1, 1, 10))
-				cond.cooling = clamp(cond.cooling + cool_amount, 0, 100)
+				cond.act_cool_move(user, cool_amount)
 		if("cond_auto")
 			var/obj/machinery/atmospherics/binary/submarine_condenser/cond = get_condenser()
 			if(!cond)
